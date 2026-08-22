@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"frameless=false": {
+			"model": "beatlamp:block/beat_lamp"
+		},
+		"frameless=true": {
+			"model": "beatlamp:block/beat_lamp_frameless"
+		}
+	}
+}

@@ -1,0 +1,8 @@
+Mod hiện tại đang gặp các vấn đề như sau và cần sửa đổi:
+- Mình muốn màu mặc định của khối là màu đen, khi mà chạy thì thêm option vào controller là nền đen thay vì trong suốt như hiện tại thì nhìn sẽ mượt hơn.
+- Nên có kiểu là nối thủ công, ví dụ cầm controller hay 1 vật phẩm gì đó để nối x block với nhau thay vì là tự động nối tất cả các khối liền kề nhau (để tăng tính custom).
+- Giảm bớt particle và thêm nhiều variants particle (hãy cho chỉnh trong controller).
+- Các hiệu ứng hiện tại cũng khá ổn, nhưng vẫn cần cải thiện nhiều. Mình muốn mod có hiệu ứng đẹp và mượt hơn nên ngoài cái pulse thì hãy để các block đầy đặn thay vì có cái gap nhìn nó không được liền mặt. Về hiệu ứng spectrum, hãy làm cho ví dụ kiểu, nếu ở trên cái khối đó ví dụ có 1 cột 4 khối, thì nó vừa nối với hàng ngang, vừa nối với các khối hàng dọc thành 1 thể để kiểu spectrum nó sẽ liền mạch 1 khối thay vì rời rạc như hiện tại.
+- Và nãy khi mở nhạc thì nhiều lúc nó bị mất active, các khối về trạng thái không nghe gì hết dù vẫn có nhạc mở, hãy thêm mấy cái để hỗ trợ cái này (hiện tại có thể reset bằng cách cầm controller đổi mode để reset).
+- Và hãy thêm giới hạn kết nối vào để tường minh hơn, mình tạo 1 dãy khối lớn thì nó vẫn có giới hạn chứ không phải tất cả đều nối với nhau, thì bạn hãy cố để tăng số lượng có thể kết nối với nhau lên tí và khi kết nối thì hãy thêm thông báo hay chú thích là dãy khối quá lớn không thể nối thêm hay gì đó.
+- Thêm nhiều các cài đặt tùy chọn vào controller, nâng cấp chức năng cho controller ví dụ như thêm các nút như trên và thêm nút reset to default. Đổi mode trong controller thì ghi ngắn gọn hơn, cụ thể các mode đó là gì thì sẽ đọc ở descriptions trên chỗ tải mod.

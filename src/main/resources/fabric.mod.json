@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "beatlamp",
+	"version": "${version}",
+	"name": "Beat Lamp",
+	"description": "Audio-reactive lamps that pulse to the beat of jukebox music. Works with vanilla discs, resource pack music, and modded music discs.\n\nModes: Pulse - lamps scale and glow to the bass. RGB - rainbow color cycle. Spectrum - equalizer bars, columns of lamps fill up like one solid block. Ripple - rings expand outward from the group center. Wave - a wave runs along the group. Scan - a light sweeps back and forth.\n\nUsage: Right-click a lamp to cycle modes, sneak + right-click to cycle colors, or use dye. Hold the Lamp Controller: click one corner, then click the opposite corner to link ALL lamps inside that area (max 512, range 48 blocks) with a live preview box - like Create's Super Glue. Right-click air to cancel a selection. Sneak + click a lamp with the controller to open settings (mode, sensitivity, speed, color, frameless, black background, particles, unlink group).",
+	"authors": [
+		"khang"
+	],
+	"contact": {
+		"homepage": "https://modrinth.com/mod/beatlamp",
+		"sources": "https://github.com/khang/beatlamp"
+	},
+	"license": "MIT",
+	"icon": "assets/beatlamp/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.beatlamp.BeatLamp"
+		],
+		"client": [
+			"com.beatlamp.client.BeatLampClient"
+		]
+	},
+	"mixins": [
+		"beatlamp.mixins.json",
+		{
+			"config": "beatlamp.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~1.21.1",
+		"java": ">=21",
+		"fabric-api": "*"
+	}
+}

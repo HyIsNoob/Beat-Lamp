@@ -1,0 +1,6 @@
+{
+	"parent": "minecraft:block/cube_all",
+	"textures": {
+		"all": "beatlamp:block/beat_lamp_frameless"
+	}
+}

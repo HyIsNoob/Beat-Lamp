@@ -1,0 +1,24 @@
+{
+	"type": "minecraft:crafting_shaped",
+	"category": "misc",
+	"key": {
+		"G": {
+			"item": "minecraft:glass"
+		},
+		"N": {
+			"item": "minecraft:note_block"
+		},
+		"R": {
+			"item": "minecraft:redstone_lamp"
+		}
+	},
+	"pattern": [
+		"GGG",
+		"GRG",
+		"GNG"
+	],
+	"result": {
+		"count": 4,
+		"id": "beatlamp:beat_lamp"
+	}
+}
