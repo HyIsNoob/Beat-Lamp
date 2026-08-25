@@ -48,6 +48,8 @@ public final class LampOutlineRenderer {
 			return;
 		}
 
+		debugLookedAtLamp(context.world(), player);
+
 		BlockPos anchor = controller.get(BeatLampItems.ANCHOR_POS);
 
 		PoseStack poseStack = context.matrixStack();
@@ -195,5 +197,32 @@ public final class LampOutlineRenderer {
 		}
 
 		return null;
+	}
+
+	private static void debugLookedAtLamp(Level level, Player player) {
+		if (level.getGameTime() % 10L != 0L) {
+			return;
+		}
+
+		BlockPos target = findLookedAtLamp(level, player);
+
+		if (target == null || !(level.getBlockEntity(target) instanceof BeatLampBlockEntity beatLamp)) {
+			return;
+		}
+
+		String text = String.format(
+			"mode=%s col=%s bb=%d il=%d lit=%d p=%.2f beat=%.2f bar=%.2f dc=%s",
+			beatLamp.getMode().getSerializedName(),
+			beatLamp.getColor() == BeatLampBlockEntity.COLOR_OLED ? "OLED" : "#" + Integer.toHexString(beatLamp.getColor()).toUpperCase(),
+			beatLamp.isBlackback() ? 1 : 0,
+			beatLamp.isIdleLight() ? 1 : 0,
+			level.getBlockState(target).getValue(com.beatlamp.block.BeatLampBlock.LIT) ? 1 : 0,
+			beatLamp.pulse,
+			beatLamp.beatPulse,
+			beatLamp.barValue,
+			"#" + Integer.toHexString(beatLamp.displayColor).toUpperCase()
+		);
+
+		player.displayClientMessage(net.minecraft.network.chat.Component.literal(text), true);
 	}
 }

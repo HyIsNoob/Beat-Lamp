@@ -9,6 +9,7 @@ import java.util.Set;
 
 import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.network.LampConfigurePayload;
+import com.beatlamp.network.LampSourcePayload;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -41,6 +42,7 @@ public class BeatLamp implements ModInitializer {
 		BeatLampItems.register();
 
 		PayloadTypeRegistry.playC2S().register(LampConfigurePayload.ID, LampConfigurePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(LampSourcePayload.ID, LampSourcePayload.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(LampConfigurePayload.ID, (payload, context) -> {
 			Level level = context.player().level();
@@ -65,8 +67,36 @@ public class BeatLamp implements ModInitializer {
 
 				if (blockEntity instanceof BeatLampBlockEntity beatLamp) {
 					beatLamp.applyConfig(
-						payload.mode(), payload.sensitivity(), payload.speed(), payload.color(), payload.frameless(), payload.blackback(), payload.particles()
+						payload.mode(),
+						payload.sensitivity(),
+						payload.speed(),
+						payload.color(),
+						payload.frameless(),
+						payload.blackback(),
+						payload.idleLight(),
+						payload.particles(),
+						payload.orientation()
 					);
+				}
+			}
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(LampSourcePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+
+			List<BlockPos> members = null;
+
+			if (level.getBlockEntity(payload.pos()) instanceof BeatLampBlockEntity lamp && lamp.getManualGroup().size() >= 2) {
+				members = lamp.getManualGroup();
+			}
+
+			if (members == null) {
+				members = floodFill(level, payload.pos());
+			}
+
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof BeatLampBlockEntity beatLamp) {
+					beatLamp.setSource(null);
 				}
 			}
 		});
@@ -75,10 +105,6 @@ public class BeatLamp implements ModInitializer {
 	}
 
 	public static void handleLink(ServerLevel level, BlockPos pos, ServerPlayer player, ItemStack controller) {
-		if (!(level.getBlockEntity(pos) instanceof BeatLampBlockEntity lamp)) {
-			return;
-		}
-
 		BlockPos anchor = controller.get(BeatLampItems.ANCHOR_POS);
 
 		if (anchor == null) {
@@ -149,6 +175,40 @@ public class BeatLamp implements ModInitializer {
 				other.setManualGroup(List.of());
 			}
 		}
+	}
+
+	public static void handleSourceSelect(ServerPlayer player, BlockPos jukeboxPos, ItemStack controller) {
+		BlockPos current = controller.get(BeatLampItems.SOURCE_POS);
+
+		if (jukeboxPos.equals(current)) {
+			controller.remove(BeatLampItems.SOURCE_POS);
+			message(player, "message.beatlamp.source.cancel");
+			return;
+		}
+
+		controller.set(BeatLampItems.SOURCE_POS, jukeboxPos.immutable());
+		message(player, "message.beatlamp.source.selected");
+	}
+
+	public static void bindSource(ServerLevel level, BlockPos lampPos, ServerPlayer player, ItemStack controller, BlockPos source) {
+		List<BlockPos> members = null;
+
+		if (level.getBlockEntity(lampPos) instanceof BeatLampBlockEntity lamp && lamp.getManualGroup().size() >= 2) {
+			members = lamp.getManualGroup();
+		}
+
+		if (members == null) {
+			members = floodFill(level, lampPos);
+		}
+
+		for (BlockPos member : members) {
+			if (level.getBlockEntity(member) instanceof BeatLampBlockEntity beatLamp) {
+				beatLamp.setSource(source);
+			}
+		}
+
+		controller.remove(BeatLampItems.SOURCE_POS);
+		message(player, "message.beatlamp.source.bound", members.size());
 	}
 
 	private static void message(ServerPlayer player, String key, Object... args) {

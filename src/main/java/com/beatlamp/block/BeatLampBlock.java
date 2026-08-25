@@ -33,13 +33,14 @@ import org.jetbrains.annotations.Nullable;
 
 public class BeatLampBlock extends BaseEntityBlock {
 	public static final BooleanProperty FRAMELESS = BooleanProperty.create("frameless");
+	public static final BooleanProperty LIT = BooleanProperty.create("lit");
 	public static final MapCodec<BeatLampBlock> CODEC = RecordCodecBuilder.mapCodec(
 		instance -> instance.group(propertiesCodec()).apply(instance, BeatLampBlock::new)
 	);
 
 	public BeatLampBlock(Properties properties) {
 		super(properties);
-		this.registerDefaultState(this.stateDefinition.any().setValue(FRAMELESS, false));
+		this.registerDefaultState(this.stateDefinition.any().setValue(FRAMELESS, true).setValue(LIT, false));
 	}
 
 	@Override
@@ -50,6 +51,7 @@ public class BeatLampBlock extends BaseEntityBlock {
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
 		builder.add(FRAMELESS);
+		builder.add(LIT);
 	}
 
 	@Override
@@ -67,7 +69,7 @@ public class BeatLampBlock extends BaseEntityBlock {
 	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState blockState, BlockEntityType<T> blockEntityType) {
 		return level.isClientSide
 			? createTickerHelper(blockEntityType, BeatLampBlockEntities.BEAT_LAMP, BeatLampBlockEntity::clientTick)
-			: null;
+			: createTickerHelper(blockEntityType, BeatLampBlockEntities.BEAT_LAMP, BeatLampBlockEntity::serverTick);
 	}
 
 	@Override
@@ -86,11 +88,7 @@ public class BeatLampBlock extends BaseEntityBlock {
 		ItemStack itemStack, BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult
 	) {
 		if (itemStack.is(BeatLampItems.CONTROLLER)) {
-			if (player.isShiftKeyDown()) {
-				if (level.isClientSide && level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity beatLamp) {
-					BeatLampBlockEntity.controllerUser.use(beatLamp);
-				}
-			} else if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+			if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
 				BeatLamp.handleLink((ServerLevel) level, blockPos, serverPlayer, itemStack);
 			}
 

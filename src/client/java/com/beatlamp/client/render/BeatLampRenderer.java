@@ -10,6 +10,7 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
@@ -18,7 +19,6 @@ import org.joml.Matrix4f;
 public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity> {
 	private static final ResourceLocation CORE_TEXTURE = ResourceLocation.fromNamespaceAndPath("beatlamp", "textures/block/beat_lamp_core.png");
 	private static final float FULL_HALF = 0.503F;
-	private static final float BACKING_HALF = 0.501F;
 
 	public BeatLampRenderer(BlockEntityRendererProvider.Context context) {
 	}
@@ -34,8 +34,28 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 	) {
 		LampMode mode = beatLamp.getMode();
 		boolean blackback = beatLamp.isBlackback();
-		float pulse = Mth.clamp(beatLamp.pulse + beatLamp.beatPulse * 0.5F, 0.0F, 1.0F);
+		float pulse = Mth.clamp(beatLamp.pulse + beatLamp.beatPulse * 0.65F, 0.0F, 1.0F);
 		float bar = Mth.clamp(beatLamp.barValue, 0.0F, 1.0F);
+		float beat = Mth.clamp(beatLamp.beatPulse, 0.0F, 1.0F);
+		float intensity = Math.max(Math.max(pulse, bar), beat);
+
+		poseStack.pushPose();
+		poseStack.translate(0.5F, 0.5F, 0.5F);
+		PoseStack.Pose pose = poseStack.last();
+		Matrix4f matrix = pose.pose();
+
+		if (intensity <= 0.02F) {
+			if (!blackback) {
+				poseStack.popPose();
+				return;
+			}
+
+			VertexConsumer black = multiBufferSource.getBuffer(RenderType.entityCutoutNoCull(CORE_TEXTURE));
+			drawCube(black, pose, matrix, FULL_HALF, FULL_HALF, FULL_HALF, 0.0F, 0.0F, 0.0F, 1.0F, 0xF000F0);
+			poseStack.popPose();
+			return;
+		}
+
 		int color = beatLamp.displayColor;
 		float red = ((color >> 16) & 0xFF) / 255.0F;
 		float green = ((color >> 8) & 0xFF) / 255.0F;
@@ -47,15 +67,15 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		switch (mode) {
 			case SPECTRUM, RIPPLE, WAVE, SCAN -> {
 				half = FULL_HALF;
-				brightness = 0.06F + bar * 1.44F;
+				brightness = bar * 1.5F;
 			}
 			case RGB -> {
 				half = FULL_HALF;
-				brightness = 0.06F + pulse * 1.44F;
+				brightness = pulse * 1.5F;
 			}
 			default -> {
 				half = blackback ? FULL_HALF : 0.3F + pulse * 0.16F;
-				brightness = 0.06F + pulse * 1.44F;
+				brightness = pulse * 1.5F;
 			}
 		}
 
@@ -64,23 +84,9 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float coreGreen = Math.min(green * brightness, 1.0F);
 		float coreBlue = Math.min(blue * brightness, 1.0F);
 
-		poseStack.pushPose();
-		poseStack.translate(0.5F, 0.5F, 0.5F);
-		PoseStack.Pose pose = poseStack.last();
-		Matrix4f matrix = pose.pose();
-
-		if (blackback) {
-			VertexConsumer backing = multiBufferSource.getBuffer(RenderType.entityTranslucent(CORE_TEXTURE));
-			drawCube(backing, pose, matrix, BACKING_HALF, BACKING_HALF, BACKING_HALF, 0.0F, 0.0F, 0.0F, 1.0F, 0);
-		}
-
-		VertexConsumer emissive = multiBufferSource.getBuffer(RenderType.entityTranslucentEmissive(CORE_TEXTURE));
-		drawCube(emissive, pose, matrix, half, half, half, coreRed, coreGreen, coreBlue, 1.0F, 0xF000F0);
-
-		float intensity = Math.max(pulse, bar);
-		float shellAlpha = 0.05F + intensity * 0.2F;
-		float shellHalf = half + 0.08F;
-		drawCube(emissive, pose, matrix, shellHalf, shellHalf, shellHalf, coreRed, coreGreen, coreBlue, shellAlpha, 0xF000F0);
+		RenderType coreType = blackback ? RenderType.entityCutoutNoCull(CORE_TEXTURE) : RenderType.entityTranslucentEmissive(CORE_TEXTURE);
+		VertexConsumer core = multiBufferSource.getBuffer(coreType);
+		drawCube(core, pose, matrix, half, half, half, coreRed, coreGreen, coreBlue, 1.0F, 0xF000F0);
 
 		poseStack.popPose();
 	}
@@ -160,7 +166,7 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		consumer.addVertex(matrix, position[0], position[1], position[2])
 			.setColor(red, green, blue, alpha)
 			.setUv(u, v)
-			.setOverlay(0)
+			.setOverlay(OverlayTexture.NO_OVERLAY)
 			.setLight(light)
 			.setNormal(pose, normalX, normalY, normalZ);
 	}

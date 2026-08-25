@@ -2,6 +2,7 @@ package com.beatlamp.network;
 
 import com.beatlamp.BeatLamp;
 import com.beatlamp.block.LampMode;
+import com.beatlamp.block.LampOrientation;
 import com.beatlamp.block.LampParticles;
 
 import net.minecraft.core.BlockPos;
@@ -17,7 +18,9 @@ public record LampConfigurePayload(
 	int color,
 	boolean frameless,
 	boolean blackback,
+	boolean idleLight,
 	LampParticles particles,
+	LampOrientation orientation,
 	boolean unlink
 ) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<LampConfigurePayload> ID = new CustomPacketPayload.Type<>(BeatLamp.id("configure_lamp"));
@@ -34,7 +37,9 @@ public record LampConfigurePayload(
 		buf.writeVarInt(payload.color());
 		buf.writeBoolean(payload.frameless());
 		buf.writeBoolean(payload.blackback());
+		buf.writeBoolean(payload.idleLight());
 		buf.writeVarInt(payload.particles().ordinal());
+		buf.writeVarInt(payload.orientation().ordinal());
 		buf.writeBoolean(payload.unlink());
 	}
 
@@ -47,7 +52,9 @@ public record LampConfigurePayload(
 			buf.readVarInt(),
 			buf.readBoolean(),
 			buf.readBoolean(),
+			buf.readBoolean(),
 			LampParticles.values()[buf.readVarInt() % LampParticles.values().length],
+			LampOrientation.values()[buf.readVarInt() % LampOrientation.values().length],
 			buf.readBoolean()
 		);
 	}

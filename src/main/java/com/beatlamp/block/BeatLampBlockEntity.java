@@ -5,6 +5,7 @@ import java.util.List;
 
 import com.beatlamp.BeatLampBlockEntities;
 import com.beatlamp.BeatLampBlocks;
+import com.beatlamp.JukeboxTracker;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
@@ -45,10 +46,13 @@ public class BeatLampBlockEntity extends BlockEntity {
 	private LampMode mode = LampMode.PULSE;
 	private float sensitivity = 1.0F;
 	private float speed = 1.0F;
-	private boolean frameless;
-	private boolean blackback;
+	private boolean frameless = true;
+	private boolean blackback = true;
+	private boolean idleLight;
 	private LampParticles particles = LampParticles.NOTE;
+	private LampOrientation orientation = LampOrientation.AUTO;
 	private List<BlockPos> manualGroup = List.of();
+	private BlockPos sourcePos;
 
 	public float pulse;
 	public float beatPulse;
@@ -92,12 +96,29 @@ public class BeatLampBlockEntity extends BlockEntity {
 		return this.blackback;
 	}
 
+	public boolean isIdleLight() {
+		return this.idleLight;
+	}
+
 	public LampParticles getParticles() {
 		return this.particles;
 	}
 
+	public LampOrientation getOrientation() {
+		return this.orientation;
+	}
+
 	public List<BlockPos> getManualGroup() {
 		return this.manualGroup;
+	}
+
+	public BlockPos getSource() {
+		return this.sourcePos;
+	}
+
+	public void setSource(BlockPos newSource) {
+		this.sourcePos = newSource == null ? null : newSource.immutable();
+		this.markUpdated();
 	}
 
 	public boolean setColor(int newColor) {
@@ -136,14 +157,24 @@ public class BeatLampBlockEntity extends BlockEntity {
 	}
 
 	public void applyConfig(
-		LampMode newMode, float newSensitivity, float newSpeed, int newColor, boolean newFrameless, boolean newBlackback, LampParticles newParticles
+		LampMode newMode,
+		float newSensitivity,
+		float newSpeed,
+		int newColor,
+		boolean newFrameless,
+		boolean newBlackback,
+		boolean newIdleLight,
+		LampParticles newParticles,
+		LampOrientation newOrientation
 	) {
 		this.mode = newMode;
 		this.sensitivity = newSensitivity;
 		this.speed = newSpeed;
 		this.color = newColor;
 		this.blackback = newBlackback;
+		this.idleLight = newIdleLight;
 		this.particles = newParticles;
+		this.orientation = newOrientation;
 		this.setFrameless(newFrameless);
 		this.markUpdated();
 	}
@@ -214,7 +245,9 @@ public class BeatLampBlockEntity extends BlockEntity {
 		compoundTag.putFloat("speed", this.speed);
 		compoundTag.putBoolean("frameless", this.frameless);
 		compoundTag.putBoolean("blackback", this.blackback);
+		compoundTag.putBoolean("idleLight", this.idleLight);
 		compoundTag.putString("particles", this.particles.getSerializedName());
+		compoundTag.putString("orientation", this.orientation.getSerializedName());
 
 		if (!this.manualGroup.isEmpty()) {
 			ListTag listTag = new ListTag();
@@ -225,6 +258,10 @@ public class BeatLampBlockEntity extends BlockEntity {
 
 			compoundTag.put("group", listTag);
 		}
+
+		if (this.sourcePos != null) {
+			compoundTag.putLong("source", this.sourcePos.asLong());
+		}
 	}
 
 	@Override
@@ -234,9 +271,11 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.mode = LampMode.byName(compoundTag.getString("mode"));
 		this.sensitivity = compoundTag.contains("sensitivity") ? compoundTag.getFloat("sensitivity") : 1.0F;
 		this.speed = compoundTag.contains("speed") ? compoundTag.getFloat("speed") : 1.0F;
-		this.frameless = compoundTag.getBoolean("frameless");
-		this.blackback = compoundTag.getBoolean("blackback");
+		this.frameless = !compoundTag.contains("frameless") || compoundTag.getBoolean("frameless");
+		this.blackback = !compoundTag.contains("blackback") || compoundTag.getBoolean("blackback");
+		this.idleLight = compoundTag.contains("idleLight") && compoundTag.getBoolean("idleLight");
 		this.particles = LampParticles.byName(compoundTag.getString("particles"));
+		this.orientation = LampOrientation.byName(compoundTag.getString("orientation"));
 
 		List<BlockPos> members = new ArrayList<>();
 		ListTag listTag = compoundTag.getList("group", 4);
@@ -246,6 +285,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		}
 
 		this.manualGroup = members.size() >= 2 ? List.copyOf(members) : List.of();
+		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;
 	}
 
 	@Override
@@ -262,5 +302,17 @@ public class BeatLampBlockEntity extends BlockEntity {
 
 	public static void clientTick(Level level, BlockPos blockPos, BlockState blockState, BeatLampBlockEntity beatLamp) {
 		clientTicker.tick(beatLamp);
+	}
+
+	public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, BeatLampBlockEntity beatLamp) {
+		if (level.getGameTime() % 10L != 0L) {
+			return;
+		}
+
+		boolean desired = beatLamp.idleLight || JukeboxTracker.isPlayingNear(level, blockPos, beatLamp.getSource());
+
+		if (blockState.getValue(BeatLampBlock.LIT) != desired) {
+			level.setBlock(blockPos, blockState.setValue(BeatLampBlock.LIT, desired), Block.UPDATE_CLIENTS);
+		}
 	}
 }

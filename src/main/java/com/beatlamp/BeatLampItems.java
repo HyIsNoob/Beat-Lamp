@@ -23,6 +23,12 @@ public class BeatLampItems {
 		DataComponentType.<BlockPos>builder().persistent(BlockPos.CODEC).networkSynchronized(BlockPos.STREAM_CODEC).build()
 	);
 
+	public static final DataComponentType<BlockPos> SOURCE_POS = Registry.register(
+		BuiltInRegistries.DATA_COMPONENT_TYPE,
+		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "source_pos"),
+		DataComponentType.<BlockPos>builder().persistent(BlockPos.CODEC).networkSynchronized(BlockPos.STREAM_CODEC).build()
+	);
+
 	public static void register() {
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_lamp"), BEAT_LAMP);
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "controller"), CONTROLLER);

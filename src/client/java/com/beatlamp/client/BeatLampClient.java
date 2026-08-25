@@ -4,9 +4,9 @@ import java.util.List;
 
 import com.beatlamp.BeatLampBlockEntities;
 import com.beatlamp.BeatLampBlocks;
-import com.beatlamp.BeatLampItems;
 import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.LampMode;
+import com.beatlamp.block.LampOrientation;
 import com.beatlamp.block.LampParticles;
 import com.beatlamp.client.audio.AudioAnalyzer;
 import com.beatlamp.client.audio.JukeboxAudioTracker;
@@ -36,8 +36,18 @@ public class BeatLampClient implements ClientModInitializer {
 		LampParticles.NOTE, LampParticles.END_ROD, LampParticles.FIREWORK, LampParticles.GLOW
 	};
 
+	private static final Direction[][] AXES = {
+		{Direction.WEST, Direction.EAST},
+		{Direction.DOWN, Direction.UP},
+		{Direction.NORTH, Direction.SOUTH}
+	};
+
+	private static final int TOPOLOGY_REFRESH_TICKS = 10;
+
 	@Override
 	public void onInitializeClient() {
+		BeatLampClientConfig.load();
+
 		BlockRenderLayerMap.INSTANCE.putBlock(BeatLampBlocks.BEAT_LAMP, RenderType.cutout());
 		BlockEntityRenderers.register(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);
 
@@ -65,37 +75,41 @@ public class BeatLampClient implements ClientModInitializer {
 
 		BlockPos blockPos = beatLamp.getBlockPos();
 		Vec3 center = Vec3.atCenterOf(blockPos);
+		BlockPos source = beatLamp.getSource();
 		float sensitivity = beatLamp.getSensitivity();
 		float speed = beatLamp.getSpeed();
 
-		float target = Mth.clamp(JukeboxAudioTracker.getLevelAt(center) * sensitivity, 0.0F, 1.0F);
+		float target = Mth.clamp(JukeboxAudioTracker.getLevelAt(center, source) * sensitivity, 0.0F, 1.0F);
 		float diff = target - beatLamp.smoothLevel;
 		beatLamp.smoothLevel += diff * (diff > 0.0F ? 0.5F : 0.15F);
 		beatLamp.pulse = beatLamp.smoothLevel;
-		beatLamp.beatPulse = JukeboxAudioTracker.getBeatPulseAt(center);
-
-		updateGroupInfo(level, beatLamp, blockPos);
+		beatLamp.beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
 
 		LampMode mode = beatLamp.getMode();
+
+		if (needsTopology(mode) && shouldRefreshTopology(level, blockPos)) {
+			updateGroupInfo(level, beatLamp, blockPos);
+		}
+
 		float time = level.getGameTime() * speed;
+		float energy = Mth.clamp(Math.max(beatLamp.pulse, beatLamp.beatPulse * 0.8F), 0.0F, 1.0F);
 
 		switch (mode) {
-			case PULSE -> beatLamp.displayColor = resolveColor(beatLamp, blockPos, time);
+			case PULSE -> beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, -1.0F, energy);
 			case RGB -> {
 				float hue = ((time * 3 + (blockPos.getX() + blockPos.getZ()) * 6) % 360) / 360.0F;
 				beatLamp.displayColor = java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
 			}
 			case SPECTRUM -> {
-				float[] spectrum = JukeboxAudioTracker.getSpectrumAt(center);
 				int band = Math.min(AudioAnalyzer.BAND_COUNT - 1, beatLamp.bandIndex * AudioAnalyzer.BAND_COUNT / Math.max(1, beatLamp.bandCount));
-				float bandTarget = Mth.clamp(spectrum[band] * sensitivity, 0.0F, 1.0F);
+				float bandTarget = Mth.clamp(JukeboxAudioTracker.getBandAt(center, band, source) * sensitivity, 0.0F, 1.0F);
 				float bandDiff = bandTarget - beatLamp.spectrumLevel;
 				beatLamp.spectrumLevel += bandDiff * (bandDiff > 0.0F ? 0.55F : 0.2F);
 
 				int rows = Math.max(1, beatLamp.columnSize);
 				float coverage = beatLamp.spectrumLevel * rows - beatLamp.columnIndex;
 				beatLamp.barValue = Mth.clamp(coverage, 0.0F, 1.0F);
-				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, (float) band / (AudioAnalyzer.BAND_COUNT - 1));
+				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, (float) band / (AudioAnalyzer.BAND_COUNT - 1), energy);
 			}
 			case RIPPLE -> {
 				float phase = (time * 0.15F - beatLamp.groupDistance * 0.35F) % 1.0F;
@@ -106,13 +120,13 @@ public class BeatLampClient implements ClientModInitializer {
 				float ring = Mth.clamp(1.0F - Math.abs(phase - 0.5F) * 4.0F, 0.0F, 1.0F);
 				float value = Mth.clamp(ring * (0.35F + beatLamp.pulse * 0.65F), 0.0F, 1.0F);
 				beatLamp.barValue = value;
-				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, beatLamp.groupDistance * 0.15F);
+				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, beatLamp.groupDistance * 0.15F, energy);
 			}
 			case WAVE -> {
 				float wave = (float) (0.5 + 0.5 * Math.sin(time * 0.25F - beatLamp.groupIndex * 0.7F));
 				float value = Mth.clamp(wave * (0.3F + beatLamp.pulse * 0.7F), 0.0F, 1.0F);
 				beatLamp.barValue = value;
-				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, (float) beatLamp.groupIndex / Math.max(1, beatLamp.groupSize));
+				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, (float) beatLamp.groupIndex / Math.max(1, beatLamp.groupSize), energy);
 			}
 			case SCAN -> {
 				float cycle = (time * 0.08F) % 2.0F;
@@ -121,12 +135,16 @@ public class BeatLampClient implements ClientModInitializer {
 				float scan = Mth.clamp(1.0F - Math.abs(position - lampPos) * beatLamp.groupSize * 0.5F, 0.0F, 1.0F);
 				float value = Mth.clamp(scan * (0.4F + beatLamp.pulse * 0.6F), 0.0F, 1.0F);
 				beatLamp.barValue = value;
-				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, position);
+				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, position, energy);
 			}
 		}
 
-		if (beatLamp.beatPulse > 0.85F && beatLamp.getParticles() != LampParticles.OFF && level.getRandom().nextInt(12) == 0) {
-			spawnParticle(level, blockPos, beatLamp);
+		if (beatLamp.beatPulse > 0.35F && beatLamp.getParticles() != LampParticles.OFF) {
+			int threshold = (int) Mth.lerp(Mth.clamp(beatLamp.beatPulse, 0.0F, 1.0F), 30.0F, 8.0F);
+
+			if (level.getRandom().nextInt(threshold) == 0) {
+				spawnParticle(level, blockPos, beatLamp);
+			}
 		}
 	}
 
@@ -138,47 +156,106 @@ public class BeatLampClient implements ClientModInitializer {
 			type = MIXED_TYPES[random.nextInt(MIXED_TYPES.length)];
 		}
 
-		double x = blockPos.getX() + 0.2 + random.nextDouble() * 0.6;
-		double y = blockPos.getY() + 1.05 + random.nextDouble() * 0.2;
-		double z = blockPos.getZ() + 0.2 + random.nextDouble() * 0.6;
+		Direction face = randomExposedFace(level, blockPos, random);
+		double u = random.nextDouble();
+		double v = random.nextDouble();
+		double x = blockPos.getX() + 0.5;
+		double y = blockPos.getY() + 0.5;
+		double z = blockPos.getZ() + 0.5;
+
+		switch (face) {
+			case WEST -> { x = blockPos.getX() - 0.06; y += u - 0.5; z += v - 0.5; }
+			case EAST -> { x = blockPos.getX() + 1.06; y += u - 0.5; z += v - 0.5; }
+			case DOWN -> { y = blockPos.getY() - 0.06; x += u - 0.5; z += v - 0.5; }
+			case UP -> { y = blockPos.getY() + 1.06; x += u - 0.5; z += v - 0.5; }
+			case NORTH -> { z = blockPos.getZ() - 0.06; x += u - 0.5; y += v - 0.5; }
+			case SOUTH -> { z = blockPos.getZ() + 1.06; x += u - 0.5; y += v - 0.5; }
+		}
+
+		double speed = 0.02 + random.nextDouble() * 0.04;
+		double vx = face.getStepX() * speed + (random.nextDouble() - 0.5) * 0.015;
+		double vy = face.getStepY() * speed + (random.nextDouble() - 0.5) * 0.015;
+		double vz = face.getStepZ() * speed + (random.nextDouble() - 0.5) * 0.015;
 
 		switch (type) {
 			case NOTE -> {
-				float[] hsb = java.awt.Color.RGBtoHSB(
-					(beatLamp.displayColor >> 16) & 0xFF, (beatLamp.displayColor >> 8) & 0xFF, beatLamp.displayColor & 0xFF, null
-				);
-				level.addParticle(ParticleTypes.NOTE, x, y, z, hsb[0], 0.0, 0.0);
+				int display = beatLamp.displayColor;
+
+				if (display == 0) {
+					level.addParticle(ParticleTypes.NOTE, x, y, z, 0.5, 0.0, 0.0);
+				} else {
+					float[] hsb = java.awt.Color.RGBtoHSB((display >> 16) & 0xFF, (display >> 8) & 0xFF, display & 0xFF, null);
+					level.addParticle(ParticleTypes.NOTE, x, y, z, hsb[0], 0.0, 0.0);
+				}
 			}
-			case END_ROD -> level.addParticle(ParticleTypes.END_ROD, x, y, z, 0.0, 0.03, 0.0);
-			case FIREWORK -> level.addParticle(ParticleTypes.FIREWORK, x, y, z, 0.0, 0.05, 0.0);
-			case GLOW -> level.addParticle(ParticleTypes.GLOW, x, y, z, 0.0, 0.02, 0.0);
+			case END_ROD -> level.addParticle(ParticleTypes.END_ROD, x, y, z, vx, vy + 0.01, vz);
+			case FIREWORK -> level.addParticle(ParticleTypes.FIREWORK, x, y, z, vx, vy + 0.02, vz);
+			case GLOW -> level.addParticle(ParticleTypes.GLOW, x, y, z, vx, vy + 0.01, vz);
 			default -> {
 			}
 		}
 	}
 
-	private static int resolveColor(BeatLampBlockEntity beatLamp, BlockPos blockPos, float time) {
-		return resolveColor(beatLamp, blockPos, time, -1.0F);
+	private static Direction randomExposedFace(Level level, BlockPos blockPos, RandomSource random) {
+		int exposed = 0;
+		Direction best = Direction.UP;
+
+		for (Direction direction : Direction.values()) {
+			if (!level.getBlockState(blockPos.relative(direction)).is(BeatLampBlocks.BEAT_LAMP)) {
+				exposed++;
+				if (random.nextInt(exposed) == 0) {
+					best = direction;
+				}
+			}
+		}
+
+		return best;
 	}
 
-	private static int resolveColor(BeatLampBlockEntity beatLamp, BlockPos blockPos, float time, float hueOffset) {
+	private static int resolveColor(BeatLampBlockEntity beatLamp, BlockPos blockPos, float time, float hueOffset, float energy) {
+		if (energy < 0.03F) {
+			return 0;
+		}
+
 		int color = beatLamp.getColor();
 
 		if (color == BeatLampBlockEntity.COLOR_OLED) {
 			float hue = ((time * 2 + (blockPos.getX() + blockPos.getZ()) * 4) % 360) / 360.0F;
+
 			if (hueOffset >= 0.0F) {
 				hue = (hue + hueOffset) % 1.0F;
 			}
 
-			return java.awt.Color.HSBtoRGB(hue, 0.9F, 1.0F);
+			float value = Math.min(1.0F, 0.35F + energy * 0.9F);
+			return java.awt.Color.HSBtoRGB(hue, 0.9F, value);
 		}
+
+		float[] hsb = java.awt.Color.RGBtoHSB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, null);
+		float hue = hsb[0];
 
 		if (hueOffset >= 0.0F) {
-			float[] hsb = java.awt.Color.RGBtoHSB((color >> 16) & 0xFF, (color >> 8) & 0xFF, color & 0xFF, null);
-			return java.awt.Color.HSBtoRGB((hsb[0] + hueOffset) % 1.0F, hsb[1], hsb[2]);
+			hue = (hsb[0] + hueOffset) % 1.0F;
 		}
 
-		return color;
+		float value = hsb[2] * Mth.clamp(energy * 1.25F, 0.0F, 1.0F);
+		return java.awt.Color.HSBtoRGB(hue, hsb[1], value);
+	}
+
+	private static Direction axisNegative(Direction.Axis axis) {
+		return switch (axis) {
+			case X -> Direction.WEST;
+			case Y -> Direction.DOWN;
+			default -> Direction.NORTH;
+		};
+	}
+
+	private static boolean needsTopology(LampMode mode) {
+		return mode == LampMode.SPECTRUM || mode == LampMode.RIPPLE || mode == LampMode.WAVE || mode == LampMode.SCAN;
+	}
+
+	private static boolean shouldRefreshTopology(Level level, BlockPos blockPos) {
+		long stagger = (long) blockPos.getX() * 31L + (long) blockPos.getY() * 17L + (long) blockPos.getZ() * 13L;
+		return Math.floorMod(level.getGameTime() + stagger, TOPOLOGY_REFRESH_TICKS) == 0L;
 	}
 
 	private static void updateGroupInfo(Level level, BeatLampBlockEntity beatLamp, BlockPos blockPos) {
@@ -189,19 +266,30 @@ public class BeatLampClient implements ClientModInitializer {
 			return;
 		}
 
-		int bestIndex = 0;
-		int bestLength = 1;
-		Direction bestAxis = Direction.WEST;
+		Direction bestAxis;
+		int bestIndex;
+		int bestLength;
+		Direction.Axis forced = beatLamp.getOrientation().getAxis();
 
-		for (Direction[] axis : AXES) {
-			int behind = countRun(level, blockPos, axis[0]);
-			int ahead = countRun(level, blockPos, axis[1]);
-			int length = behind + 1 + ahead;
+		if (forced != null) {
+			bestAxis = axisNegative(forced);
+			bestIndex = countRun(level, blockPos, bestAxis);
+			bestLength = bestIndex + 1 + countRun(level, blockPos, bestAxis.getOpposite());
+		} else {
+			bestIndex = 0;
+			bestLength = 1;
+			bestAxis = Direction.WEST;
 
-			if (length > bestLength) {
-				bestLength = length;
-				bestIndex = behind;
-				bestAxis = axis[0];
+			for (Direction[] axis : AXES) {
+				int behind = countRun(level, blockPos, axis[0]);
+				int ahead = countRun(level, blockPos, axis[1]);
+				int length = behind + 1 + ahead;
+
+				if (length > bestLength) {
+					bestLength = length;
+					bestIndex = behind;
+					bestAxis = axis[0];
+				}
 			}
 		}
 
@@ -235,19 +323,31 @@ public class BeatLampClient implements ClientModInitializer {
 		updateBandAndColumnInfo(level, beatLamp, blockPos);
 	}
 
+	private static int compareByAxis(BlockPos a, BlockPos b, Direction.Axis axis) {
+		int c = Integer.compare(axis.choose(a.getX(), a.getY(), a.getZ()), axis.choose(b.getX(), b.getY(), b.getZ()));
+		if (c != 0) {
+			return c;
+		}
+
+		c = Integer.compare(a.getY(), b.getY());
+		if (c != 0) {
+			return c;
+		}
+
+		c = Integer.compare(a.getX(), b.getX());
+		if (c != 0) {
+			return c;
+		}
+
+		return Integer.compare(a.getZ(), b.getZ());
+	}
+
 	private static void applyManualGroup(BeatLampBlockEntity beatLamp, BlockPos blockPos, List<BlockPos> members) {
-		int index = 0;
 		double centerX = 0.0;
 		double centerY = 0.0;
 		double centerZ = 0.0;
 
-		for (int i = 0; i < members.size(); i++) {
-			BlockPos member = members.get(i);
-
-			if (member.equals(blockPos)) {
-				index = i;
-			}
-
+		for (BlockPos member : members) {
 			centerX += member.getX();
 			centerY += member.getY();
 			centerZ += member.getZ();
@@ -257,17 +357,39 @@ public class BeatLampClient implements ClientModInitializer {
 		centerY /= members.size();
 		centerZ /= members.size();
 
+		Direction.Axis forced = beatLamp.getOrientation().getAxis();
+		int index = 0;
+
+		if (forced != null) {
+			for (BlockPos member : members) {
+				if (!member.equals(blockPos) && compareByAxis(member, blockPos, forced) < 0) {
+					index++;
+				}
+			}
+		} else {
+			for (int i = 0; i < members.size(); i++) {
+				if (members.get(i).equals(blockPos)) {
+					index = i;
+					break;
+				}
+			}
+		}
+
 		beatLamp.groupIndex = index;
 		beatLamp.groupSize = members.size();
 		beatLamp.groupDistance = (float) Math.sqrt(
 			Math.pow(blockPos.getX() - centerX, 2) + Math.pow(blockPos.getY() - centerY, 2) + Math.pow(blockPos.getZ() - centerZ, 2)
 		);
+		beatLamp.bandIndex = index;
+		beatLamp.bandCount = members.size();
 
 		Level level = beatLamp.getLevel();
-		if (level != null) {
-			beatLamp.bandIndex = index;
-			beatLamp.bandCount = members.size();
+
+		if (level != null && forced != Direction.Axis.Y) {
 			updateColumnInfo(level, beatLamp, blockPos);
+		} else {
+			beatLamp.columnIndex = 0;
+			beatLamp.columnSize = 1;
 		}
 	}
 
@@ -279,18 +401,31 @@ public class BeatLampClient implements ClientModInitializer {
 		beatLamp.columnSize = below + 1 + above;
 
 		BlockPos base = blockPos.relative(Direction.DOWN, below);
-		int westEast = countRun(level, base, Direction.WEST) + 1 + countRun(level, base, Direction.EAST);
-		int northSouth = countRun(level, base, Direction.NORTH) + 1 + countRun(level, base, Direction.SOUTH);
+		Direction.Axis forced = beatLamp.getOrientation().getAxis();
 
-		if (westEast >= northSouth && westEast > 1) {
-			beatLamp.bandIndex = countRun(level, base, Direction.WEST);
-			beatLamp.bandCount = westEast;
-		} else if (northSouth > 1) {
-			beatLamp.bandIndex = countRun(level, base, Direction.NORTH);
-			beatLamp.bandCount = northSouth;
+		if (forced == null) {
+			int westEast = countRun(level, base, Direction.WEST) + 1 + countRun(level, base, Direction.EAST);
+			int northSouth = countRun(level, base, Direction.NORTH) + 1 + countRun(level, base, Direction.SOUTH);
+
+			if (westEast >= northSouth && westEast > 1) {
+				beatLamp.bandIndex = countRun(level, base, Direction.WEST);
+				beatLamp.bandCount = westEast;
+			} else if (northSouth > 1) {
+				beatLamp.bandIndex = countRun(level, base, Direction.NORTH);
+				beatLamp.bandCount = northSouth;
+			} else {
+				beatLamp.bandIndex = 0;
+				beatLamp.bandCount = 1;
+			}
 		} else {
-			beatLamp.bandIndex = 0;
-			beatLamp.bandCount = 1;
+			Direction negative = axisNegative(forced);
+			beatLamp.bandIndex = countRun(level, base, negative);
+			beatLamp.bandCount = beatLamp.bandIndex + 1 + countRun(level, base, negative.getOpposite());
+
+			if (forced == Direction.Axis.Y) {
+				beatLamp.columnIndex = 0;
+				beatLamp.columnSize = 1;
+			}
 		}
 	}
 
@@ -313,10 +448,4 @@ public class BeatLampClient implements ClientModInitializer {
 
 		return count;
 	}
-
-	private static final Direction[][] AXES = {
-		{Direction.WEST, Direction.EAST},
-		{Direction.DOWN, Direction.UP},
-		{Direction.NORTH, Direction.SOUTH}
-	};
 }

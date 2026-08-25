@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.beatlamp.BeatLamp;
+import com.beatlamp.client.BeatLampClientConfig;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.Sound;
@@ -79,7 +80,7 @@ public final class JukeboxAudioTracker {
 			InputStream inputStream = minecraft.getResourceManager().open(path);
 			JOrbisAudioStream audioStream = new JOrbisAudioStream(inputStream);
 			AudioFormat format = audioStream.getFormat();
-			AudioAnalyzer analyzer = new AudioAnalyzer((int) format.getSampleRate());
+			AudioAnalyzer analyzer = new AudioAnalyzer((int) format.getSampleRate(), BeatLampClientConfig.highQualityBeat);
 			int channels = format.getChannels();
 			BeatLamp.LOGGER.info("Beat Lamp tracking jukebox at {} -> {} ({}Hz, {}ch)", blockPos.toShortString(), path, format.getSampleRate(), channels);
 
@@ -186,8 +187,9 @@ public final class JukeboxAudioTracker {
 				}
 
 				int monoCount = toMono(raw, count[0], channels, mono);
-				if (monoCount > 0) {
-					analyzer.push(mono, monoCount);
+
+				for (int offset = 0; offset < monoCount; offset += 1024) {
+					analyzer.push(mono, offset, Math.min(1024, monoCount - offset));
 				}
 
 				if (!more) {
@@ -239,7 +241,7 @@ public final class JukeboxAudioTracker {
 			if (song.analyzer.consumeBeat()) {
 				song.beatPulse = 1.0F;
 			} else {
-				song.beatPulse *= 0.82F;
+				song.beatPulse *= 0.85F;
 			}
 		});
 	}
@@ -280,8 +282,7 @@ public final class JukeboxAudioTracker {
 		return best;
 	}
 
-	public static float[] getSpectrumAt(Vec3 position) {
-		float[] result = new float[AudioAnalyzer.BAND_COUNT];
+	public static float getBandAt(Vec3 position, int band) {
 		float best = -1.0F;
 		ActiveSong bestSong = null;
 		float bestFalloff = 0.0F;
@@ -300,15 +301,67 @@ public final class JukeboxAudioTracker {
 			}
 		}
 
-		if (bestSong != null) {
-			float[] bands = bestSong.analyzer.getBands();
-
-			for (int i = 0; i < bands.length; i++) {
-				result[i] = bands[i] * bestFalloff;
-			}
+		if (bestSong == null) {
+			return 0.0F;
 		}
 
-		return result;
+		float[] bands = bestSong.analyzer.getBands();
+		if (band < 0 || band >= bands.length) {
+			return 0.0F;
+		}
+
+		return bands[band] * bestFalloff;
+	}
+
+	public static float getLevelAt(Vec3 position, BlockPos source) {
+		if (source == null) {
+			return getLevelAt(position);
+		}
+
+		ActiveSong song = ACTIVE_SONGS.get(source);
+		if (song == null) {
+			return 0.0F;
+		}
+
+		float falloff = falloff(song.position.distanceTo(position));
+		return falloff <= 0.0F ? 0.0F : song.analyzer.getLevel() * falloff;
+	}
+
+	public static float getBeatPulseAt(Vec3 position, BlockPos source) {
+		if (source == null) {
+			return getBeatPulseAt(position);
+		}
+
+		ActiveSong song = ACTIVE_SONGS.get(source);
+		if (song == null) {
+			return 0.0F;
+		}
+
+		float falloff = falloff(song.position.distanceTo(position));
+		return falloff <= 0.0F ? 0.0F : song.beatPulse * falloff;
+	}
+
+	public static float getBandAt(Vec3 position, int band, BlockPos source) {
+		if (source == null) {
+			return getBandAt(position, band);
+		}
+
+		ActiveSong song = ACTIVE_SONGS.get(source);
+		if (song == null) {
+			return 0.0F;
+		}
+
+		float falloff = falloff(song.position.distanceTo(position));
+		if (falloff <= 0.0F) {
+			return 0.0F;
+		}
+
+		float[] bands = song.analyzer.getBands();
+		if (band < 0 || band >= bands.length) {
+			return 0.0F;
+		}
+
+		return bands[band] * falloff;
 	}
 
 	private static float falloff(double distance) {

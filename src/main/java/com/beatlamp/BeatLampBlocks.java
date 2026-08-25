@@ -14,7 +14,7 @@ public class BeatLampBlocks {
 		BlockBehaviour.Properties.of()
 			.strength(0.3F)
 			.sound(SoundType.GLASS)
-			.lightLevel(state -> 15)
+			.lightLevel(state -> state.getValue(BeatLampBlock.LIT) ? 15 : 0)
 			.noOcclusion()
 	);
 
