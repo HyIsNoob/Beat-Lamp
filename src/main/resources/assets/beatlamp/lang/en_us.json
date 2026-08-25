@@ -1,6 +1,8 @@
 {
 	"item.beatlamp.beat_lamp": "Beat Lamp",
 	"block.beatlamp.beat_lamp": "Beat Lamp",
+	"item.beatlamp.beat_emitter": "Beat Emitter",
+	"block.beatlamp.beat_emitter": "Beat Emitter",
 	"item.beatlamp.controller": "Lamp Controller",
 	"item.beatlamp.controller.tooltip": "Click two opposite corners to link all lamps inside the area. Click air to cancel.",
 	"item.beatlamp.controller.anchor": "Selection corner: %s, %s, %s",
@@ -40,6 +42,7 @@
 	"message.beatlamp.source.selected": "Jukebox source selected - sneak-click a lamp to bind it (click the same jukebox again to cancel)",
 	"message.beatlamp.source.cancel": "Source selection cancelled",
 	"message.beatlamp.source.bound": "Bound jukebox source to %s lamps",
+	"message.beatlamp.source.bound_emitter": "Bound jukebox source to emitter",
 	"screen.beatlamp.orientation": "Facing",
 	"screen.beatlamp.orientation.auto": "Auto",
 	"screen.beatlamp.orientation.east_west": "East-West",

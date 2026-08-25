@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.beatlamp.BeatLampBlockEntities;
 import com.beatlamp.BeatLampBlocks;
+import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.LampMode;
 import com.beatlamp.block.LampOrientation;
@@ -13,11 +14,13 @@ import com.beatlamp.client.audio.JukeboxAudioTracker;
 import com.beatlamp.client.gui.LampConfigScreen;
 import com.beatlamp.client.render.BeatLampRenderer;
 import com.beatlamp.client.render.LampOutlineRenderer;
+import com.beatlamp.network.EmitterSignalPayload;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 
 import net.minecraft.client.Minecraft;
@@ -52,6 +55,7 @@ public class BeatLampClient implements ClientModInitializer {
 		BlockEntityRenderers.register(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);
 
 		BeatLampBlockEntity.clientTicker = BeatLampClient::tickLamp;
+		BeatEmitterBlockEntity.clientTicker = BeatLampClient::tickEmitter;
 		BeatLampBlockEntity.controllerUser = beatLamp -> {
 			Minecraft minecraft = Minecraft.getInstance();
 			minecraft.execute(() -> {
@@ -145,6 +149,36 @@ public class BeatLampClient implements ClientModInitializer {
 			if (level.getRandom().nextInt(threshold) == 0) {
 				spawnParticle(level, blockPos, beatLamp);
 			}
+		}
+	}
+
+	private static void tickEmitter(BeatEmitterBlockEntity emitter) {
+		Level level = emitter.getLevel();
+		if (level == null) {
+			return;
+		}
+
+		Minecraft minecraft = Minecraft.getInstance();
+
+		if (minecraft.player == null || minecraft.player.distanceToSqr(
+			emitter.getBlockPos().getX() + 0.5, emitter.getBlockPos().getY() + 0.5, emitter.getBlockPos().getZ() + 0.5
+		) >= 4096.0) {
+			return;
+		}
+
+		BlockPos blockPos = emitter.getBlockPos();
+		Vec3 center = Vec3.atCenterOf(blockPos);
+		BlockPos source = emitter.getSource();
+
+		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
+		float beat = JukeboxAudioTracker.getBeatPulseAt(center, source);
+		float energy = Mth.clamp(Math.max(audioLevel, beat * 0.8F), 0.0F, 1.0F);
+		int signal = Math.round(energy * 15.0F);
+		long gameTime = level.getGameTime();
+
+		if (emitter.shouldSendSignal(gameTime, signal)) {
+			ClientPlayNetworking.send(new EmitterSignalPayload(blockPos, signal));
+			emitter.markSent(gameTime, signal);
 		}
 	}
 

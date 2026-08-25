@@ -7,7 +7,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.network.EmitterSignalPayload;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
 
@@ -43,6 +45,7 @@ public class BeatLamp implements ModInitializer {
 
 		PayloadTypeRegistry.playC2S().register(LampConfigurePayload.ID, LampConfigurePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(LampSourcePayload.ID, LampSourcePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(EmitterSignalPayload.ID, EmitterSignalPayload.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(LampConfigurePayload.ID, (payload, context) -> {
 			Level level = context.player().level();
@@ -98,6 +101,16 @@ public class BeatLamp implements ModInitializer {
 				if (level.getBlockEntity(member) instanceof BeatLampBlockEntity beatLamp) {
 					beatLamp.setSource(null);
 				}
+			}
+		});
+
+		ServerPlayNetworking.registerGlobalReceiver(EmitterSignalPayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+
+			if (level.getBlockEntity(payload.pos()) instanceof BeatEmitterBlockEntity emitter
+				&& context.player().distanceToSqr(payload.pos().getX() + 0.5, payload.pos().getY() + 0.5, payload.pos().getZ() + 0.5) < 4096.0) {
+				emitter.setSignal(Math.max(0, Math.min(15, payload.signal())), level.getGameTime());
+				level.updateNeighborsAt(payload.pos(), BeatLampBlocks.BEAT_EMITTER);
 			}
 		});
 
@@ -174,6 +187,14 @@ public class BeatLamp implements ModInitializer {
 			if (level.getBlockEntity(target) instanceof BeatLampBlockEntity other) {
 				other.setManualGroup(List.of());
 			}
+		}
+	}
+
+	public static void bindEmitterSource(ServerPlayer player, BlockPos emitterPos, ItemStack controller, BlockPos source) {
+		if (player.level().getBlockEntity(emitterPos) instanceof BeatEmitterBlockEntity emitter) {
+			emitter.setSource(source);
+			controller.remove(BeatLampItems.SOURCE_POS);
+			message(player, "message.beatlamp.source.bound_emitter");
 		}
 	}
 

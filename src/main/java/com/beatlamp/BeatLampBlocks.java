@@ -1,5 +1,6 @@
 package com.beatlamp;
 
+import com.beatlamp.block.BeatEmitterBlock;
 import com.beatlamp.block.BeatLampBlock;
 
 import net.minecraft.core.Registry;
@@ -18,7 +19,10 @@ public class BeatLampBlocks {
 			.noOcclusion()
 	);
 
+	public static final BeatEmitterBlock BEAT_EMITTER = new BeatEmitterBlock(BeatEmitterBlock.emitterProperties());
+
 	public static void register() {
 		Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_lamp"), BEAT_LAMP);
+		Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_emitter"), BEAT_EMITTER);
 	}
 }

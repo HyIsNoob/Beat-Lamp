@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.beatlamp.BeatLamp;
 import com.beatlamp.BeatLampItems;
+import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
 
 import net.minecraft.ChatFormatting;
@@ -44,6 +45,20 @@ public class LampControllerItem extends Item {
 				}
 
 				return InteractionResult.SUCCESS;
+			}
+
+			if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
+				BlockPos pendingSource = context.getItemInHand().get(BeatLampItems.SOURCE_POS);
+
+				if (pendingSource != null) {
+					if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+						BeatLamp.bindEmitterSource(serverPlayer, blockPos, context.getItemInHand(), pendingSource);
+					}
+
+					return InteractionResult.SUCCESS;
+				}
+
+				return InteractionResult.PASS;
 			}
 
 			if (level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity beatLamp) {

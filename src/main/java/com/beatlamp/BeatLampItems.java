@@ -15,6 +15,7 @@ import net.minecraft.world.item.Item;
 
 public class BeatLampItems {
 	public static final BlockItem BEAT_LAMP = new BlockItem(BeatLampBlocks.BEAT_LAMP, new Item.Properties());
+	public static final BlockItem BEAT_EMITTER = new BlockItem(BeatLampBlocks.BEAT_EMITTER, new Item.Properties());
 	public static final LampControllerItem CONTROLLER = new LampControllerItem(new Item.Properties().stacksTo(1));
 
 	public static final DataComponentType<BlockPos> ANCHOR_POS = Registry.register(
@@ -31,9 +32,11 @@ public class BeatLampItems {
 
 	public static void register() {
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_lamp"), BEAT_LAMP);
+		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_emitter"), BEAT_EMITTER);
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "controller"), CONTROLLER);
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.COLORED_BLOCKS).register(entries -> entries.accept(BEAT_LAMP));
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(entries -> entries.accept(BEAT_LAMP));
+		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.REDSTONE_BLOCKS).register(entries -> entries.accept(BEAT_EMITTER));
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.TOOLS_AND_UTILITIES).register(entries -> entries.accept(CONTROLLER));
 	}
 }

@@ -1,5 +1,6 @@
 package com.beatlamp;
 
+import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
 
 import net.minecraft.core.Registry;
@@ -12,6 +13,12 @@ public class BeatLampBlockEntities {
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
 		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_lamp"),
 		BlockEntityType.Builder.of(BeatLampBlockEntity::new, BeatLampBlocks.BEAT_LAMP).build(null)
+	);
+
+	public static final BlockEntityType<BeatEmitterBlockEntity> BEAT_EMITTER = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE,
+		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_emitter"),
+		BlockEntityType.Builder.of(BeatEmitterBlockEntity::new, BeatLampBlocks.BEAT_EMITTER).build(null)
 	);
 
 	public static void register() {
