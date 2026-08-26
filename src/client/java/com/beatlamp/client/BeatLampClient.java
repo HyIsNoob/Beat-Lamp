@@ -95,7 +95,7 @@ public class BeatLampClient implements ClientModInitializer {
 			updateGroupInfo(level, beatLamp, blockPos);
 		}
 
-		float time = level.getGameTime() * speed;
+		float time = JukeboxAudioTracker.getEffectTime() * speed;
 		float energy = Mth.clamp(Math.max(beatLamp.pulse, beatLamp.beatPulse * 0.8F), 0.0F, 1.0F);
 
 		switch (mode) {

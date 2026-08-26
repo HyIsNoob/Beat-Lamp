@@ -24,6 +24,11 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 	}
 
 	@Override
+	public int getViewDistance() {
+		return 512;
+	}
+
+	@Override
 	public void render(
 		BeatLampBlockEntity beatLamp,
 		float partialTick,
@@ -105,23 +110,17 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		int light
 	) {
 		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{-halfX, -halfY, halfZ}, new float[]{halfX, -halfY, halfZ}, new float[]{halfX, halfY, halfZ}, new float[]{-halfX, halfY, halfZ},
-			0.0F, 0.0F, 1.0F);
+			new float[]{-halfX, -halfY, halfZ}, new float[]{halfX, -halfY, halfZ}, new float[]{halfX, halfY, halfZ}, new float[]{-halfX, halfY, halfZ});
 		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{halfX, -halfY, -halfZ}, new float[]{-halfX, -halfY, -halfZ}, new float[]{-halfX, halfY, -halfZ}, new float[]{halfX, halfY, -halfZ},
-			0.0F, 0.0F, -1.0F);
+			new float[]{halfX, -halfY, -halfZ}, new float[]{-halfX, -halfY, -halfZ}, new float[]{-halfX, halfY, -halfZ}, new float[]{halfX, halfY, -halfZ});
 		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{halfX, -halfY, halfZ}, new float[]{halfX, -halfY, -halfZ}, new float[]{halfX, halfY, -halfZ}, new float[]{halfX, halfY, halfZ},
-			1.0F, 0.0F, 0.0F);
+			new float[]{halfX, -halfY, halfZ}, new float[]{halfX, -halfY, -halfZ}, new float[]{halfX, halfY, -halfZ}, new float[]{halfX, halfY, halfZ});
 		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{-halfX, -halfY, -halfZ}, new float[]{-halfX, -halfY, halfZ}, new float[]{-halfX, halfY, halfZ}, new float[]{-halfX, halfY, -halfZ},
-			-1.0F, 0.0F, 0.0F);
+			new float[]{-halfX, -halfY, -halfZ}, new float[]{-halfX, -halfY, halfZ}, new float[]{-halfX, halfY, halfZ}, new float[]{-halfX, halfY, -halfZ});
 		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{-halfX, halfY, halfZ}, new float[]{halfX, halfY, halfZ}, new float[]{halfX, halfY, -halfZ}, new float[]{-halfX, halfY, -halfZ},
-			0.0F, 1.0F, 0.0F);
+			new float[]{-halfX, halfY, halfZ}, new float[]{halfX, halfY, halfZ}, new float[]{halfX, halfY, -halfZ}, new float[]{-halfX, halfY, -halfZ});
 		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{-halfX, -halfY, -halfZ}, new float[]{halfX, -halfY, -halfZ}, new float[]{-halfX, -halfY, halfZ}, new float[]{-halfX, -halfY, halfZ},
-			0.0F, -1.0F, 0.0F);
+			new float[]{-halfX, -halfY, -halfZ}, new float[]{halfX, -halfY, -halfZ}, new float[]{halfX, -halfY, halfZ}, new float[]{-halfX, -halfY, halfZ});
 	}
 
 	private static void drawFace(
@@ -136,15 +135,12 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float[] v0,
 		float[] v1,
 		float[] v2,
-		float[] v3,
-		float normalX,
-		float normalY,
-		float normalZ
+		float[] v3
 	) {
-		vertex(consumer, matrix, v0, red, green, blue, alpha, 0.0F, 0.0F, light, pose, normalX, normalY, normalZ);
-		vertex(consumer, matrix, v1, red, green, blue, alpha, 1.0F, 0.0F, light, pose, normalX, normalY, normalZ);
-		vertex(consumer, matrix, v2, red, green, blue, alpha, 1.0F, 1.0F, light, pose, normalX, normalY, normalZ);
-		vertex(consumer, matrix, v3, red, green, blue, alpha, 0.0F, 1.0F, light, pose, normalX, normalY, normalZ);
+		vertex(consumer, matrix, v0, red, green, blue, alpha, 0.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, v1, red, green, blue, alpha, 1.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, v2, red, green, blue, alpha, 1.0F, 1.0F, light, pose);
+		vertex(consumer, matrix, v3, red, green, blue, alpha, 0.0F, 1.0F, light, pose);
 	}
 
 	private static void vertex(
@@ -158,16 +154,13 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float u,
 		float v,
 		int light,
-		PoseStack.Pose pose,
-		float normalX,
-		float normalY,
-		float normalZ
+		PoseStack.Pose pose
 	) {
 		consumer.addVertex(matrix, position[0], position[1], position[2])
 			.setColor(red, green, blue, alpha)
 			.setUv(u, v)
 			.setOverlay(OverlayTexture.NO_OVERLAY)
 			.setLight(light)
-			.setNormal(pose, normalX, normalY, normalZ);
+			.setNormal(pose, 0.0F, 1.0F, 0.0F);
 	}
 }

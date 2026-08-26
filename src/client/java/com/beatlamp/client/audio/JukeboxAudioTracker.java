@@ -25,6 +25,7 @@ public final class JukeboxAudioTracker {
 	private static final double AUDIBLE_RADIUS = 64.0;
 	private static final int MAX_CONSECUTIVE_ERRORS = 64;
 	private static final Map<BlockPos, ActiveSong> ACTIVE_SONGS = new ConcurrentHashMap<>();
+	private static float effectTime;
 
 	private JukeboxAudioTracker() {
 	}
@@ -237,13 +238,25 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static void clientTick() {
-		ACTIVE_SONGS.values().forEach(song -> {
+		float maxBeat = 0.0F;
+
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
 			if (song.analyzer.consumeBeat()) {
 				song.beatPulse = 1.0F;
 			} else {
 				song.beatPulse *= 0.85F;
 			}
-		});
+
+			if (song.beatPulse > maxBeat) {
+				maxBeat = song.beatPulse;
+			}
+		}
+
+		effectTime += 1.0F + 1.5F * maxBeat;
+	}
+
+	public static float getEffectTime() {
+		return effectTime;
 	}
 
 	public static float getLevelAt(Vec3 position) {

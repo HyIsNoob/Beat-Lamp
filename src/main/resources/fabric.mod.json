@@ -3,7 +3,7 @@
 	"id": "beatlamp",
 	"version": "${version}",
 	"name": "Beat Lamp",
-	"description": "Audio-reactive lamps that pulse to the beat of jukebox music. Works with vanilla discs, resource pack music, and modded music discs.\n\nModes: Pulse - lamps scale and glow to the bass. RGB - rainbow color cycle. Spectrum - equalizer bars, columns of lamps fill up like one solid block. Ripple - rings expand outward from the group center. Wave - a wave runs along the group. Scan - a light sweeps back and forth.\n\nUsage: Right-click a lamp to cycle modes, sneak + right-click to cycle colors, or use dye. Hold the Lamp Controller: click one corner, then click the opposite corner to link ALL lamps inside that area (max 512, range 48 blocks) with a live preview box - like Create's Super Glue. Right-click air to cancel a selection. Sneak + click a lamp with the controller to open settings (mode, sensitivity, speed, color, frameless, black background, particles, unlink group).",
+	"description": "Audio-reactive lamps and redstone emitters that pulse to the beat of jukebox music. Works with vanilla discs, resource pack music, and modded music discs.\n\nFeatures:\n- Beat Lamp: 6 reactive modes (Pulse, RGB, Spectrum, Ripple, Wave, Scan), 16 dye colors + OLED rainbow, frameless styling, and particle effects.\n- Beat Emitter: Outputs redstone power (0-15) dynamically reacting to jukebox bass and music energy.\n- Lamp Controller: Link lamps into synchronized groups with live preview, bind to specific jukeboxes, or configure all settings.",
 	"authors": [
 		"khang"
 	],
