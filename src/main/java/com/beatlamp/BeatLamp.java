@@ -77,6 +77,7 @@ public class BeatLamp implements ModInitializer {
 						payload.frameless(),
 						payload.blackback(),
 						payload.idleLight(),
+						payload.reverse(),
 						payload.particles(),
 						payload.orientation()
 					);

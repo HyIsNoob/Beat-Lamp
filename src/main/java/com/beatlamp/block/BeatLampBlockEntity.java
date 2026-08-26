@@ -49,6 +49,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 	private boolean frameless = true;
 	private boolean blackback = true;
 	private boolean idleLight;
+	private boolean reverse;
 	private LampParticles particles = LampParticles.NOTE;
 	private LampOrientation orientation = LampOrientation.AUTO;
 	private List<BlockPos> manualGroup = List.of();
@@ -98,6 +99,10 @@ public class BeatLampBlockEntity extends BlockEntity {
 
 	public boolean isIdleLight() {
 		return this.idleLight;
+	}
+
+	public boolean isReverse() {
+		return this.reverse;
 	}
 
 	public LampParticles getParticles() {
@@ -164,6 +169,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		boolean newFrameless,
 		boolean newBlackback,
 		boolean newIdleLight,
+		boolean newReverse,
 		LampParticles newParticles,
 		LampOrientation newOrientation
 	) {
@@ -173,6 +179,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.color = newColor;
 		this.blackback = newBlackback;
 		this.idleLight = newIdleLight;
+		this.reverse = newReverse;
 		this.particles = newParticles;
 		this.orientation = newOrientation;
 		this.setFrameless(newFrameless);
@@ -246,6 +253,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		compoundTag.putBoolean("frameless", this.frameless);
 		compoundTag.putBoolean("blackback", this.blackback);
 		compoundTag.putBoolean("idleLight", this.idleLight);
+		compoundTag.putBoolean("reverse", this.reverse);
 		compoundTag.putString("particles", this.particles.getSerializedName());
 		compoundTag.putString("orientation", this.orientation.getSerializedName());
 
@@ -274,6 +282,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.frameless = !compoundTag.contains("frameless") || compoundTag.getBoolean("frameless");
 		this.blackback = !compoundTag.contains("blackback") || compoundTag.getBoolean("blackback");
 		this.idleLight = compoundTag.contains("idleLight") && compoundTag.getBoolean("idleLight");
+		this.reverse = compoundTag.getBoolean("reverse");
 		this.particles = LampParticles.byName(compoundTag.getString("particles"));
 		this.orientation = LampOrientation.byName(compoundTag.getString("orientation"));
 

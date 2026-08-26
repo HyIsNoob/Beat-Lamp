@@ -30,6 +30,7 @@ public class LampConfigScreen extends Screen {
 	private boolean frameless;
 	private boolean blackback;
 	private boolean idleLight;
+	private boolean reverse;
 	private LampParticles particles;
 	private LampOrientation orientation;
 	private boolean unlink;
@@ -40,6 +41,7 @@ public class LampConfigScreen extends Screen {
 	private Button blackbackButton;
 	private Button idleLightButton;
 	private Button sourceButton;
+	private Button directionButton;
 	private Button particlesButton;
 	private Button orientationButton;
 	private ValueSlider sensitivitySlider;
@@ -56,6 +58,7 @@ public class LampConfigScreen extends Screen {
 		this.frameless = beatLamp.isFrameless();
 		this.blackback = beatLamp.isBlackback();
 		this.idleLight = beatLamp.isIdleLight();
+		this.reverse = beatLamp.isReverse();
 		this.particles = beatLamp.getParticles();
 		this.orientation = beatLamp.getOrientation();
 		this.sourcePos = beatLamp.getSource() == null ? null : beatLamp.getSource().immutable();
@@ -156,17 +159,24 @@ public class LampConfigScreen extends Screen {
 			}).bounds(centerX + 2, y + 144, 98, 20).build()
 		);
 
+		this.directionButton = this.addRenderableWidget(
+			Button.builder(this.directionLabel(), button -> {
+				this.reverse = !this.reverse;
+				button.setMessage(this.directionLabel());
+			}).bounds(centerX - 100, y + 168, 98, 20).build()
+		);
+
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.beatquality").append(": ").append(Component.translatable(BeatLampClientConfig.highQualityBeat ? "screen.beatlamp.beatquality.high" : "screen.beatlamp.beatquality.low")), button -> {
 				BeatLampClientConfig.highQualityBeat = !BeatLampClientConfig.highQualityBeat;
 				BeatLampClientConfig.save();
 				button.setMessage(Component.translatable("screen.beatlamp.beatquality").append(": ").append(Component.translatable(BeatLampClientConfig.highQualityBeat ? "screen.beatlamp.beatquality.high" : "screen.beatlamp.beatquality.low")));
-			}).bounds(centerX - 100, y + 168, 98, 20).build()
+			}).bounds(centerX + 2, y + 168, 98, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.reset"), button -> this.resetToDefault())
-				.bounds(centerX + 2, y + 168, 98, 20)
+				.bounds(centerX - 100, y + 192, 65, 20)
 				.build()
 		);
 
@@ -174,12 +184,12 @@ public class LampConfigScreen extends Screen {
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX - 100, y + 192, 98, 20).build()
+			}).bounds(centerX - 33, y + 192, 65, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX + 2, y + 192, 98, 20)
+				.bounds(centerX + 34, y + 192, 66, 20)
 				.build()
 		);
 	}
@@ -192,6 +202,7 @@ public class LampConfigScreen extends Screen {
 		this.frameless = true;
 		this.blackback = true;
 		this.idleLight = false;
+		this.reverse = false;
 		this.particles = LampParticles.NOTE;
 		this.orientation = LampOrientation.AUTO;
 
@@ -200,6 +211,7 @@ public class LampConfigScreen extends Screen {
 		this.framelessButton.setMessage(this.framelessLabel());
 		this.blackbackButton.setMessage(this.blackbackLabel());
 		this.idleLightButton.setMessage(this.idleLightLabel());
+		this.directionButton.setMessage(this.directionLabel());
 		this.particlesButton.setMessage(this.particlesLabel());
 		this.orientationButton.setMessage(this.orientationLabel());
 		this.sensitivitySlider.reset(1.0F, 0.25, 3.0);
@@ -228,6 +240,12 @@ public class LampConfigScreen extends Screen {
 
 	private Component idleLightLabel() {
 		return Component.translatable("screen.beatlamp.idlelight").append(": ").append(Component.translatable(this.idleLight ? "gui.yes" : "gui.no"));
+	}
+
+	private Component directionLabel() {
+		return Component.translatable("screen.beatlamp.direction")
+			.append(": ")
+			.append(Component.translatable(this.reverse ? "screen.beatlamp.direction.reverse" : "screen.beatlamp.direction.forward"));
 	}
 
 	private Component sourceLabel() {
@@ -271,7 +289,7 @@ public class LampConfigScreen extends Screen {
 	public void onClose() {
 		ClientPlayNetworking.send(
 			new LampConfigurePayload(
-				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.frameless, this.blackback, this.idleLight, this.particles, this.orientation, this.unlink
+				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.frameless, this.blackback, this.idleLight, this.reverse, this.particles, this.orientation, this.unlink
 			)
 		);
 		super.onClose();

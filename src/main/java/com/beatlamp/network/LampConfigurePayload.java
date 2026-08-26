@@ -19,6 +19,7 @@ public record LampConfigurePayload(
 	boolean frameless,
 	boolean blackback,
 	boolean idleLight,
+	boolean reverse,
 	LampParticles particles,
 	LampOrientation orientation,
 	boolean unlink
@@ -38,6 +39,7 @@ public record LampConfigurePayload(
 		buf.writeBoolean(payload.frameless());
 		buf.writeBoolean(payload.blackback());
 		buf.writeBoolean(payload.idleLight());
+		buf.writeBoolean(payload.reverse());
 		buf.writeVarInt(payload.particles().ordinal());
 		buf.writeVarInt(payload.orientation().ordinal());
 		buf.writeBoolean(payload.unlink());
@@ -50,6 +52,7 @@ public record LampConfigurePayload(
 			buf.readFloat(),
 			buf.readFloat(),
 			buf.readVarInt(),
+			buf.readBoolean(),
 			buf.readBoolean(),
 			buf.readBoolean(),
 			buf.readBoolean(),

@@ -105,7 +105,8 @@ public class BeatLampClient implements ClientModInitializer {
 				beatLamp.displayColor = java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
 			}
 			case SPECTRUM -> {
-				int band = Math.min(AudioAnalyzer.BAND_COUNT - 1, beatLamp.bandIndex * AudioAnalyzer.BAND_COUNT / Math.max(1, beatLamp.bandCount));
+				int spatialIndex = beatLamp.isReverse() ? Math.max(0, beatLamp.bandCount - 1 - beatLamp.bandIndex) : beatLamp.bandIndex;
+				int band = Math.min(AudioAnalyzer.BAND_COUNT - 1, spatialIndex * AudioAnalyzer.BAND_COUNT / Math.max(1, beatLamp.bandCount));
 				float bandTarget = Mth.clamp(JukeboxAudioTracker.getBandAt(center, band, source) * sensitivity, 0.0F, 1.0F);
 				float bandDiff = bandTarget - beatLamp.spectrumLevel;
 				beatLamp.spectrumLevel += bandDiff * (bandDiff > 0.0F ? 0.55F : 0.2F);
@@ -116,7 +117,7 @@ public class BeatLampClient implements ClientModInitializer {
 				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, (float) band / (AudioAnalyzer.BAND_COUNT - 1), energy);
 			}
 			case RIPPLE -> {
-				float phase = (time * 0.15F - beatLamp.groupDistance * 0.35F) % 1.0F;
+				float phase = (time * 0.15F + (beatLamp.isReverse() ? 0.35F : -0.35F) * beatLamp.groupDistance) % 1.0F;
 				if (phase < 0.0F) {
 					phase += 1.0F;
 				}
@@ -127,7 +128,7 @@ public class BeatLampClient implements ClientModInitializer {
 				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, beatLamp.groupDistance * 0.15F, energy);
 			}
 			case WAVE -> {
-				float wave = (float) (0.5 + 0.5 * Math.sin(time * 0.25F - beatLamp.groupIndex * 0.7F));
+				float wave = (float) (0.5 + 0.5 * Math.sin(time * 0.25F + (beatLamp.isReverse() ? 0.7F : -0.7F) * beatLamp.groupIndex));
 				float value = Mth.clamp(wave * (0.3F + beatLamp.pulse * 0.7F), 0.0F, 1.0F);
 				beatLamp.barValue = value;
 				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, (float) beatLamp.groupIndex / Math.max(1, beatLamp.groupSize), energy);
@@ -136,6 +137,11 @@ public class BeatLampClient implements ClientModInitializer {
 				float cycle = (time * 0.08F) % 2.0F;
 				float position = cycle < 1.0F ? cycle : 2.0F - cycle;
 				float lampPos = beatLamp.groupSize > 1 ? (float) beatLamp.groupIndex / (beatLamp.groupSize - 1) : 0.5F;
+
+				if (beatLamp.isReverse()) {
+					lampPos = 1.0F - lampPos;
+				}
+
 				float scan = Mth.clamp(1.0F - Math.abs(position - lampPos) * beatLamp.groupSize * 0.5F, 0.0F, 1.0F);
 				float value = Mth.clamp(scan * (0.4F + beatLamp.pulse * 0.6F), 0.0F, 1.0F);
 				beatLamp.barValue = value;

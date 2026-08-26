@@ -37,6 +37,9 @@
 	"screen.beatlamp.beatquality.high": "High",
 	"screen.beatlamp.beatquality.low": "Low",
 	"screen.beatlamp.idlelight": "Idle Light",
+	"screen.beatlamp.direction": "Direction",
+	"screen.beatlamp.direction.forward": "Forward",
+	"screen.beatlamp.direction.reverse": "Reverse",
 	"screen.beatlamp.source.none": "Source: None",
 	"screen.beatlamp.source.bound": "Source: %s,%s,%s",
 	"message.beatlamp.source.selected": "Jukebox source selected - sneak-click a lamp to bind it (click the same jukebox again to cancel)",
@@ -55,6 +58,6 @@
 	"screen.beatlamp.particles.firework": "Firework",
 	"screen.beatlamp.particles.glow": "Glow",
 	"screen.beatlamp.particles.mixed": "Mixed",
-	"screen.beatlamp.reset": "Reset to Default",
-	"screen.beatlamp.unlink": "Unlink Group"
+	"screen.beatlamp.reset": "Reset",
+	"screen.beatlamp.unlink": "Unlink"
 }
