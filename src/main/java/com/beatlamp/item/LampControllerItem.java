@@ -58,7 +58,11 @@ public class LampControllerItem extends Item {
 					return InteractionResult.SUCCESS;
 				}
 
-				return InteractionResult.PASS;
+				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+					BeatLamp.toggleEmitterMode(serverPlayer, blockPos);
+				}
+
+				return InteractionResult.SUCCESS;
 			}
 
 			if (level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity beatLamp) {
@@ -94,11 +98,13 @@ public class LampControllerItem extends Item {
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand interactionHand) {
 		ItemStack itemStack = player.getItemInHand(interactionHand);
 
-		if (itemStack.get(BeatLampItems.ANCHOR_POS) != null) {
+		if (itemStack.get(BeatLampItems.ANCHOR_POS) != null || itemStack.get(BeatLampItems.SOURCE_POS) != null) {
 			if (!level.isClientSide) {
+				boolean hadAnchor = itemStack.get(BeatLampItems.ANCHOR_POS) != null;
 				itemStack.remove(BeatLampItems.ANCHOR_POS);
+				itemStack.remove(BeatLampItems.SOURCE_POS);
 				player.displayClientMessage(
-					Component.translatable("message.beatlamp.link.cancel").withStyle(ChatFormatting.AQUA), true
+					Component.translatable(hadAnchor ? "message.beatlamp.link.cancel" : "message.beatlamp.source.cancel").withStyle(ChatFormatting.AQUA), true
 				);
 			}
 

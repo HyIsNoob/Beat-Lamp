@@ -194,8 +194,14 @@ public class BeatLamp implements ModInitializer {
 	public static void bindEmitterSource(ServerPlayer player, BlockPos emitterPos, ItemStack controller, BlockPos source) {
 		if (player.level().getBlockEntity(emitterPos) instanceof BeatEmitterBlockEntity emitter) {
 			emitter.setSource(source);
-			controller.remove(BeatLampItems.SOURCE_POS);
 			message(player, "message.beatlamp.source.bound_emitter");
+		}
+	}
+
+	public static void toggleEmitterMode(ServerPlayer player, BlockPos emitterPos) {
+		if (player.level().getBlockEntity(emitterPos) instanceof BeatEmitterBlockEntity emitter) {
+			emitter.togglePulseMode();
+			message(player, emitter.isPulseMode() ? "message.beatlamp.emitter.mode.pulse" : "message.beatlamp.emitter.mode.level");
 		}
 	}
 

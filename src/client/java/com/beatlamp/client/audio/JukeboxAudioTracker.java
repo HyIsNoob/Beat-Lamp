@@ -332,12 +332,7 @@ public final class JukeboxAudioTracker {
 		}
 
 		ActiveSong song = ACTIVE_SONGS.get(source);
-		if (song == null) {
-			return 0.0F;
-		}
-
-		float falloff = falloff(song.position.distanceTo(position));
-		return falloff <= 0.0F ? 0.0F : song.analyzer.getLevel() * falloff;
+		return song == null ? 0.0F : song.analyzer.getLevel();
 	}
 
 	public static float getBeatPulseAt(Vec3 position, BlockPos source) {
@@ -346,12 +341,7 @@ public final class JukeboxAudioTracker {
 		}
 
 		ActiveSong song = ACTIVE_SONGS.get(source);
-		if (song == null) {
-			return 0.0F;
-		}
-
-		float falloff = falloff(song.position.distanceTo(position));
-		return falloff <= 0.0F ? 0.0F : song.beatPulse * falloff;
+		return song == null ? 0.0F : song.beatPulse;
 	}
 
 	public static float getBandAt(Vec3 position, int band, BlockPos source) {
@@ -364,17 +354,12 @@ public final class JukeboxAudioTracker {
 			return 0.0F;
 		}
 
-		float falloff = falloff(song.position.distanceTo(position));
-		if (falloff <= 0.0F) {
-			return 0.0F;
-		}
-
 		float[] bands = song.analyzer.getBands();
 		if (band < 0 || band >= bands.length) {
 			return 0.0F;
 		}
 
-		return bands[band] * falloff;
+		return bands[band];
 	}
 
 	private static float falloff(double distance) {

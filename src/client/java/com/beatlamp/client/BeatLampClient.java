@@ -178,8 +178,15 @@ public class BeatLampClient implements ClientModInitializer {
 
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
 		float beat = JukeboxAudioTracker.getBeatPulseAt(center, source);
-		float energy = Mth.clamp(Math.max(audioLevel, beat * 0.8F), 0.0F, 1.0F);
-		int signal = Math.round(energy * 15.0F);
+		int signal;
+
+		if (emitter.isPulseMode()) {
+			signal = beat >= 0.65F ? 15 : 0;
+		} else {
+			float energy = Mth.clamp(Math.max(audioLevel, beat * 0.8F), 0.0F, 1.0F);
+			signal = Math.round(energy * 15.0F);
+		}
+
 		long gameTime = level.getGameTime();
 
 		if (emitter.shouldSendSignal(gameTime, signal)) {

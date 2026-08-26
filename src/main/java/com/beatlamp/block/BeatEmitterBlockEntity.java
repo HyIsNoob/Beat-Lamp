@@ -18,6 +18,7 @@ public class BeatEmitterBlockEntity extends BlockEntity {
 	};
 
 	private BlockPos sourcePos;
+	private boolean pulseMode;
 	private int signalLevel;
 	private long lastServerUpdate;
 
@@ -34,7 +35,15 @@ public class BeatEmitterBlockEntity extends BlockEntity {
 
 	public void setSource(BlockPos newSource) {
 		this.sourcePos = newSource == null ? null : newSource.immutable();
-		this.setChanged();
+		this.markUpdated();
+	}
+
+	public boolean isPulseMode() {
+		return this.pulseMode;
+	}
+
+	public void togglePulseMode() {
+		this.pulseMode = !this.pulseMode;
 		this.markUpdated();
 	}
 
@@ -69,11 +78,24 @@ public class BeatEmitterBlockEntity extends BlockEntity {
 
 	public void markUpdated() {
 		this.setChanged();
+
+		if (this.level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+			net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket packet =
+				net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+			net.minecraft.world.phys.Vec3 center = net.minecraft.world.phys.Vec3.atCenterOf(this.worldPosition);
+
+			for (net.minecraft.server.level.ServerPlayer player : serverLevel.players()) {
+				if (player.distanceToSqr(center) < 4096.0) {
+					player.connection.send(packet);
+				}
+			}
+		}
 	}
 
 	@Override
 	protected void saveAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
 		super.saveAdditional(compoundTag, provider);
+		compoundTag.putBoolean("pulseMode", this.pulseMode);
 
 		if (this.sourcePos != null) {
 			compoundTag.putLong("source", this.sourcePos.asLong());
@@ -83,6 +105,7 @@ public class BeatEmitterBlockEntity extends BlockEntity {
 	@Override
 	protected void loadAdditional(CompoundTag compoundTag, HolderLookup.Provider provider) {
 		super.loadAdditional(compoundTag, provider);
+		this.pulseMode = compoundTag.getBoolean("pulseMode");
 		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;
 	}
 
