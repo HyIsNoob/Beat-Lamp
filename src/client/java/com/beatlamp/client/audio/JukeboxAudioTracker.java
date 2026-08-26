@@ -36,6 +36,7 @@ public final class JukeboxAudioTracker {
 		Thread thread;
 		volatile boolean running = true;
 		volatile float beatPulse;
+		volatile float impactPulse;
 
 		ActiveSong(Vec3 position, AudioAnalyzer analyzer, Thread thread) {
 			this.position = position;
@@ -247,12 +248,37 @@ public final class JukeboxAudioTracker {
 				song.beatPulse *= 0.85F;
 			}
 
+			if (song.analyzer.consumeImpact()) {
+				song.impactPulse = 1.0F;
+			} else {
+				song.impactPulse *= 0.93F;
+			}
+
 			if (song.beatPulse > maxBeat) {
 				maxBeat = song.beatPulse;
 			}
 		}
 
 		effectTime += 1.0F + 1.5F * maxBeat;
+	}
+
+	public static float getImpactPulseAt(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song == null ? 0.0F : song.impactPulse;
+		}
+
+		float best = 0.0F;
+
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
+			float falloff = falloff(song.position.distanceTo(position));
+			float impact = song.impactPulse * falloff;
+			if (impact > best) {
+				best = impact;
+			}
+		}
+
+		return best;
 	}
 
 	public static float getEffectTime() {

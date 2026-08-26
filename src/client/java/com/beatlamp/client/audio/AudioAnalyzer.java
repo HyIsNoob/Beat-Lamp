@@ -25,6 +25,8 @@ public final class AudioAnalyzer {
 	private float bassAverage = 0.001F;
 	private float envelope;
 	private boolean beatReady;
+	private boolean impactReady;
+	private float previousEnvelope;
 	private long lastBeatSample = -1_000_000L;
 	private final float[] prevBassMagnitude;
 	private static final int FLUX_HISTORY_SIZE = 64;
@@ -103,6 +105,12 @@ public final class AudioAnalyzer {
 		return beat;
 	}
 
+	public boolean consumeImpact() {
+		boolean impact = this.impactReady;
+		this.impactReady = false;
+		return impact;
+	}
+
 	private void update() {
 		if (this.ringFilled < this.fftSize) {
 			return;
@@ -148,6 +156,12 @@ public final class AudioAnalyzer {
 		float target = clamp01(bass / (previousAverage * 2.5F + 0.0001F));
 		float diff = target - this.envelope;
 		this.envelope += diff * (diff > 0.0F ? 0.55F : 0.10F);
+
+		if (this.envelope > 0.55F && this.previousEnvelope <= 0.4F) {
+			this.impactReady = true;
+		}
+
+		this.previousEnvelope = this.envelope;
 
 		for (int b = 0; b < BAND_COUNT; b++) {
 			float sum = 0.0F;

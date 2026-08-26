@@ -6,6 +6,8 @@ import com.beatlamp.BeatLamp;
 import com.beatlamp.BeatLampItems;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.FountainBlockEntity;
+import com.beatlamp.block.StageLightBlockEntity;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -47,19 +49,21 @@ public class LampControllerItem extends Item {
 				return InteractionResult.SUCCESS;
 			}
 
-			if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
+			if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity
+				|| level.getBlockEntity(blockPos) instanceof StageLightBlockEntity
+				|| level.getBlockEntity(blockPos) instanceof FountainBlockEntity) {
 				BlockPos pendingSource = context.getItemInHand().get(BeatLampItems.SOURCE_POS);
 
 				if (pendingSource != null) {
-					if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-						BeatLamp.bindEmitterSource(serverPlayer, blockPos, context.getItemInHand(), pendingSource);
+					if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
+						BeatLamp.bindTarget(serverLevel, blockPos, serverPlayer, context.getItemInHand(), pendingSource);
 					}
 
 					return InteractionResult.SUCCESS;
 				}
 
 				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-					BeatLamp.toggleEmitterMode(serverPlayer, blockPos);
+					BeatLamp.toggleTarget(serverPlayer, blockPos);
 				}
 
 				return InteractionResult.SUCCESS;

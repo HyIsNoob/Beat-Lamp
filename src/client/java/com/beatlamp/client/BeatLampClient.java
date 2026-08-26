@@ -6,15 +6,19 @@ import com.beatlamp.BeatLampBlockEntities;
 import com.beatlamp.BeatLampBlocks;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LampMode;
 import com.beatlamp.block.LampOrientation;
 import com.beatlamp.block.LampParticles;
+import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.client.audio.AudioAnalyzer;
 import com.beatlamp.client.audio.JukeboxAudioTracker;
 import com.beatlamp.client.gui.LampConfigScreen;
 import com.beatlamp.client.render.BeatLampRenderer;
 import com.beatlamp.client.render.LampOutlineRenderer;
+import com.beatlamp.client.render.StageLightRenderer;
 import com.beatlamp.network.EmitterSignalPayload;
+import com.beatlamp.network.FountainFirePayload;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
@@ -53,9 +57,12 @@ public class BeatLampClient implements ClientModInitializer {
 
 		BlockRenderLayerMap.INSTANCE.putBlock(BeatLampBlocks.BEAT_LAMP, RenderType.cutout());
 		BlockEntityRenderers.register(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);
+		BlockEntityRenderers.register(BeatLampBlockEntities.STAGE_LIGHT, StageLightRenderer::new);
 
 		BeatLampBlockEntity.clientTicker = BeatLampClient::tickLamp;
 		BeatEmitterBlockEntity.clientTicker = BeatLampClient::tickEmitter;
+		StageLightBlockEntity.clientTicker = BeatLampClient::tickStageLight;
+		FountainBlockEntity.clientTicker = BeatLampClient::tickFountain;
 		BeatLampBlockEntity.controllerUser = beatLamp -> {
 			Minecraft minecraft = Minecraft.getInstance();
 			minecraft.execute(() -> {
@@ -192,6 +199,63 @@ public class BeatLampClient implements ClientModInitializer {
 		if (emitter.shouldSendSignal(gameTime, signal)) {
 			ClientPlayNetworking.send(new EmitterSignalPayload(blockPos, signal));
 			emitter.markSent(gameTime, signal);
+		}
+	}
+
+	private static void tickStageLight(StageLightBlockEntity light) {
+		Level level = light.getLevel();
+		if (level == null) {
+			return;
+		}
+
+		Vec3 center = Vec3.atCenterOf(light.getBlockPos());
+		BlockPos source = light.getSource();
+		light.beamEnergy = JukeboxAudioTracker.getLevelAt(center, source);
+		light.beamBeat = JukeboxAudioTracker.getBeatPulseAt(center, source);
+	}
+
+	private static void tickFountain(FountainBlockEntity fountain) {
+		Level level = fountain.getLevel();
+		if (level == null) {
+			return;
+		}
+
+		BlockPos blockPos = fountain.getBlockPos();
+		Vec3 center = Vec3.atCenterOf(blockPos);
+		BlockPos source = fountain.getSource();
+		float energy = Mth.clamp(Math.max(
+			JukeboxAudioTracker.getLevelAt(center, source),
+			JukeboxAudioTracker.getBeatPulseAt(center, source) * 0.8F
+		), 0.0F, 1.0F);
+		float impact = JukeboxAudioTracker.getImpactPulseAt(center, source);
+		fountain.fountainEnergy = energy;
+		fountain.fountainImpact = impact;
+
+		RandomSource random = level.getRandom();
+
+		if (energy > 0.08F && random.nextInt(3) == 0) {
+			double x = blockPos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.3;
+			double z = blockPos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.3;
+			level.addParticle(ParticleTypes.FLAME, x, blockPos.getY() + 1.05, z,
+				(random.nextDouble() - 0.5) * 0.05, 0.08 + energy * 0.2, (random.nextDouble() - 0.5) * 0.05);
+		}
+
+		if (impact > 0.9F) {
+			for (int i = 0; i < 24; i++) {
+				double angle = random.nextDouble() * Math.PI * 2.0;
+				double speed = 0.08 + random.nextDouble() * 0.22;
+				level.addParticle(ParticleTypes.FIREWORK, blockPos.getX() + 0.5, blockPos.getY() + 1.1, blockPos.getZ() + 0.5,
+					Math.cos(angle) * speed, 0.15 + random.nextDouble() * 0.3, Math.sin(angle) * speed);
+			}
+		}
+
+		Minecraft minecraft = Minecraft.getInstance();
+
+		if (fountain.isFireworkMode() && impact > 0.9F && minecraft.player != null
+			&& minecraft.player.distanceToSqr(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5) < 4096.0
+			&& level.getGameTime() - fountain.lastFireSend >= 20L) {
+			fountain.lastFireSend = level.getGameTime();
+			ClientPlayNetworking.send(new FountainFirePayload(blockPos));
 		}
 	}
 

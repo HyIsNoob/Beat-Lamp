@@ -9,7 +9,10 @@ import java.util.Set;
 
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.FountainBlockEntity;
+import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.network.EmitterSignalPayload;
+import com.beatlamp.network.FountainFirePayload;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
 
@@ -46,6 +49,7 @@ public class BeatLamp implements ModInitializer {
 		PayloadTypeRegistry.playC2S().register(LampConfigurePayload.ID, LampConfigurePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(LampSourcePayload.ID, LampSourcePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(EmitterSignalPayload.ID, EmitterSignalPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(FountainFirePayload.ID, FountainFirePayload.CODEC);
 
 		ServerPlayNetworking.registerGlobalReceiver(LampConfigurePayload.ID, (payload, context) -> {
 			Level level = context.player().level();
@@ -115,7 +119,46 @@ public class BeatLamp implements ModInitializer {
 			}
 		});
 
+		ServerPlayNetworking.registerGlobalReceiver(FountainFirePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+
+			if (level.getBlockEntity(payload.pos()) instanceof FountainBlockEntity fountain
+				&& context.player().distanceToSqr(payload.pos().getX() + 0.5, payload.pos().getY() + 0.5, payload.pos().getZ() + 0.5) < 4096.0
+				&& fountain.canFire(level.getGameTime())) {
+				fountain.markFired(level.getGameTime());
+				spawnFirework((ServerLevel) level, payload.pos(), fountain.getColor());
+			}
+		});
+
 		LOGGER.info("Beat Lamp initialized");
+	}
+
+	private static void spawnFirework(ServerLevel level, BlockPos pos, int color) {
+		java.util.List<Integer> colors = new java.util.ArrayList<>();
+
+		if (color == 0) {
+			for (net.minecraft.world.item.DyeColor dye : net.minecraft.world.item.DyeColor.values()) {
+				colors.add(dye.getFireworkColor());
+			}
+		} else {
+			colors.add(color);
+		}
+
+		net.minecraft.world.item.component.FireworkExplosion explosion = new net.minecraft.world.item.component.FireworkExplosion(
+			net.minecraft.world.item.component.FireworkExplosion.Shape.values()[level.random.nextInt(net.minecraft.world.item.component.FireworkExplosion.Shape.values().length)],
+			new it.unimi.dsi.fastutil.ints.IntArrayList(colors),
+			new it.unimi.dsi.fastutil.ints.IntArrayList(),
+			level.random.nextBoolean(),
+			true
+		);
+
+		net.minecraft.world.item.ItemStack stack = new net.minecraft.world.item.ItemStack(net.minecraft.world.item.Items.FIREWORK_ROCKET);
+		stack.set(net.minecraft.core.component.DataComponents.FIREWORKS, new net.minecraft.world.item.component.Fireworks(1, java.util.List.of(explosion)));
+
+		net.minecraft.world.entity.projectile.FireworkRocketEntity rocket = new net.minecraft.world.entity.projectile.FireworkRocketEntity(
+			level, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, stack
+		);
+		level.addFreshEntity(rocket);
 	}
 
 	public static void handleLink(ServerLevel level, BlockPos pos, ServerPlayer player, ItemStack controller) {
@@ -191,17 +234,46 @@ public class BeatLamp implements ModInitializer {
 		}
 	}
 
-	public static void bindEmitterSource(ServerPlayer player, BlockPos emitterPos, ItemStack controller, BlockPos source) {
-		if (player.level().getBlockEntity(emitterPos) instanceof BeatEmitterBlockEntity emitter) {
+	public static void bindTarget(ServerLevel level, BlockPos pos, ServerPlayer player, ItemStack controller, BlockPos source) {
+		if (level.getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
 			emitter.setSource(source);
 			message(player, "message.beatlamp.source.bound_emitter");
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof StageLightBlockEntity light) {
+			light.setSource(source);
+			message(player, "message.beatlamp.source.bound_light");
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof FountainBlockEntity fountain) {
+			fountain.setSource(source);
+			message(player, "message.beatlamp.source.bound_fountain");
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof BeatLampBlockEntity) {
+			bindSource(level, pos, player, controller, source);
 		}
 	}
 
-	public static void toggleEmitterMode(ServerPlayer player, BlockPos emitterPos) {
-		if (player.level().getBlockEntity(emitterPos) instanceof BeatEmitterBlockEntity emitter) {
+	public static void toggleTarget(ServerPlayer player, BlockPos pos) {
+		if (player.level().getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
 			emitter.togglePulseMode();
 			message(player, emitter.isPulseMode() ? "message.beatlamp.emitter.mode.pulse" : "message.beatlamp.emitter.mode.level");
+			return;
+		}
+
+		if (player.level().getBlockEntity(pos) instanceof StageLightBlockEntity light) {
+			light.toggleSweep();
+			message(player, light.isSweepMode() ? "message.beatlamp.light.mode.sweep" : "message.beatlamp.light.mode.fixed");
+			return;
+		}
+
+		if (player.level().getBlockEntity(pos) instanceof FountainBlockEntity fountain) {
+			fountain.toggleFirework();
+			message(player, fountain.isFireworkMode() ? "message.beatlamp.fountain.mode.firework" : "message.beatlamp.fountain.mode.visual");
 		}
 	}
 

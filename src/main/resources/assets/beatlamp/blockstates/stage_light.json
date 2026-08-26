@@ -1,0 +1,10 @@
+{
+	"variants": {
+		"facing=down": { "model": "beatlamp:block/stage_light" },
+		"facing=east": { "model": "beatlamp:block/stage_light" },
+		"facing=north": { "model": "beatlamp:block/stage_light" },
+		"facing=south": { "model": "beatlamp:block/stage_light" },
+		"facing=up": { "model": "beatlamp:block/stage_light" },
+		"facing=west": { "model": "beatlamp:block/stage_light" }
+	}
+}
