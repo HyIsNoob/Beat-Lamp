@@ -6,6 +6,8 @@ import com.beatlamp.BeatLamp;
 import com.beatlamp.BeatLampBlocks;
 import com.beatlamp.BeatLampItems;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.FountainBlockEntity;
+import com.beatlamp.block.StageLightBlockEntity;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
@@ -41,14 +43,14 @@ public final class LampOutlineRenderer {
 			return;
 		}
 
-		ItemStack controller = getHeldController(player);
+		ItemStack heldItem = getHeldTool(player);
 
-		if (controller == null) {
+		if (heldItem == null) {
 			cachedTarget = null;
 			return;
 		}
 
-		BlockPos anchor = controller.get(BeatLampItems.ANCHOR_POS);
+		BlockPos anchor = heldItem.get(BeatLampItems.ANCHOR_POS);
 
 		PoseStack poseStack = context.matrixStack();
 		Vec3 camera = context.camera().getPosition();
@@ -66,7 +68,7 @@ public final class LampOutlineRenderer {
 	}
 
 	private static void renderGroupPreview(WorldRenderContext context, PoseStack poseStack, Player player) {
-		BlockPos target = findLookedAtLamp(context.world(), player);
+		BlockPos target = findLookedAtDevice(context.world(), player);
 
 		if (target == null) {
 			cachedTarget = null;
@@ -158,11 +160,11 @@ public final class LampOutlineRenderer {
 		consumer.addVertex(poseStack.last(), x3, y3, z3).setColor(red, green, blue, alpha);
 	}
 
-	private static ItemStack getHeldController(Player player) {
+	private static ItemStack getHeldTool(Player player) {
 		for (InteractionHand interactionHand : InteractionHand.values()) {
 			ItemStack itemStack = player.getItemInHand(interactionHand);
 
-			if (itemStack.is(BeatLampItems.CONTROLLER)) {
+			if (itemStack.is(BeatLampItems.LINKER) || itemStack.is(BeatLampItems.CONTROLLER)) {
 				return itemStack;
 			}
 		}
@@ -173,24 +175,47 @@ public final class LampOutlineRenderer {
 	private static List<BlockPos> resolveMembers(Level level, BlockPos target) {
 		if (level.getBlockEntity(target) instanceof BeatLampBlockEntity beatLamp && beatLamp.getManualGroup().size() >= 2) {
 			List<BlockPos> members = new java.util.ArrayList<>();
-
 			for (BlockPos member : beatLamp.getManualGroup()) {
-				if (level.getBlockState(member).is(BeatLampBlocks.BEAT_LAMP)) {
+				if (isSupportedDevice(level, member)) {
 					members.add(member);
 				}
 			}
-
+			return members;
+		}
+		if (level.getBlockEntity(target) instanceof StageLightBlockEntity light && light.getManualGroup().size() >= 2) {
+			List<BlockPos> members = new java.util.ArrayList<>();
+			for (BlockPos member : light.getManualGroup()) {
+				if (isSupportedDevice(level, member)) {
+					members.add(member);
+				}
+			}
+			return members;
+		}
+		if (level.getBlockEntity(target) instanceof FountainBlockEntity fountain && fountain.getManualGroup().size() >= 2) {
+			List<BlockPos> members = new java.util.ArrayList<>();
+			for (BlockPos member : fountain.getManualGroup()) {
+				if (isSupportedDevice(level, member)) {
+					members.add(member);
+				}
+			}
 			return members;
 		}
 
 		return BeatLamp.floodFill(level, target);
 	}
 
-	private static BlockPos findLookedAtLamp(Level level, Player player) {
+	private static boolean isSupportedDevice(Level level, BlockPos pos) {
+		return level.getBlockState(pos).is(BeatLampBlocks.BEAT_LAMP)
+			|| level.getBlockState(pos).is(BeatLampBlocks.STAGE_LIGHT)
+			|| level.getBlockState(pos).is(BeatLampBlocks.FOUNTAIN)
+			|| level.getBlockState(pos).is(BeatLampBlocks.BEAT_EMITTER);
+	}
+
+	private static BlockPos findLookedAtDevice(Level level, Player player) {
 		var hitResult = player.pick(8.0, 0.0F, false);
 
 		if (hitResult instanceof BlockHitResult blockHitResult
-			&& level.getBlockState(blockHitResult.getBlockPos()).is(BeatLampBlocks.BEAT_LAMP)) {
+			&& isSupportedDevice(level, blockHitResult.getBlockPos())) {
 			return blockHitResult.getBlockPos();
 		}
 

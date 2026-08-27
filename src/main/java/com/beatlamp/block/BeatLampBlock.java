@@ -87,14 +87,6 @@ public class BeatLampBlock extends BaseEntityBlock {
 	protected ItemInteractionResult useItemOn(
 		ItemStack itemStack, BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult
 	) {
-		if (itemStack.is(BeatLampItems.CONTROLLER)) {
-			if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-				BeatLamp.handleLink((ServerLevel) level, blockPos, serverPlayer, itemStack);
-			}
-
-			return ItemInteractionResult.SUCCESS;
-		}
-
 		if (itemStack.getItem() instanceof DyeItem dyeItem) {
 			if (!level.isClientSide
 				&& level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity beatLamp

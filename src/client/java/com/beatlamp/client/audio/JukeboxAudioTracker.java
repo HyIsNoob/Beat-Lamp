@@ -201,10 +201,10 @@ public final class JukeboxAudioTracker {
 				long elapsedNanos = System.nanoTime() - startNanos;
 				double expectedSeconds = (double) analyzer.getTotalSamples() / analyzer.getSampleRate();
 				double elapsedSeconds = elapsedNanos / 1_000_000_000.0;
-				double aheadSeconds = expectedSeconds - elapsedSeconds;
-				if (aheadSeconds > 0.08) {
+				double lead = expectedSeconds - elapsedSeconds;
+				if (lead > 0.035) {
 					try {
-						Thread.sleep((long) ((aheadSeconds - 0.05) * 1000.0));
+						Thread.sleep((long) ((lead - 0.020) * 1000.0));
 					} catch (InterruptedException interruptedException) {
 						Thread.currentThread().interrupt();
 						break;
@@ -245,13 +245,13 @@ public final class JukeboxAudioTracker {
 			if (song.analyzer.consumeBeat()) {
 				song.beatPulse = 1.0F;
 			} else {
-				song.beatPulse *= 0.85F;
+				song.beatPulse *= 0.80F;
 			}
 
 			if (song.analyzer.consumeImpact()) {
 				song.impactPulse = 1.0F;
 			} else {
-				song.impactPulse *= 0.93F;
+				song.impactPulse *= 0.88F;
 			}
 
 			if (song.beatPulse > maxBeat) {

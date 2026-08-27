@@ -2,6 +2,7 @@ package com.beatlamp.client.render;
 
 import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
+import com.beatlamp.block.StageLightMode;
 import com.beatlamp.client.audio.JukeboxAudioTracker;
 
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -15,11 +16,13 @@ import com.mojang.math.Axis;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
+import net.minecraft.world.item.DyeColor;
 
 import org.joml.Matrix4f;
 
 public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEntity> {
 	private static final ResourceLocation BEAM_TEXTURE = ResourceLocation.withDefaultNamespace("textures/entity/beacon_beam.png");
+	private static final DyeColor[] DYES = DyeColor.values();
 
 	public StageLightRenderer(BlockEntityRendererProvider.Context context) {
 	}
@@ -38,11 +41,21 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		int packedLight,
 		int packedOverlay
 	) {
-		float energy = Mth.clamp(light.beamEnergy, 0.0F, 1.0F);
+		float energy = Mth.clamp(light.beamEnergy * light.getSensitivity(), 0.0F, 1.0F);
 		float beat = Mth.clamp(light.beamBeat, 0.0F, 1.0F);
 
 		if (energy <= 0.02F) {
 			return;
+		}
+
+		StageLightMode mode = light.getMode();
+
+		// Strobe mode check
+		if (mode == StageLightMode.STROBE) {
+			float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
+			if ((int) (strobeTime * 0.8F) % 2 == 1 && beat < 0.7F) {
+				return;
+			}
 		}
 
 		int color = resolveColor(light, energy);
@@ -50,28 +63,56 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		float green = ((color >> 8) & 0xFF) / 255.0F;
 		float blue = (color & 0xFF) / 255.0F;
 
-		float brightness = 0.4F + energy * 1.1F;
+		float brightness = 0.6F + energy * 1.0F;
 		float coreRed = Math.min(red * brightness, 1.0F);
 		float coreGreen = Math.min(green * brightness, 1.0F);
 		float coreBlue = Math.min(blue * brightness, 1.0F);
 
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F);
-		drawCore(poseStack, multiBufferSource, coreRed, coreGreen, coreBlue, 0.3F + beat * 0.1F);
-
-		float length = 10.0F + beat * 14.0F;
-		float baseAlpha = 0.22F + energy * 0.4F;
+		drawCore(poseStack, multiBufferSource, coreRed, coreGreen, coreBlue, 0.32F + beat * 0.12F);
 
 		poseStack.mulPose(alignment(light));
-		float effectTime = JukeboxAudioTracker.getEffectTime();
+		float effectTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
 
-		if (light.isSweepMode()) {
-			poseStack.mulPose(Axis.YP.rotationDegrees(effectTime * 30.0F));
-			poseStack.mulPose(Axis.XP.rotationDegrees(Mth.sin(effectTime * 0.45F) * 38.0F));
+		switch (mode) {
+			case SWEEP -> {
+				float pan = Mth.sin(effectTime * 0.05F) * 48.0F;
+				float tilt = 28.0F + Mth.sin(effectTime * 0.075F + 0.8F) * 22.0F;
+				poseStack.mulPose(Axis.YP.rotationDegrees(pan));
+				poseStack.mulPose(Axis.XP.rotationDegrees(tilt));
+			}
+			case BEAT_STEP -> {
+				light.currentPan = Mth.lerp(0.28F, light.currentPan, light.targetPan);
+				light.currentTilt = Mth.lerp(0.28F, light.currentTilt, light.targetTilt);
+				poseStack.mulPose(Axis.YP.rotationDegrees(light.currentPan));
+				poseStack.mulPose(Axis.XP.rotationDegrees(light.currentTilt));
+			}
+			case CHASE -> {
+				float phase = effectTime * 0.12F + light.groupIndex * 0.5F;
+				float pan = Mth.sin(phase) * 52.0F;
+				float tilt = 30.0F + Mth.cos(phase) * 22.0F;
+				poseStack.mulPose(Axis.YP.rotationDegrees(pan));
+				poseStack.mulPose(Axis.XP.rotationDegrees(tilt));
+			}
+			case STATIC, STROBE -> {
+				// Fixed straight beam
+			}
 		}
 
 		VertexConsumer consumer = multiBufferSource.getBuffer(RenderType.beaconBeam(BEAM_TEXTURE, true));
-		drawBeam(consumer, poseStack.last().pose(), length, baseAlpha, coreRed, coreGreen, coreBlue);
+		Matrix4f matrix = poseStack.last().pose();
+
+		// Outer wide atmospheric glow cone
+		float outerLength = 14.0F + beat * 18.0F;
+		float outerAlpha = 0.22F + energy * 0.35F;
+		drawBeam(consumer, matrix, outerLength, outerAlpha, 0.0F, 0.18F, 1.25F, coreRed, coreGreen, coreBlue);
+
+		// Inner intense core beam
+		float innerLength = 12.0F + beat * 16.0F;
+		float innerAlpha = 0.55F + energy * 0.4F;
+		drawBeam(consumer, matrix, innerLength, innerAlpha, 0.05F, 0.09F, 0.45F, coreRed, coreGreen, coreBlue);
+
 		poseStack.popPose();
 	}
 
@@ -92,7 +133,7 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		VertexConsumer consumer = multiBufferSource.getBuffer(RenderType.beaconBeam(BEAM_TEXTURE, true));
 		PoseStack.Pose pose = poseStack.last();
 		Matrix4f matrix = pose.pose();
-		float a = 0.85F;
+		float a = 0.95F;
 
 		float[][][] faces = {
 			{{-half, -half, half}, {half, -half, half}, {half, half, half}, {-half, half, half}},
@@ -115,12 +156,18 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		}
 	}
 
-	private static void drawBeam(VertexConsumer consumer, Matrix4f matrix, float length, float baseAlpha, float red, float green, float blue) {
-		float baseHalf = 0.14F;
-		float endHalf = 0.55F;
-		float alphaStart = baseAlpha;
-		float alphaEnd = 0.0F;
-
+	private static void drawBeam(
+		VertexConsumer consumer,
+		Matrix4f matrix,
+		float length,
+		float alphaStart,
+		float alphaEnd,
+		float baseHalf,
+		float endHalf,
+		float red,
+		float green,
+		float blue
+	) {
 		float[][] cornersBase = {
 			{-baseHalf, 0.0F, -baseHalf},
 			{baseHalf, 0.0F, -baseHalf},
@@ -194,6 +241,11 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		if (color == BeatLampBlockEntity.COLOR_OLED) {
 			float hue = (JukeboxAudioTracker.getEffectTime() * 2.0F % 360.0F) / 360.0F;
 			return java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
+		}
+
+		if (color == StageLightBlockEntity.COLOR_BEAT_CYCLE) {
+			int dyeIndex = Math.abs(light.beatColorIndex) % DYES.length;
+			return DYES[dyeIndex].getFireworkColor();
 		}
 
 		return color;

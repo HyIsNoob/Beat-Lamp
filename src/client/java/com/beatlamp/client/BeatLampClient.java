@@ -7,13 +7,17 @@ import com.beatlamp.BeatLampBlocks;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
+import com.beatlamp.block.FountainParticles;
 import com.beatlamp.block.LampMode;
 import com.beatlamp.block.LampOrientation;
 import com.beatlamp.block.LampParticles;
 import com.beatlamp.block.StageLightBlockEntity;
+import com.beatlamp.block.StageLightMode;
 import com.beatlamp.client.audio.AudioAnalyzer;
 import com.beatlamp.client.audio.JukeboxAudioTracker;
+import com.beatlamp.client.gui.FountainConfigScreen;
 import com.beatlamp.client.gui.LampConfigScreen;
+import com.beatlamp.client.gui.StageLightConfigScreen;
 import com.beatlamp.client.render.BeatLampRenderer;
 import com.beatlamp.client.render.LampOutlineRenderer;
 import com.beatlamp.client.render.StageLightRenderer;
@@ -68,6 +72,22 @@ public class BeatLampClient implements ClientModInitializer {
 			minecraft.execute(() -> {
 				if (minecraft.screen == null && minecraft.player != null) {
 					minecraft.setScreen(new LampConfigScreen(beatLamp));
+				}
+			});
+		};
+		StageLightBlockEntity.controllerUser = light -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new StageLightConfigScreen(light));
+				}
+			});
+		};
+		FountainBlockEntity.controllerUser = fountain -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new FountainConfigScreen(fountain));
 				}
 			});
 		};
@@ -208,10 +228,32 @@ public class BeatLampClient implements ClientModInitializer {
 			return;
 		}
 
-		Vec3 center = Vec3.atCenterOf(light.getBlockPos());
+		BlockPos blockPos = light.getBlockPos();
+		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = light.getSource();
 		light.beamEnergy = JukeboxAudioTracker.getLevelAt(center, source);
 		light.beamBeat = JukeboxAudioTracker.getBeatPulseAt(center, source);
+
+		if (!light.getManualGroup().isEmpty()) {
+			light.groupSize = light.getManualGroup().size();
+			light.groupIndex = Math.max(0, light.getManualGroup().indexOf(blockPos));
+		} else {
+			light.groupSize = 1;
+			light.groupIndex = 0;
+		}
+
+		if (light.getMode() == StageLightMode.BEAT_STEP) {
+			long gameTime = level.getGameTime();
+			if (light.beamBeat > 0.60F && gameTime - light.lastBeatChange >= 8L) {
+				light.lastBeatChange = gameTime;
+				RandomSource random = level.getRandom();
+				float[] discretePans = {-48.0F, -32.0F, -16.0F, 0.0F, 16.0F, 32.0F, 48.0F};
+				float[] discreteTilts = {15.0F, 26.0F, 38.0F, 50.0F};
+				light.targetPan = discretePans[random.nextInt(discretePans.length)];
+				light.targetTilt = discreteTilts[random.nextInt(discreteTilts.length)];
+				light.beatColorIndex++;
+			}
+		}
 	}
 
 	private static void tickFountain(FountainBlockEntity fountain) {
@@ -223,39 +265,116 @@ public class BeatLampClient implements ClientModInitializer {
 		BlockPos blockPos = fountain.getBlockPos();
 		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = fountain.getSource();
-		float energy = Mth.clamp(Math.max(
-			JukeboxAudioTracker.getLevelAt(center, source),
-			JukeboxAudioTracker.getBeatPulseAt(center, source) * 0.8F
-		), 0.0F, 1.0F);
+		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
+		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
+		float energy = Mth.clamp(Math.max(audioLevel, beatPulse * 0.85F), 0.0F, 1.0F);
 		float impact = JukeboxAudioTracker.getImpactPulseAt(center, source);
 		fountain.fountainEnergy = energy;
 		fountain.fountainImpact = impact;
 
 		RandomSource random = level.getRandom();
+		double originX = blockPos.getX() + 0.5;
+		double originY = blockPos.getY() + 1.02;
+		double originZ = blockPos.getZ() + 0.5;
 
-		if (energy > 0.08F && random.nextInt(3) == 0) {
-			double x = blockPos.getX() + 0.5 + (random.nextDouble() - 0.5) * 0.3;
-			double z = blockPos.getZ() + 0.5 + (random.nextDouble() - 0.5) * 0.3;
-			level.addParticle(ParticleTypes.FLAME, x, blockPos.getY() + 1.05, z,
-				(random.nextDouble() - 0.5) * 0.05, 0.08 + energy * 0.2, (random.nextDouble() - 0.5) * 0.05);
+		int color = fountain.getColor();
+		if (color == BeatLampBlockEntity.COLOR_OLED) {
+			float hue = (JukeboxAudioTracker.getEffectTime() * 3.0F % 360.0F) / 360.0F;
+			color = java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
+		}
+		float r = ((color >> 16) & 0xFF) / 255.0F;
+		float g = ((color >> 8) & 0xFF) / 255.0F;
+		float b = (color & 0xFF) / 255.0F;
+		net.minecraft.core.particles.DustParticleOptions dust = new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(r, g, b), 1.4F);
+
+		// Resolve particle type
+		FountainParticles pType = fountain.getParticleType();
+
+		// 1. Continuous stage pyro jet
+		if (energy > 0.04F) {
+			int count = 1 + (int) (energy * 3.5F);
+			for (int i = 0; i < count; i++) {
+				double px = originX + (random.nextDouble() - 0.5) * 0.22;
+				double pz = originZ + (random.nextDouble() - 0.5) * 0.22;
+				double vx = (random.nextDouble() - 0.5) * 0.04;
+				double vy = 0.22 + energy * 0.45 + random.nextDouble() * 0.15;
+				double vz = (random.nextDouble() - 0.5) * 0.04;
+
+				spawnFountainParticle(level, pType, px, originY, pz, vx, vy, vz, dust, random);
+			}
+
+			if (fountain.isSmokeEnabled() && random.nextInt(4) == 0) {
+				level.addParticle(ParticleTypes.SMOKE, originX, originY, originZ, 0.0, 0.06, 0.0);
+			}
 		}
 
-		if (impact > 0.9F) {
-			for (int i = 0; i < 24; i++) {
+		// 2. Bass beat spurts (thumping bass drum accents)
+		if (beatPulse > 0.5F) {
+			int beatSparks = 2 + (int) (beatPulse * 4.0F);
+			for (int i = 0; i < beatSparks; i++) {
+				double px = originX + (random.nextDouble() - 0.5) * 0.18;
+				double pz = originZ + (random.nextDouble() - 0.5) * 0.18;
+				double vx = (random.nextDouble() - 0.5) * 0.08;
+				double vy = 0.38 + beatPulse * 0.42 + random.nextDouble() * 0.18;
+				double vz = (random.nextDouble() - 0.5) * 0.08;
+
+				level.addParticle(ParticleTypes.FIREWORK, px, originY, pz, vx, vy, vz);
+				spawnFountainParticle(level, pType, px, originY, pz, vx * 0.8, vy * 0.9, vz * 0.8, dust, random);
+			}
+		}
+
+		// 3. Drop / Impact grand eruption
+		float dropThreshold = fountain.getImpactThreshold();
+		if (impact >= dropThreshold) {
+			for (int i = 0; i < 48; i++) {
 				double angle = random.nextDouble() * Math.PI * 2.0;
-				double speed = 0.08 + random.nextDouble() * 0.22;
-				level.addParticle(ParticleTypes.FIREWORK, blockPos.getX() + 0.5, blockPos.getY() + 1.1, blockPos.getZ() + 0.5,
-					Math.cos(angle) * speed, 0.15 + random.nextDouble() * 0.3, Math.sin(angle) * speed);
+				double spread = 0.08 + random.nextDouble() * 0.28;
+				double vx = Math.cos(angle) * spread;
+				double vy = 0.35 + random.nextDouble() * 0.55;
+				double vz = Math.sin(angle) * spread;
+
+				level.addParticle(ParticleTypes.FIREWORK, originX, originY + 0.1, originZ, vx, vy, vz);
+				if (i % 2 == 0) {
+					level.addParticle(dust, originX, originY + 0.1, originZ, vx * 0.8, vy * 0.9, vz * 0.8);
+				}
+				if (i % 3 == 0) {
+					level.addParticle(ParticleTypes.GLOW, originX, originY + 0.1, originZ, vx * 0.6, vy * 0.8, vz * 0.6);
+				}
 			}
 		}
 
 		Minecraft minecraft = Minecraft.getInstance();
 
-		if (fountain.isFireworkMode() && impact > 0.9F && minecraft.player != null
-			&& minecraft.player.distanceToSqr(blockPos.getX() + 0.5, blockPos.getY() + 0.5, blockPos.getZ() + 0.5) < 4096.0
+		if (fountain.isFireworkMode() && impact >= dropThreshold && minecraft.player != null
+			&& minecraft.player.distanceToSqr(originX, originY, originZ) < 4096.0
 			&& level.getGameTime() - fountain.lastFireSend >= 20L) {
 			fountain.lastFireSend = level.getGameTime();
 			ClientPlayNetworking.send(new FountainFirePayload(blockPos));
+		}
+	}
+
+	private static void spawnFountainParticle(
+		Level level,
+		FountainParticles pType,
+		double x, double y, double z,
+		double vx, double vy, double vz,
+		net.minecraft.core.particles.DustParticleOptions dust,
+		RandomSource random
+	) {
+		switch (pType) {
+			case SOUL_FLAME -> level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x, y, z, vx, vy, vz);
+			case FIREWORK -> level.addParticle(ParticleTypes.FIREWORK, x, y, z, vx, vy, vz);
+			case GLOW -> level.addParticle(ParticleTypes.GLOW, x, y, z, vx, vy, vz);
+			case SPARK -> level.addParticle(ParticleTypes.ELECTRIC_SPARK, x, y, z, vx, vy, vz);
+			case DUST -> level.addParticle(dust, x, y, z, vx, vy, vz);
+			case MIXED -> {
+				int pick = random.nextInt(4);
+				if (pick == 0) level.addParticle(ParticleTypes.FLAME, x, y, z, vx, vy, vz);
+				else if (pick == 1) level.addParticle(ParticleTypes.FIREWORK, x, y, z, vx, vy, vz);
+				else if (pick == 2) level.addParticle(ParticleTypes.GLOW, x, y, z, vx, vy, vz);
+				else level.addParticle(dust, x, y, z, vx, vy, vz);
+			}
+			default -> level.addParticle(ParticleTypes.FLAME, x, y, z, vx, vy, vz);
 		}
 	}
 

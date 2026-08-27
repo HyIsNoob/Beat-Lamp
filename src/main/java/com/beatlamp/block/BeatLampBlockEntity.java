@@ -199,8 +199,13 @@ public class BeatLampBlockEntity extends BlockEntity {
 		}
 	}
 
-	public void setManualGroup(List<BlockPos> members) {
-		this.manualGroup = List.copyOf(members);
+	public void setManualGroup(List<BlockPos> group) {
+		this.manualGroup = List.copyOf(group);
+		this.markUpdated();
+	}
+
+	public void clearManualGroup() {
+		this.manualGroup = List.of();
 		this.markUpdated();
 	}
 

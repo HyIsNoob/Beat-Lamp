@@ -40,75 +40,86 @@ public class LampControllerItem extends Item {
 			return InteractionResult.PASS;
 		}
 
+		ItemStack controller = context.getItemInHand();
+		BlockPos pendingSource = controller.get(BeatLampItems.SOURCE_POS);
+
+		// 1. Sneak interaction: Jukebox Source Select or Binding
 		if (player.isShiftKeyDown()) {
 			if (level.getBlockState(blockPos).is(Blocks.JUKEBOX)) {
 				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-					BeatLamp.handleSourceSelect(serverPlayer, blockPos, context.getItemInHand());
+					BeatLamp.handleSourceSelect(serverPlayer, blockPos, controller);
 				}
-
 				return InteractionResult.SUCCESS;
 			}
 
-			if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity
-				|| level.getBlockEntity(blockPos) instanceof StageLightBlockEntity
-				|| level.getBlockEntity(blockPos) instanceof FountainBlockEntity) {
-				BlockPos pendingSource = context.getItemInHand().get(BeatLampItems.SOURCE_POS);
-
-				if (pendingSource != null) {
-					if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
-						BeatLamp.bindTarget(serverLevel, blockPos, serverPlayer, context.getItemInHand(), pendingSource);
+			if (pendingSource != null) {
+				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
+					if (level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity) {
+						BeatLamp.bindSource(serverLevel, blockPos, serverPlayer, controller, pendingSource);
+					} else if (level.getBlockEntity(blockPos) instanceof StageLightBlockEntity
+						|| level.getBlockEntity(blockPos) instanceof FountainBlockEntity
+						|| level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
+						BeatLamp.bindTarget(serverLevel, blockPos, serverPlayer, controller, pendingSource);
 					}
-
-					return InteractionResult.SUCCESS;
 				}
+				return InteractionResult.SUCCESS;
+			}
 
+			if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
 				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
 					BeatLamp.toggleTarget(serverPlayer, blockPos);
 				}
-
 				return InteractionResult.SUCCESS;
 			}
+		}
 
+		// 2. Normal Right-Click: Open Config GUI directly for the clicked block/group
+		if (pendingSource != null) {
+			// If holding pending source, right click also binds
+			if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
+				if (level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity) {
+					BeatLamp.bindSource(serverLevel, blockPos, serverPlayer, controller, pendingSource);
+				} else if (level.getBlockEntity(blockPos) instanceof StageLightBlockEntity
+					|| level.getBlockEntity(blockPos) instanceof FountainBlockEntity
+					|| level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
+					BeatLamp.bindTarget(serverLevel, blockPos, serverPlayer, controller, pendingSource);
+				}
+			}
+			return InteractionResult.SUCCESS;
+		}
+
+		if (level.isClientSide) {
 			if (level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity beatLamp) {
-				ItemStack controller = context.getItemInHand();
-				BlockPos pendingSource = controller.get(BeatLampItems.SOURCE_POS);
-
-				if (pendingSource != null) {
-					if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
-						BeatLamp.bindSource(serverLevel, blockPos, serverPlayer, controller, pendingSource);
-					}
-
-					return InteractionResult.SUCCESS;
-				}
-
-				if (level.isClientSide) {
-					BeatLampBlockEntity.controllerUser.use(beatLamp);
-				}
-
+				BeatLampBlockEntity.controllerUser.use(beatLamp);
+				return InteractionResult.SUCCESS;
+			} else if (level.getBlockEntity(blockPos) instanceof StageLightBlockEntity stageLight) {
+				StageLightBlockEntity.controllerUser.use(stageLight);
+				return InteractionResult.SUCCESS;
+			} else if (level.getBlockEntity(blockPos) instanceof FountainBlockEntity fountain) {
+				FountainBlockEntity.controllerUser.use(fountain);
 				return InteractionResult.SUCCESS;
 			}
-
-			return InteractionResult.PASS;
 		}
 
-		if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
-			BeatLamp.handleLink(serverLevel, blockPos, serverPlayer, context.getItemInHand());
+		if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
+			if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
+				BeatLamp.toggleTarget(serverPlayer, blockPos);
+			}
+			return InteractionResult.SUCCESS;
 		}
 
-		return InteractionResult.SUCCESS;
+		return InteractionResult.PASS;
 	}
 
 	@Override
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand interactionHand) {
 		ItemStack itemStack = player.getItemInHand(interactionHand);
 
-		if (itemStack.get(BeatLampItems.ANCHOR_POS) != null || itemStack.get(BeatLampItems.SOURCE_POS) != null) {
+		if (itemStack.get(BeatLampItems.SOURCE_POS) != null) {
 			if (!level.isClientSide) {
-				boolean hadAnchor = itemStack.get(BeatLampItems.ANCHOR_POS) != null;
-				itemStack.remove(BeatLampItems.ANCHOR_POS);
 				itemStack.remove(BeatLampItems.SOURCE_POS);
 				player.displayClientMessage(
-					Component.translatable(hadAnchor ? "message.beatlamp.link.cancel" : "message.beatlamp.source.cancel").withStyle(ChatFormatting.AQUA), true
+					Component.translatable("message.beatlamp.source.cancel").withStyle(ChatFormatting.AQUA), true
 				);
 			}
 
@@ -122,11 +133,10 @@ public class LampControllerItem extends Item {
 	public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
 		tooltipComponents.add(Component.translatable("item.beatlamp.controller.tooltip").withStyle(ChatFormatting.GRAY));
 
-		BlockPos anchor = itemStack.get(BeatLampItems.ANCHOR_POS);
-
-		if (anchor != null) {
+		BlockPos source = itemStack.get(BeatLampItems.SOURCE_POS);
+		if (source != null) {
 			tooltipComponents.add(
-				Component.translatable("item.beatlamp.controller.anchor", anchor.getX(), anchor.getY(), anchor.getZ()).withStyle(ChatFormatting.GOLD)
+				Component.translatable("item.beatlamp.controller.source", source.getX(), source.getY(), source.getZ()).withStyle(ChatFormatting.AQUA)
 			);
 		}
 	}

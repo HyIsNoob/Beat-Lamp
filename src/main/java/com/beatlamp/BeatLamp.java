@@ -12,9 +12,11 @@ import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.network.EmitterSignalPayload;
+import com.beatlamp.network.FountainConfigurePayload;
 import com.beatlamp.network.FountainFirePayload;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
+import com.beatlamp.network.StageLightConfigurePayload;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -47,10 +49,13 @@ public class BeatLamp implements ModInitializer {
 		BeatLampItems.register();
 
 		PayloadTypeRegistry.playC2S().register(LampConfigurePayload.ID, LampConfigurePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(StageLightConfigurePayload.ID, StageLightConfigurePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(FountainConfigurePayload.ID, FountainConfigurePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(LampSourcePayload.ID, LampSourcePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(EmitterSignalPayload.ID, EmitterSignalPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(FountainFirePayload.ID, FountainFirePayload.CODEC);
 
+		// 1. Lamp config receiver
 		ServerPlayNetworking.registerGlobalReceiver(LampConfigurePayload.ID, (payload, context) -> {
 			Level level = context.player().level();
 
@@ -60,19 +65,15 @@ public class BeatLamp implements ModInitializer {
 			}
 
 			List<BlockPos> members = null;
-
 			if (level.getBlockEntity(payload.pos()) instanceof BeatLampBlockEntity lamp && lamp.getManualGroup().size() >= 2) {
 				members = lamp.getManualGroup();
 			}
-
 			if (members == null) {
 				members = floodFill(level, payload.pos());
 			}
 
 			for (BlockPos member : members) {
-				BlockEntity blockEntity = level.getBlockEntity(member);
-
-				if (blockEntity instanceof BeatLampBlockEntity beatLamp) {
+				if (level.getBlockEntity(member) instanceof BeatLampBlockEntity beatLamp) {
 					beatLamp.applyConfig(
 						payload.mode(),
 						payload.sensitivity(),
@@ -89,26 +90,90 @@ public class BeatLamp implements ModInitializer {
 			}
 		});
 
-		ServerPlayNetworking.registerGlobalReceiver(LampSourcePayload.ID, (payload, context) -> {
+		// 2. Stage Light config receiver
+		ServerPlayNetworking.registerGlobalReceiver(StageLightConfigurePayload.ID, (payload, context) -> {
 			Level level = context.player().level();
 
-			List<BlockPos> members = null;
-
-			if (level.getBlockEntity(payload.pos()) instanceof BeatLampBlockEntity lamp && lamp.getManualGroup().size() >= 2) {
-				members = lamp.getManualGroup();
+			if (payload.unlink()) {
+				unlinkStageLightGroup(level, payload.pos());
+				return;
 			}
 
+			List<BlockPos> members = null;
+			if (level.getBlockEntity(payload.pos()) instanceof StageLightBlockEntity light && light.getManualGroup().size() >= 2) {
+				members = light.getManualGroup();
+			}
 			if (members == null) {
-				members = floodFill(level, payload.pos());
+				members = List.of(payload.pos());
 			}
 
 			for (BlockPos member : members) {
-				if (level.getBlockEntity(member) instanceof BeatLampBlockEntity beatLamp) {
-					beatLamp.setSource(null);
+				if (level.getBlockEntity(member) instanceof StageLightBlockEntity light) {
+					light.setMode(payload.mode());
+					light.setSensitivity(payload.sensitivity());
+					light.setSpeed(payload.speed());
+					light.setColor(payload.color());
 				}
 			}
 		});
 
+		// 3. Fountain config receiver
+		ServerPlayNetworking.registerGlobalReceiver(FountainConfigurePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+
+			if (payload.unlink()) {
+				unlinkFountainGroup(level, payload.pos());
+				return;
+			}
+
+			List<BlockPos> members = null;
+			if (level.getBlockEntity(payload.pos()) instanceof FountainBlockEntity fountain && fountain.getManualGroup().size() >= 2) {
+				members = fountain.getManualGroup();
+			}
+			if (members == null) {
+				members = List.of(payload.pos());
+			}
+
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof FountainBlockEntity fountain) {
+					fountain.setFireworkMode(payload.fireworkMode());
+					fountain.setImpactThreshold(payload.impactThreshold());
+					fountain.setSmokeEnabled(payload.smokeEnabled());
+					fountain.setParticleType(payload.particleType());
+					fountain.setColor(payload.color());
+				}
+			}
+		});
+
+		// 4. Source clear receiver
+		ServerPlayNetworking.registerGlobalReceiver(LampSourcePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+
+			if (level.getBlockEntity(payload.pos()) instanceof BeatLampBlockEntity lamp) {
+				List<BlockPos> members = lamp.getManualGroup().size() >= 2 ? lamp.getManualGroup() : floodFill(level, payload.pos());
+				for (BlockPos member : members) {
+					if (level.getBlockEntity(member) instanceof BeatLampBlockEntity beatLamp) {
+						beatLamp.setSource(null);
+					}
+				}
+			} else if (level.getBlockEntity(payload.pos()) instanceof StageLightBlockEntity light) {
+				List<BlockPos> members = light.getManualGroup().size() >= 2 ? light.getManualGroup() : List.of(payload.pos());
+				for (BlockPos member : members) {
+					if (level.getBlockEntity(member) instanceof StageLightBlockEntity l) {
+						l.setSource(null);
+					}
+				}
+			} else if (level.getBlockEntity(payload.pos()) instanceof FountainBlockEntity fountain) {
+				List<BlockPos> members = fountain.getManualGroup().size() >= 2 ? fountain.getManualGroup() : List.of(payload.pos());
+				for (BlockPos member : members) {
+					if (level.getBlockEntity(member) instanceof FountainBlockEntity f) {
+						f.setSource(null);
+					}
+				}
+			}
+		});
+
+		// 5. Emitter signal receiver
 		ServerPlayNetworking.registerGlobalReceiver(EmitterSignalPayload.ID, (payload, context) -> {
 			Level level = context.player().level();
 
@@ -119,6 +184,7 @@ public class BeatLamp implements ModInitializer {
 			}
 		});
 
+		// 6. Fountain firework spawn receiver
 		ServerPlayNetworking.registerGlobalReceiver(FountainFirePayload.ID, (payload, context) -> {
 			Level level = context.player().level();
 
@@ -136,7 +202,7 @@ public class BeatLamp implements ModInitializer {
 	private static void spawnFirework(ServerLevel level, BlockPos pos, int color) {
 		java.util.List<Integer> colors = new java.util.ArrayList<>();
 
-		if (color == 0) {
+		if (color == BeatLampBlockEntity.COLOR_OLED) {
 			for (net.minecraft.world.item.DyeColor dye : net.minecraft.world.item.DyeColor.values()) {
 				colors.add(dye.getFireworkColor());
 			}
@@ -161,17 +227,17 @@ public class BeatLamp implements ModInitializer {
 		level.addFreshEntity(rocket);
 	}
 
-	public static void handleLink(ServerLevel level, BlockPos pos, ServerPlayer player, ItemStack controller) {
-		BlockPos anchor = controller.get(BeatLampItems.ANCHOR_POS);
+	public static void handleLink(ServerLevel level, BlockPos pos, ServerPlayer player, ItemStack linker) {
+		BlockPos anchor = linker.get(BeatLampItems.ANCHOR_POS);
 
 		if (anchor == null) {
-			controller.set(BeatLampItems.ANCHOR_POS, pos.immutable());
+			linker.set(BeatLampItems.ANCHOR_POS, pos.immutable());
 			message(player, "message.beatlamp.link.anchor");
 			return;
 		}
 
 		if (anchor.equals(pos)) {
-			controller.remove(BeatLampItems.ANCHOR_POS);
+			linker.remove(BeatLampItems.ANCHOR_POS);
 			message(player, "message.beatlamp.link.cancel");
 			return;
 		}
@@ -188,36 +254,54 @@ public class BeatLamp implements ModInitializer {
 		int maxY = Math.max(anchor.getY(), pos.getY());
 		int maxZ = Math.max(anchor.getZ(), pos.getZ());
 
-		List<BeatLampBlockEntity> members = new ArrayList<>();
+		List<BeatLampBlockEntity> lamps = new ArrayList<>();
+		List<StageLightBlockEntity> lights = new ArrayList<>();
+		List<FountainBlockEntity> fountains = new ArrayList<>();
 
 		for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
-			if (level.getBlockEntity(memberPos) instanceof BeatLampBlockEntity member) {
-				members.add(member);
+			BlockEntity be = level.getBlockEntity(memberPos);
+			if (be instanceof BeatLampBlockEntity lamp) {
+				lamps.add(lamp);
+			} else if (be instanceof StageLightBlockEntity light) {
+				lights.add(light);
+			} else if (be instanceof FountainBlockEntity fountain) {
+				fountains.add(fountain);
+			}
 
-				if (members.size() >= MAX_GROUP_SIZE) {
-					message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
-					return;
-				}
+			if (lamps.size() + lights.size() + fountains.size() >= MAX_GROUP_SIZE) {
+				message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+				return;
 			}
 		}
 
-		if (members.size() < 2) {
+		int totalLinked = 0;
+
+		if (lamps.size() >= 2) {
+			List<BlockPos> positions = new ArrayList<>(lamps.size());
+			for (BeatLampBlockEntity member : lamps) positions.add(member.getBlockPos().immutable());
+			for (BeatLampBlockEntity member : lamps) member.setManualGroup(positions);
+			totalLinked += positions.size();
+		}
+		if (lights.size() >= 2) {
+			List<BlockPos> positions = new ArrayList<>(lights.size());
+			for (StageLightBlockEntity member : lights) positions.add(member.getBlockPos().immutable());
+			for (StageLightBlockEntity member : lights) member.setManualGroup(positions);
+			totalLinked += positions.size();
+		}
+		if (fountains.size() >= 2) {
+			List<BlockPos> positions = new ArrayList<>(fountains.size());
+			for (FountainBlockEntity member : fountains) positions.add(member.getBlockPos().immutable());
+			for (FountainBlockEntity member : fountains) member.setManualGroup(positions);
+			totalLinked += positions.size();
+		}
+
+		if (totalLinked < 2) {
 			message(player, "message.beatlamp.link.empty");
 			return;
 		}
 
-		List<BlockPos> positions = new ArrayList<>(members.size());
-
-		for (BeatLampBlockEntity member : members) {
-			positions.add(member.getBlockPos().immutable());
-		}
-
-		for (BeatLampBlockEntity member : members) {
-			member.setManualGroup(positions);
-		}
-
-		controller.remove(BeatLampItems.ANCHOR_POS);
-		message(player, "message.beatlamp.link.added", positions.size());
+		linker.remove(BeatLampItems.ANCHOR_POS);
+		message(player, "message.beatlamp.link.added", totalLinked);
 	}
 
 	public static void unlinkGroup(Level level, BlockPos pos) {
@@ -226,10 +310,35 @@ public class BeatLamp implements ModInitializer {
 		}
 
 		List<BlockPos> targets = lamp.getManualGroup().size() >= 2 ? lamp.getManualGroup() : List.of(pos);
-
 		for (BlockPos target : targets) {
 			if (level.getBlockEntity(target) instanceof BeatLampBlockEntity other) {
-				other.setManualGroup(List.of());
+				other.clearManualGroup();
+			}
+		}
+	}
+
+	public static void unlinkStageLightGroup(Level level, BlockPos pos) {
+		if (!(level.getBlockEntity(pos) instanceof StageLightBlockEntity light)) {
+			return;
+		}
+
+		List<BlockPos> targets = light.getManualGroup().size() >= 2 ? light.getManualGroup() : List.of(pos);
+		for (BlockPos target : targets) {
+			if (level.getBlockEntity(target) instanceof StageLightBlockEntity other) {
+				other.clearManualGroup();
+			}
+		}
+	}
+
+	public static void unlinkFountainGroup(Level level, BlockPos pos) {
+		if (!(level.getBlockEntity(pos) instanceof FountainBlockEntity fountain)) {
+			return;
+		}
+
+		List<BlockPos> targets = fountain.getManualGroup().size() >= 2 ? fountain.getManualGroup() : List.of(pos);
+		for (BlockPos target : targets) {
+			if (level.getBlockEntity(target) instanceof FountainBlockEntity other) {
+				other.clearManualGroup();
 			}
 		}
 	}
@@ -242,14 +351,24 @@ public class BeatLamp implements ModInitializer {
 		}
 
 		if (level.getBlockEntity(pos) instanceof StageLightBlockEntity light) {
-			light.setSource(source);
-			message(player, "message.beatlamp.source.bound_light");
+			List<BlockPos> members = light.getManualGroup().size() >= 2 ? light.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof StageLightBlockEntity l) {
+					l.setSource(source);
+				}
+			}
+			message(player, "message.beatlamp.source.bound", members.size());
 			return;
 		}
 
 		if (level.getBlockEntity(pos) instanceof FountainBlockEntity fountain) {
-			fountain.setSource(source);
-			message(player, "message.beatlamp.source.bound_fountain");
+			List<BlockPos> members = fountain.getManualGroup().size() >= 2 ? fountain.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof FountainBlockEntity f) {
+					f.setSource(source);
+				}
+			}
+			message(player, "message.beatlamp.source.bound", members.size());
 			return;
 		}
 
@@ -262,18 +381,6 @@ public class BeatLamp implements ModInitializer {
 		if (player.level().getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
 			emitter.togglePulseMode();
 			message(player, emitter.isPulseMode() ? "message.beatlamp.emitter.mode.pulse" : "message.beatlamp.emitter.mode.level");
-			return;
-		}
-
-		if (player.level().getBlockEntity(pos) instanceof StageLightBlockEntity light) {
-			light.toggleSweep();
-			message(player, light.isSweepMode() ? "message.beatlamp.light.mode.sweep" : "message.beatlamp.light.mode.fixed");
-			return;
-		}
-
-		if (player.level().getBlockEntity(pos) instanceof FountainBlockEntity fountain) {
-			fountain.toggleFirework();
-			message(player, fountain.isFireworkMode() ? "message.beatlamp.fountain.mode.firework" : "message.beatlamp.fountain.mode.visual");
 		}
 	}
 

@@ -1,10 +1,10 @@
 {
 	"variants": {
-		"facing=down": { "model": "beatlamp:block/stage_light" },
-		"facing=east": { "model": "beatlamp:block/stage_light" },
-		"facing=north": { "model": "beatlamp:block/stage_light" },
-		"facing=south": { "model": "beatlamp:block/stage_light" },
 		"facing=up": { "model": "beatlamp:block/stage_light" },
-		"facing=west": { "model": "beatlamp:block/stage_light" }
+		"facing=down": { "model": "beatlamp:block/stage_light", "x": 180 },
+		"facing=north": { "model": "beatlamp:block/stage_light", "x": 90, "y": 180 },
+		"facing=south": { "model": "beatlamp:block/stage_light", "x": 90, "y": 0 },
+		"facing=west": { "model": "beatlamp:block/stage_light", "x": 90, "y": 90 },
+		"facing=east": { "model": "beatlamp:block/stage_light", "x": 90, "y": 270 }
 	}
 }

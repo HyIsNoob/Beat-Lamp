@@ -8,8 +8,11 @@ public final class AudioAnalyzer {
 	private final int sampleRate;
 	private final int fftSize;
 	private final int fftMask;
-	private final int lowFluxBin;
-	private final int highFluxBin;
+	private final int lowBassBin;
+	private final int highBassBin;
+	private final int lowMidBin;
+	private final int highMidBin;
+
 	private final float[] ring;
 	private int ringIndex;
 	private int ringFilled;
@@ -24,13 +27,16 @@ public final class AudioAnalyzer {
 	private long totalSamples;
 	private float bassAverage = 0.001F;
 	private float envelope;
-	private boolean beatReady;
-	private boolean impactReady;
+	private volatile boolean beatReady;
+	private volatile boolean impactReady;
 	private float previousEnvelope;
 	private long lastBeatSample = -1_000_000L;
+
 	private final float[] prevBassMagnitude;
+	private final float[] prevMidMagnitude;
+
 	private static final int FLUX_HISTORY_SIZE = 64;
-	private static final float FLUX_WINDOW_SECONDS = 1.2F;
+	private static final float FLUX_WINDOW_SECONDS = 1.0F;
 	private final long[] fluxTimes = new long[FLUX_HISTORY_SIZE];
 	private final float[] fluxValues = new float[FLUX_HISTORY_SIZE];
 	private int fluxCursor;
@@ -60,10 +66,15 @@ public final class AudioAnalyzer {
 			this.bandAverages[b] = 0.001F;
 		}
 
-		float fluxMaxHz = highQuality ? 250.0F : 160.0F;
-		this.lowFluxBin = Math.max(1, (int) (25.0F / binHz));
-		this.highFluxBin = Math.min(this.fftSize / 2 - 1, (int) (fluxMaxHz / binHz));
-		this.prevBassMagnitude = new float[Math.max(1, this.highFluxBin - this.lowFluxBin + 1)];
+		// Bass band (Kick drums: 30 - 150 Hz)
+		this.lowBassBin = Math.max(1, (int) (30.0F / binHz));
+		this.highBassBin = Math.min(this.fftSize / 2 - 1, (int) (150.0F / binHz));
+		this.prevBassMagnitude = new float[Math.max(1, this.highBassBin - this.lowBassBin + 1)];
+
+		// Mid-high transient band (Snare/Clap/Hi-hat: 1200 - 4500 Hz)
+		this.lowMidBin = Math.max(1, (int) (1200.0F / binHz));
+		this.highMidBin = Math.min(this.fftSize / 2 - 1, (int) (4500.0F / binHz));
+		this.prevMidMagnitude = new float[Math.max(1, this.highMidBin - this.lowMidBin + 1)];
 	}
 
 	public void push(float[] samples, int count) {
@@ -124,20 +135,36 @@ public final class AudioAnalyzer {
 
 		Fft.fft(this.fftReal, this.fftImag);
 
+		// 1. Bass spectral flux
 		float bass = 0.0F;
-		float flux = 0.0F;
-
-		for (int bin = this.lowFluxBin; bin <= this.highFluxBin; bin++) {
+		float bassFlux = 0.0F;
+		for (int bin = this.lowBassBin; bin <= this.highBassBin; bin++) {
 			float magnitude = magnitude(bin);
-			float previous = this.prevBassMagnitude[bin - this.lowFluxBin];
-			this.prevBassMagnitude[bin - this.lowFluxBin] = magnitude;
-			flux += Math.max(0.0F, magnitude - previous);
+			float previous = this.prevBassMagnitude[bin - this.lowBassBin];
+			this.prevBassMagnitude[bin - this.lowBassBin] = magnitude;
+			bassFlux += Math.max(0.0F, magnitude - previous);
 			bass += magnitude;
 		}
+		int bassBins = this.highBassBin - this.lowBassBin + 1;
+		bass /= bassBins * this.fftSize * 0.5F;
+		bassFlux /= bassBins * this.fftSize * 0.5F;
 
-		int fluxBins = this.highFluxBin - this.lowFluxBin + 1;
-		bass /= fluxBins * this.fftSize * 0.5F;
-		flux /= fluxBins * this.fftSize * 0.5F;
+		// 2. Mid transient flux (snare/clap)
+		float mid = 0.0F;
+		float midFlux = 0.0F;
+		for (int bin = this.lowMidBin; bin <= this.highMidBin; bin++) {
+			float magnitude = magnitude(bin);
+			float previous = this.prevMidMagnitude[bin - this.lowMidBin];
+			this.prevMidMagnitude[bin - this.lowMidBin] = magnitude;
+			midFlux += Math.max(0.0F, magnitude - previous);
+			mid += magnitude;
+		}
+		int midBins = this.highMidBin - this.lowMidBin + 1;
+		mid /= midBins * this.fftSize * 0.5F;
+		midFlux /= midBins * this.fftSize * 0.5F;
+
+		// Combined dual-band flux (weighted for kick prominence + crisp snare detection)
+		float flux = bassFlux * 1.0F + midFlux * 0.4F;
 
 		this.fluxTimes[this.fluxCursor] = this.totalSamples;
 		this.fluxValues[this.fluxCursor] = flux;
@@ -146,23 +173,25 @@ public final class AudioAnalyzer {
 			this.fluxFilled++;
 		}
 
-		float localAverage = this.localFluxAverage();
+		float localAvg = this.localFluxAverage();
+		float localVariance = this.localFluxVariance(localAvg);
 		boolean rising = flux > this.previousFlux;
 		this.previousFlux = flux;
 
 		float previousAverage = this.bassAverage;
 		this.bassAverage = this.bassAverage * 0.995F + bass * 0.005F;
 
-		float target = clamp01(bass / (previousAverage * 2.5F + 0.0001F));
+		float target = clamp01(bass / (previousAverage * 2.3F + 0.0001F));
 		float diff = target - this.envelope;
-		this.envelope += diff * (diff > 0.0F ? 0.55F : 0.10F);
+		this.envelope += diff * (diff > 0.0F ? 0.60F : 0.12F);
 
-		if (this.envelope > 0.55F && this.previousEnvelope <= 0.4F) {
+		// Impact / Drop detection on envelope sudden jump
+		if (this.envelope > 0.52F && this.previousEnvelope <= 0.38F) {
 			this.impactReady = true;
 		}
-
 		this.previousEnvelope = this.envelope;
 
+		// 16 Frequency Equalizer Bands
 		for (int b = 0; b < BAND_COUNT; b++) {
 			float sum = 0.0F;
 			int count = 0;
@@ -176,11 +205,14 @@ public final class AudioAnalyzer {
 			this.bandAverages[b] = this.bandAverages[b] * 0.99F + value * 0.01F;
 			float bandTarget = clamp01(value / (this.bandAverages[b] * 2.2F + 0.0001F));
 			float bandDiff = bandTarget - this.bands[b];
-			this.bands[b] += bandDiff * (bandDiff > 0.0F ? 0.5F : 0.12F);
+			this.bands[b] += bandDiff * (bandDiff > 0.0F ? 0.55F : 0.14F);
 		}
 
-		long minBeatGap = (long) (this.sampleRate * 0.15);
-		if (flux > localAverage * 1.35F + 0.0012F && rising && bass > 0.008F && this.totalSamples - this.lastBeatSample > minBeatGap) {
+		// Adaptive threshold: local mean + variance offset
+		float adaptiveThreshold = localAvg * 1.25F + (float) Math.sqrt(localVariance) * 0.35F + 0.0009F;
+		long minBeatGap = (long) (this.sampleRate * 0.12); // ~120ms min gap (allows up to 500 BPM)
+
+		if (flux > adaptiveThreshold && rising && (bass > 0.006F || mid > 0.008F) && (this.totalSamples - this.lastBeatSample > minBeatGap)) {
 			this.lastBeatSample = this.totalSamples;
 			this.beatReady = true;
 		}
@@ -199,6 +231,22 @@ public final class AudioAnalyzer {
 		}
 
 		return count > 0 ? sum / count : 0.0F;
+	}
+
+	private float localFluxVariance(float mean) {
+		long cutoff = this.totalSamples - (long) ((float) this.sampleRate * FLUX_WINDOW_SECONDS);
+		float sumSq = 0.0F;
+		int count = 0;
+
+		for (int i = 0; i < this.fluxFilled; i++) {
+			if (this.fluxTimes[i] >= cutoff) {
+				float diff = this.fluxValues[i] - mean;
+				sumSq += diff * diff;
+				count++;
+			}
+		}
+
+		return count > 0 ? sumSq / count : 0.0F;
 	}
 
 	private float magnitude(int bin) {
