@@ -750,36 +750,77 @@ public class BeatLampClient implements ClientModInitializer {
 			return;
 		}
 
+		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
+		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
+
+		Direction facing = Direction.UP;
+		if (fog.getBlockState().hasProperty(com.beatlamp.block.FogGeneratorBlock.FACING)) {
+			facing = fog.getBlockState().getValue(com.beatlamp.block.FogGeneratorBlock.FACING);
+		}
+
 		RandomSource random = level.getRandom();
-		int count = fog.getDensity().getParticleCount();
-		double originX = blockPos.getX() + 0.5;
-		double originY = blockPos.getY() + 0.5;
-		double originZ = blockPos.getZ() + 0.5;
+		int baseCount = fog.getDensity().getParticleCount();
+		int count = baseCount;
+		if (beatPulse > 0.55F) {
+			count += 2 + (int) (beatPulse * 3); // Dynamic CO2 burst on beat
+		}
+
+		double originX = blockPos.getX() + 0.5 + facing.getStepX() * 0.45;
+		double originY = blockPos.getY() + 0.5 + facing.getStepY() * 0.45;
+		double originZ = blockPos.getZ() + 0.5 + facing.getStepZ() * 0.45;
 
 		int color = fog.getColor();
 		float r = 1.0F, g = 1.0F, b = 1.0F;
-		if (color != BeatLampBlockEntity.COLOR_OLED) {
+		boolean isColored = color != BeatLampBlockEntity.COLOR_OLED;
+		if (isColored) {
 			r = ((color >> 16) & 0xFF) / 255.0F;
 			g = ((color >> 8) & 0xFF) / 255.0F;
 			b = (color & 0xFF) / 255.0F;
 		}
 
+		double maxRadius = (double) fog.getRadius();
+		double speedMultiplier = fog.getDensity().getSpeed() * (maxRadius / 8.0);
+
 		for (int i = 0; i < count; i++) {
-			double angle = random.nextDouble() * Math.PI * 2.0;
-			double speed = fog.getDensity().getSpeed() * (0.5 + random.nextDouble() * 0.5);
-			double vx = Math.cos(angle) * speed;
-			double vy = 0.015 + random.nextDouble() * 0.02;
-			double vz = Math.sin(angle) * speed;
-
-			double px = originX + (random.nextDouble() - 0.5) * 0.4;
+			double px = originX + (random.nextDouble() - 0.5) * 0.35;
 			double py = originY + (random.nextDouble() - 0.5) * 0.2;
-			double pz = originZ + (random.nextDouble() - 0.5) * 0.4;
+			double pz = originZ + (random.nextDouble() - 0.5) * 0.35;
 
-			if (color == BeatLampBlockEntity.COLOR_OLED) {
-				level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, py, pz, vx, vy, vz);
+			double vx, vy, vz;
+			if (facing == Direction.UP) {
+				double angle = random.nextDouble() * Math.PI * 2.0;
+				double speed = speedMultiplier * (0.35 + random.nextDouble() * 0.65);
+				vx = Math.cos(angle) * speed;
+				vy = 0.008 + random.nextDouble() * 0.015 + (beatPulse > 0.55F ? 0.06 : 0.0);
+				vz = Math.sin(angle) * speed;
+			} else if (facing == Direction.DOWN) {
+				double angle = random.nextDouble() * Math.PI * 2.0;
+				double speed = speedMultiplier * (0.35 + random.nextDouble() * 0.65);
+				vx = Math.cos(angle) * speed;
+				vy = -0.015 - random.nextDouble() * 0.02;
+				vz = Math.sin(angle) * speed;
 			} else {
-				level.addParticle(new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(r, g, b), 1.6F), px, py, pz, vx, vy, vz);
-				level.addParticle(ParticleTypes.SMOKE, px, py, pz, vx * 0.6, vy, vz * 0.6);
+				// Horizontal jet
+				double spread = 0.12;
+				vx = facing.getStepX() * speedMultiplier * 1.3 + (random.nextDouble() - 0.5) * spread;
+				vy = 0.005 + (random.nextDouble() - 0.5) * 0.01;
+				vz = facing.getStepZ() * speedMultiplier * 1.3 + (random.nextDouble() - 0.5) * spread;
+			}
+
+			// 1. Billowing dense stage smoke cloud
+			level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, py, pz, vx, vy, vz);
+
+			// 2. Extra soft cloud puffs for low-lying density
+			if (i % 2 == 0) {
+				level.addParticle(ParticleTypes.CLOUD, px, py, pz, vx * 0.7, vy * 0.5, vz * 0.7);
+			}
+
+			// 3. Colored stage lighting illumination
+			if (isColored) {
+				level.addParticle(new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(r, g, b), 2.2F), px, py, pz, vx * 0.9, vy, vz * 0.9);
+				if (i % 3 == 0) {
+					level.addParticle(ParticleTypes.GLOW, px, py, pz, vx * 0.5, vy, vz * 0.5);
+				}
 			}
 		}
 	}
