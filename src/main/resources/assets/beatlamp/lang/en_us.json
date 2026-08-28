@@ -103,6 +103,7 @@
 	"screen.beatlamp.solid_back.solid": "Solid",
 	"screen.beatlamp.solid_back.glass": "Glass",
 	"screen.beatlamp.idle_light": "Idle Glow: %s",
+	"screen.beatlamp.tempo_pulse": "Tempo Pulse: %s",
 	"screen.beatlamp.orientation": "Orientation: %s",
 	"screen.beatlamp.orientation.auto": "Auto",
 	"screen.beatlamp.orientation.east_west": "East-West (X)",

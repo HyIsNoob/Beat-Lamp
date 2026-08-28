@@ -100,7 +100,8 @@ public class BeatLamp implements ModInitializer {
 						payload.idleLight(),
 						payload.reverse(),
 						payload.particles(),
-						payload.orientation()
+						payload.orientation(),
+						payload.tempoPulse()
 					);
 				}
 			}

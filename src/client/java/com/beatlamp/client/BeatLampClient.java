@@ -186,25 +186,35 @@ public class BeatLampClient implements ClientModInitializer {
 			return;
 		}
 
-		Vec3 center = Vec3.atCenterOf(blockPos);
+		Vec3 center = getGroupCenter(blockPos, beatLamp.getManualGroup());
 		BlockPos source = beatLamp.getSource();
 		float sensitivity = beatLamp.getSensitivity();
 		float speed = beatLamp.getSpeed() * DmxMasterTracker.getMasterSpeedNear(blockPos);
 
-		float target = Mth.clamp(JukeboxAudioTracker.getLevelAt(center, source) * sensitivity, 0.0F, 1.0F);
+		LampMode mode = beatLamp.getMode();
+		boolean tempoAssist = beatLamp.isTempoPulse();
+		float rawLevel = JukeboxAudioTracker.getRawLevelAt(center, source);
+		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
+		float target = Mth.clamp((tempoAssist ? audioLevel : rawLevel) * sensitivity, 0.0F, 1.0F);
+
 		float diff = target - beatLamp.smoothLevel;
-		beatLamp.smoothLevel += diff * (diff > 0.0F ? 0.5F : 0.15F);
+		if (tempoAssist) {
+			beatLamp.smoothLevel += diff * (diff > 0.0F ? 0.5F : 0.15F);
+		} else {
+			beatLamp.smoothLevel += diff * (diff > 0.0F ? 0.55F : 0.25F);
+			if (beatLamp.smoothLevel < 0.02F) {
+				beatLamp.smoothLevel = 0.0F;
+			}
+		}
 		beatLamp.pulse = beatLamp.smoothLevel;
 		beatLamp.beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
-
-		LampMode mode = beatLamp.getMode();
 
 		if (needsTopology(mode) && shouldRefreshTopology(level, blockPos)) {
 			updateGroupInfo(level, beatLamp, blockPos);
 		}
 
 		float time = JukeboxAudioTracker.getEffectTime() * speed;
-		float energy = Mth.clamp(Math.max(beatLamp.pulse, beatLamp.beatPulse * 0.8F), 0.0F, 1.0F);
+		float energy = tempoAssist ? Mth.clamp(Math.max(beatLamp.pulse, beatLamp.beatPulse * 0.8F), 0.0F, 1.0F) : beatLamp.pulse;
 
 		switch (mode) {
 			case PULSE -> beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, -1.0F, energy);
@@ -405,7 +415,7 @@ public class BeatLampClient implements ClientModInitializer {
 			return;
 		}
 
-		Vec3 center = Vec3.atCenterOf(blockPos);
+		Vec3 center = getGroupCenter(blockPos, light.getManualGroup());
 		BlockPos source = light.getSource();
 		light.beamEnergy = JukeboxAudioTracker.getLevelAt(center, source);
 		light.beamBeat = JukeboxAudioTracker.getBeatPulseAt(center, source);
@@ -444,7 +454,7 @@ public class BeatLampClient implements ClientModInitializer {
 			fountain.fountainImpact = 0.0F;
 			return;
 		}
-		Vec3 center = Vec3.atCenterOf(blockPos);
+		Vec3 center = getGroupCenter(blockPos, fountain.getManualGroup());
 		BlockPos source = fountain.getSource();
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
 		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
@@ -863,6 +873,20 @@ public class BeatLampClient implements ClientModInitializer {
 		return count;
 	}
 
+	private static Vec3 getGroupCenter(BlockPos pos, List<BlockPos> manualGroup) {
+		if (manualGroup == null || manualGroup.size() < 2) {
+			return Vec3.atCenterOf(pos);
+		}
+		double gx = 0, gy = 0, gz = 0;
+		for (BlockPos p : manualGroup) {
+			gx += p.getX() + 0.5;
+			gy += p.getY() + 0.5;
+			gz += p.getZ() + 0.5;
+		}
+		int size = manualGroup.size();
+		return new Vec3(gx / size, gy / size, gz / size);
+	}
+
 	private static void tickLaserProjector(LaserProjectorBlockEntity laser) {
 		Level level = laser.getLevel();
 		if (level == null) {
@@ -881,7 +905,7 @@ public class BeatLampClient implements ClientModInitializer {
 			return;
 		}
 
-		Vec3 center = Vec3.atCenterOf(blockPos);
+		Vec3 center = getGroupCenter(blockPos, laser.getManualGroup());
 		BlockPos source = laser.getSource();
 
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
@@ -911,7 +935,7 @@ public class BeatLampClient implements ClientModInitializer {
 		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
 			return;
 		}
-		Vec3 center = Vec3.atCenterOf(blockPos);
+		Vec3 center = getGroupCenter(blockPos, fog.getManualGroup());
 		BlockPos source = fog.getSource();
 
 		boolean active = JukeboxAudioTracker.isAnyJukeboxPlayingNear(center, source);

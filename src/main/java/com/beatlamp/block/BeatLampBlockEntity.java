@@ -50,6 +50,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 	private boolean blackback = true;
 	private boolean idleLight;
 	private boolean reverse;
+	private boolean tempoPulse = true;
 	private LampParticles particles = LampParticles.NOTE;
 	private LampOrientation orientation = LampOrientation.AUTO;
 	private List<BlockPos> manualGroup = List.of();
@@ -162,6 +163,15 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.markUpdated();
 	}
 
+	public boolean isTempoPulse() {
+		return this.tempoPulse;
+	}
+
+	public void setTempoPulse(boolean tempoPulse) {
+		this.tempoPulse = tempoPulse;
+		this.markUpdated();
+	}
+
 	public void applyConfig(
 		LampMode newMode,
 		float newSensitivity,
@@ -172,7 +182,8 @@ public class BeatLampBlockEntity extends BlockEntity {
 		boolean newIdleLight,
 		boolean newReverse,
 		LampParticles newParticles,
-		LampOrientation newOrientation
+		LampOrientation newOrientation,
+		boolean newTempoPulse
 	) {
 		this.mode = newMode;
 		this.sensitivity = newSensitivity;
@@ -183,6 +194,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.reverse = newReverse;
 		this.particles = newParticles;
 		this.orientation = newOrientation;
+		this.tempoPulse = newTempoPulse;
 		this.setFrameless(newFrameless);
 		this.markUpdated();
 	}
@@ -260,6 +272,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		compoundTag.putBoolean("blackback", this.blackback);
 		compoundTag.putBoolean("idleLight", this.idleLight);
 		compoundTag.putBoolean("reverse", this.reverse);
+		compoundTag.putBoolean("tempoPulse", this.tempoPulse);
 		compoundTag.putString("particles", this.particles.getSerializedName());
 		compoundTag.putString("orientation", this.orientation.getSerializedName());
 
@@ -289,6 +302,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.blackback = !compoundTag.contains("blackback") || compoundTag.getBoolean("blackback");
 		this.idleLight = compoundTag.contains("idleLight") && compoundTag.getBoolean("idleLight");
 		this.reverse = compoundTag.getBoolean("reverse");
+		this.tempoPulse = !compoundTag.contains("tempoPulse") || compoundTag.getBoolean("tempoPulse");
 		this.particles = LampParticles.byName(compoundTag.getString("particles"));
 		this.orientation = LampOrientation.byName(compoundTag.getString("orientation"));
 
