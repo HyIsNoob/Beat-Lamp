@@ -1,7 +1,5 @@
 package com.beatlamp.client.audio;
 
-import java.util.Arrays;
-
 public final class AudioAnalyzer {
 	public static final int BAND_COUNT = 16;
 	private static final float BAND_MIN_HZ = 40.0F;
@@ -43,10 +41,8 @@ public final class AudioAnalyzer {
 	private long lastBeatSample = -1_000_000L;
 	private float lastBeatIntensity;
 
-	// Complex Spectral Difference tracking
+	// Spectral magnitude tracking
 	private final float[] prevMag;
-	private final float[] prevPhase1;
-	private final float[] prevPhase2;
 
 	// 7-Frame Median Filter for Noise Floor Rejection
 	private static final int MEDIAN_WINDOW = 7;
@@ -62,16 +58,16 @@ public final class AudioAnalyzer {
 	private long prevBeatSample = -1_000_000L;
 
 	private static final int FLUX_HISTORY_SIZE = 64;
-	private static final float FLUX_WINDOW_SECONDS = 1.0F;
-	private final long[] fluxTimes = new long[FLUX_HISTORY_SIZE];
 	private final float[] fluxValues = new float[FLUX_HISTORY_SIZE];
 	private int fluxCursor;
 	private int fluxFilled;
+	private float fluxRunningSum;
+	private float fluxRunningSumSq;
 	private float previousFlux;
 
 	public AudioAnalyzer(int sampleRate, boolean highQuality) {
 		this.sampleRate = Math.max(8000, sampleRate);
-		this.fftSize = highQuality ? 2048 : 1024;
+		this.fftSize = highQuality ? 1024 : 1024;
 		this.fftMask = this.fftSize - 1;
 		this.ring = new float[this.fftSize];
 		this.window = new float[this.fftSize];
@@ -94,7 +90,6 @@ public final class AudioAnalyzer {
 			double den = (f2 + 20.6 * 20.6) * Math.sqrt((f2 + 107.7 * 107.7) * (f2 + 737.9 * 737.9)) * (f2 + 12194.0 * 12194.0);
 			double ra = den > 0 ? num / den : 0.0;
 			double db = 2.0 + 20.0 * Math.log10(Math.max(1e-6, ra));
-			// Convert dB to perceptual linear scaling factor (normalized around 1kHz)
 			this.aWeights[i] = (float) Math.clamp(Math.pow(10.0, db / 20.0) * 1.15, 0.25, 2.0);
 		}
 		this.aWeights[0] = this.aWeights[1];
@@ -122,8 +117,6 @@ public final class AudioAnalyzer {
 
 		int maxTrackedBin = Math.max(this.highBassBin, Math.max(this.highMidBin, this.highHighBin)) + 1;
 		this.prevMag = new float[maxTrackedBin];
-		this.prevPhase1 = new float[maxTrackedBin];
-		this.prevPhase2 = new float[maxTrackedBin];
 	}
 
 	public void push(float[] samples, int count) {
@@ -203,58 +196,38 @@ public final class AudioAnalyzer {
 		Fft.fft(this.fftReal, this.fftImag);
 
 		float bassEnergy = 0.0F;
-		float complexBassFlux = 0.0F;
+		float bassFlux = 0.0F;
 
-		// 1. Complex-Domain Spectral Difference for Sub-Bass Kick
+		// 1. Half-Wave Rectified Spectral Flux with A-Weighting for Sub-Bass Kick
 		for (int bin = this.lowBassBin; bin <= this.highBassBin; bin++) {
 			float mag = magnitude(bin) * this.aWeights[bin];
-			float phase = (float) Math.atan2(this.fftImag[bin], this.fftReal[bin]);
-
-			// Phase prediction
-			float expectedPhase = 2.0F * this.prevPhase1[bin] - this.prevPhase2[bin];
-			float phaseDiff = phase - expectedPhase;
 			float pMag = this.prevMag[bin];
-
-			// Complex distance
-			float csd = (float) Math.sqrt(Math.max(0.0F, mag * mag + pMag * pMag - 2.0F * mag * pMag * (float) Math.cos(phaseDiff)));
-			if (mag >= pMag) {
-				complexBassFlux += csd;
+			if (mag > pMag) {
+				bassFlux += (mag - pMag);
 			} else {
-				complexBassFlux += csd * 0.15F;
+				bassFlux += (mag - pMag) * 0.10F;
 			}
-
-			this.prevPhase2[bin] = this.prevPhase1[bin];
-			this.prevPhase1[bin] = phase;
 			this.prevMag[bin] = mag;
 			bassEnergy += mag;
 		}
 
 		int bassBins = this.highBassBin - this.lowBassBin + 1;
 		bassEnergy /= bassBins * this.fftSize * 0.5F;
-		complexBassFlux /= bassBins * this.fftSize * 0.5F;
+		bassFlux /= bassBins * this.fftSize * 0.5F;
 
 		// 2. Mid Transient Detection (Snare / Clap Transients)
-		float complexMidFlux = 0.0F;
+		float midFlux = 0.0F;
 		for (int bin = this.lowMidBin; bin <= this.highMidBin; bin++) {
 			float mag = magnitude(bin) * this.aWeights[bin];
-			float phase = (float) Math.atan2(this.fftImag[bin], this.fftReal[bin]);
-
-			float expectedPhase = 2.0F * this.prevPhase1[bin] - this.prevPhase2[bin];
-			float phaseDiff = phase - expectedPhase;
 			float pMag = this.prevMag[bin];
-
-			float csd = (float) Math.sqrt(Math.max(0.0F, mag * mag + pMag * pMag - 2.0F * mag * pMag * (float) Math.cos(phaseDiff)));
-			if (mag >= pMag) {
-				complexMidFlux += csd;
+			if (mag > pMag) {
+				midFlux += (mag - pMag);
 			}
-
-			this.prevPhase2[bin] = this.prevPhase1[bin];
-			this.prevPhase1[bin] = phase;
 			this.prevMag[bin] = mag;
 		}
 
 		int midBins = this.highMidBin - this.lowMidBin + 1;
-		complexMidFlux /= midBins * this.fftSize * 0.5F;
+		midFlux /= midBins * this.fftSize * 0.5F;
 
 		// 3. Hi-Hat / Cymbal Sizzle Detection
 		float highFlux = 0.0F;
@@ -269,8 +242,8 @@ public final class AudioAnalyzer {
 		int highBins = this.highHighBin - this.lowHighBin + 1;
 		highFlux /= highBins * this.fftSize * 0.5F;
 
-		// 4. Combined Onset Flux with 7-Frame Median Filter
-		float rawFlux = complexBassFlux * 1.0F + complexMidFlux * 0.38F;
+		// 4. Combined Onset Flux with Fast 7-Frame Median Filter
+		float rawFlux = bassFlux * 1.0F + midFlux * 0.40F;
 
 		this.medianRing[this.medianIndex] = rawFlux;
 		this.medianIndex = (this.medianIndex + 1) % MEDIAN_WINDOW;
@@ -278,15 +251,22 @@ public final class AudioAnalyzer {
 
 		float filteredFlux = this.getMedianFlux(rawFlux);
 
-		this.fluxTimes[this.fluxCursor] = this.totalSamples;
-		this.fluxValues[this.fluxCursor] = filteredFlux;
-		this.fluxCursor = (this.fluxCursor + 1) % FLUX_HISTORY_SIZE;
-		if (this.fluxFilled < FLUX_HISTORY_SIZE) {
+		// Maintain Running Sum for O(1) Local Average & Variance
+		if (this.fluxFilled >= FLUX_HISTORY_SIZE) {
+			float oldVal = this.fluxValues[this.fluxCursor];
+			this.fluxRunningSum -= oldVal;
+			this.fluxRunningSumSq -= oldVal * oldVal;
+		} else {
 			this.fluxFilled++;
 		}
 
-		float localAvg = this.localFluxAverage();
-		float localVariance = this.localFluxVariance(localAvg);
+		this.fluxValues[this.fluxCursor] = filteredFlux;
+		this.fluxRunningSum += filteredFlux;
+		this.fluxRunningSumSq += filteredFlux * filteredFlux;
+		this.fluxCursor = (this.fluxCursor + 1) % FLUX_HISTORY_SIZE;
+
+		float localAvg = this.fluxRunningSum / this.fluxFilled;
+		float localVariance = Math.max(0.0F, (this.fluxRunningSumSq / this.fluxFilled) - (localAvg * localAvg));
 		boolean rising = filteredFlux > this.previousFlux;
 		this.previousFlux = filteredFlux;
 
@@ -327,8 +307,8 @@ public final class AudioAnalyzer {
 		float adaptiveThreshold = localAvg * 1.22F + (float) Math.sqrt(localVariance) * 0.36F + refractoryDecay + 0.0008F;
 		long minBeatGap = (long) (this.sampleRate * 0.115); // ~115ms min gap
 
-		boolean hasKick = complexBassFlux > adaptiveThreshold * 0.95F && bassEnergy > 0.005F;
-		boolean hasSnare = complexMidFlux > adaptiveThreshold * 0.65F && complexMidFlux > 0.007F;
+		boolean hasKick = bassFlux > adaptiveThreshold * 0.95F && bassEnergy > 0.005F;
+		boolean hasSnare = midFlux > adaptiveThreshold * 0.65F && midFlux > 0.007F;
 		boolean hasHihat = highFlux > adaptiveThreshold * 0.45F && highFlux > 0.006F;
 
 		// 6. Beat-Grid Metronome Phase Progression
@@ -370,47 +350,31 @@ public final class AudioAnalyzer {
 	}
 
 	private float getMedianFlux(float fallback) {
-		if (this.medianFilled <= 0) return fallback;
-		for (int i = 0; i < this.medianFilled; i++) {
+		int n = this.medianFilled;
+		if (n <= 0) return fallback;
+		if (n <= 2) return this.medianRing[0];
+
+		for (int i = 0; i < n; i++) {
 			this.medianScratch[i] = this.medianRing[i];
 		}
-		Arrays.sort(this.medianScratch, 0, this.medianFilled);
-		return this.medianScratch[this.medianFilled / 2];
-	}
 
-	private float localFluxAverage() {
-		long cutoff = this.totalSamples - (long) ((float) this.sampleRate * FLUX_WINDOW_SECONDS);
-		float sum = 0.0F;
-		int count = 0;
-
-		for (int i = 0; i < this.fluxFilled; i++) {
-			if (this.fluxTimes[i] >= cutoff) {
-				sum += this.fluxValues[i];
-				count++;
+		// Fast in-place insertion sort (n <= 7) with 0 allocations
+		for (int i = 1; i < n; i++) {
+			float key = this.medianScratch[i];
+			int j = i - 1;
+			while (j >= 0 && this.medianScratch[j] > key) {
+				this.medianScratch[j + 1] = this.medianScratch[j];
+				j--;
 			}
+			this.medianScratch[j + 1] = key;
 		}
-
-		return count > 0 ? sum / count : 0.0F;
-	}
-
-	private float localFluxVariance(float mean) {
-		long cutoff = this.totalSamples - (long) ((float) this.sampleRate * FLUX_WINDOW_SECONDS);
-		float sumSq = 0.0F;
-		int count = 0;
-
-		for (int i = 0; i < this.fluxFilled; i++) {
-			if (this.fluxTimes[i] >= cutoff) {
-				float diff = this.fluxValues[i] - mean;
-				sumSq += diff * diff;
-				count++;
-			}
-		}
-
-		return count > 0 ? sumSq / count : 0.0F;
+		return this.medianScratch[n / 2];
 	}
 
 	private float magnitude(int bin) {
-		return (float) Math.sqrt(this.fftReal[bin] * this.fftReal[bin] + this.fftImag[bin] * this.fftImag[bin]);
+		float r = this.fftReal[bin];
+		float i = this.fftImag[bin];
+		return (float) Math.sqrt(r * r + i * i);
 	}
 
 	private static float clamp01(float value) {

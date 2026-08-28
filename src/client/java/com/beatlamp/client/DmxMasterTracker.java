@@ -6,11 +6,11 @@ import java.util.concurrent.ConcurrentHashMap;
 import com.beatlamp.block.DmxConsoleBlockEntity;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.phys.Vec3;
 
 public class DmxMasterTracker {
 	private static final Map<BlockPos, DmxConsoleBlockEntity> ACTIVE_CONSOLES = new ConcurrentHashMap<>();
 	public static final double DMX_RANGE = 64.0;
+	public static final double DMX_RANGE_SQR = DMX_RANGE * DMX_RANGE;
 
 	public static void register(DmxConsoleBlockEntity console) {
 		if (console.getBlockPos() != null) {
@@ -27,12 +27,21 @@ public class DmxMasterTracker {
 	}
 
 	public static boolean isBlackoutNear(BlockPos pos) {
-		Vec3 center = Vec3.atCenterOf(pos);
+		if (ACTIVE_CONSOLES.isEmpty()) {
+			return false;
+		}
+
 		for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
 			if (console.isRemoved() || console.getLevel() == null) {
 				continue;
 			}
-			if (Vec3.atCenterOf(console.getBlockPos()).distanceTo(center) <= DMX_RANGE) {
+
+			BlockPos cPos = console.getBlockPos();
+			long dx = pos.getX() - cPos.getX();
+			long dy = pos.getY() - cPos.getY();
+			long dz = pos.getZ() - cPos.getZ();
+
+			if (dx * dx + dy * dy + dz * dz <= DMX_RANGE_SQR) {
 				if (console.isBlackout()) {
 					return true;
 				}
@@ -42,12 +51,21 @@ public class DmxMasterTracker {
 	}
 
 	public static boolean isStrobeAllNear(BlockPos pos) {
-		Vec3 center = Vec3.atCenterOf(pos);
+		if (ACTIVE_CONSOLES.isEmpty()) {
+			return false;
+		}
+
 		for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
 			if (console.isRemoved() || console.getLevel() == null) {
 				continue;
 			}
-			if (Vec3.atCenterOf(console.getBlockPos()).distanceTo(center) <= DMX_RANGE) {
+
+			BlockPos cPos = console.getBlockPos();
+			long dx = pos.getX() - cPos.getX();
+			long dy = pos.getY() - cPos.getY();
+			long dz = pos.getZ() - cPos.getZ();
+
+			if (dx * dx + dy * dy + dz * dz <= DMX_RANGE_SQR) {
 				if (console.isStrobeAll()) {
 					return true;
 				}
@@ -57,13 +75,22 @@ public class DmxMasterTracker {
 	}
 
 	public static float getMasterDimmerNear(BlockPos pos) {
-		Vec3 center = Vec3.atCenterOf(pos);
+		if (ACTIVE_CONSOLES.isEmpty()) {
+			return 1.0F;
+		}
+
 		float dimmer = 1.0F;
 		for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
 			if (console.isRemoved() || console.getLevel() == null) {
 				continue;
 			}
-			if (Vec3.atCenterOf(console.getBlockPos()).distanceTo(center) <= DMX_RANGE) {
+
+			BlockPos cPos = console.getBlockPos();
+			long dx = pos.getX() - cPos.getX();
+			long dy = pos.getY() - cPos.getY();
+			long dz = pos.getZ() - cPos.getZ();
+
+			if (dx * dx + dy * dy + dz * dz <= DMX_RANGE_SQR) {
 				if (console.isBlackout()) {
 					return 0.0F;
 				}
@@ -74,12 +101,21 @@ public class DmxMasterTracker {
 	}
 
 	public static float getMasterSpeedNear(BlockPos pos) {
-		Vec3 center = Vec3.atCenterOf(pos);
+		if (ACTIVE_CONSOLES.isEmpty()) {
+			return 1.0F;
+		}
+
 		for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
 			if (console.isRemoved() || console.getLevel() == null) {
 				continue;
 			}
-			if (Vec3.atCenterOf(console.getBlockPos()).distanceTo(center) <= DMX_RANGE) {
+
+			BlockPos cPos = console.getBlockPos();
+			long dx = pos.getX() - cPos.getX();
+			long dy = pos.getY() - cPos.getY();
+			long dz = pos.getZ() - cPos.getZ();
+
+			if (dx * dx + dy * dy + dz * dz <= DMX_RANGE_SQR) {
 				return console.getMasterSpeed();
 			}
 		}
