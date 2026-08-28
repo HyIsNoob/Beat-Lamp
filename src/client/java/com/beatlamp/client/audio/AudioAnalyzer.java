@@ -67,7 +67,7 @@ public final class AudioAnalyzer {
 
 	public AudioAnalyzer(int sampleRate, boolean highQuality) {
 		this.sampleRate = Math.max(8000, sampleRate);
-		this.fftSize = highQuality ? 1024 : 1024;
+		this.fftSize = highQuality ? 2048 : 1024;
 		this.fftMask = this.fftSize - 1;
 		this.ring = new float[this.fftSize];
 		this.window = new float[this.fftSize];

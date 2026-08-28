@@ -168,6 +168,9 @@
 	"message.beatlamp.source.cancel": "Jukebox selection cancelled",
 	"screen.beatlamp.dmx.title": "Master DMX Stage Console",
 	"screen.beatlamp.dmx.dimmer": "Master Dimmer",
+	"screen.beatlamp.dmx.quality": "Audio Engine: %s",
+	"screen.beatlamp.quality.lite": "LITE (Max FPS)",
+	"screen.beatlamp.quality.studio": "STUDIO (High Precision)",
 	"message.beatlamp.emitter.mode.pulse": "Emitter mode: Beat Pulse Clock (1-tick spike on drop)",
 	"message.beatlamp.emitter.mode.level": "Emitter mode: Continuous Energy (0-15 signal)"
 }

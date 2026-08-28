@@ -9,7 +9,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import javax.sound.sampled.AudioFormat;
 
 import com.beatlamp.BeatLamp;
-import com.beatlamp.client.BeatLampClientConfig;
+import com.beatlamp.client.config.BeatLampClientConfig;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.sounds.Sound;
@@ -34,19 +34,20 @@ public final class JukeboxAudioTracker {
 	private static final class ActiveSong {
 		final Vec3 position;
 		final AudioAnalyzer analyzer;
-		Thread thread;
 		volatile boolean running = true;
-		volatile float beatPulse;
-		volatile float kickPulse;
-		volatile float snarePulse;
-		volatile float hihatPulse;
-		volatile float impactPulse;
+		Thread thread;
 
 		ActiveSong(Vec3 position, AudioAnalyzer analyzer, Thread thread) {
 			this.position = position;
 			this.analyzer = analyzer;
 			this.thread = thread;
 		}
+
+		float beatPulse;
+		float kickPulse;
+		float snarePulse;
+		float hihatPulse;
+		float impactPulse;
 	}
 
 	public static void onSoundPlayed(SoundInstance soundInstance) {
@@ -56,24 +57,22 @@ public final class JukeboxAudioTracker {
 
 		Minecraft minecraft = Minecraft.getInstance();
 		SoundManager soundManager = minecraft.getSoundManager();
-		WeighedSoundEvents weighedSoundEvents = soundManager.getSoundEvent(soundInstance.getLocation());
+		WeighedSoundEvents weighedSoundEvents = soundInstance.resolve(soundManager);
+
 		if (weighedSoundEvents == null) {
 			return;
 		}
 
-		Sound sound = weighedSoundEvents.getSound(RandomSource.create());
-		int guard = 0;
-		while (sound != null && sound.getType() == Sound.Type.SOUND_EVENT && guard++ < 8) {
-			WeighedSoundEvents next = soundManager.getSoundEvent(sound.getLocation());
+		Sound sound = soundInstance.getSound();
+
+		if (sound == null || sound == SoundManager.EMPTY_SOUND) {
+			WeighedSoundEvents next = soundManager.getSoundEvent(soundInstance.getLocation());
+
 			if (next == null) {
-				break;
+				return;
 			}
 
 			sound = next.getSound(RandomSource.create());
-		}
-
-		if (sound == null || sound == SoundManager.EMPTY_SOUND) {
-			return;
 		}
 
 		startSong(BlockPos.containing(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ()), sound.getPath(), minecraft);
@@ -86,7 +85,7 @@ public final class JukeboxAudioTracker {
 			InputStream inputStream = minecraft.getResourceManager().open(path);
 			JOrbisAudioStream audioStream = new JOrbisAudioStream(inputStream);
 			AudioFormat format = audioStream.getFormat();
-			AudioAnalyzer analyzer = new AudioAnalyzer((int) format.getSampleRate(), BeatLampClientConfig.highQualityBeat);
+			AudioAnalyzer analyzer = new AudioAnalyzer((int) format.getSampleRate(), BeatLampClientConfig.isStudioQuality());
 			int channels = format.getChannels();
 			BeatLamp.LOGGER.info("Beat Lamp tracking jukebox at {} -> {} ({}Hz, {}ch)", blockPos.toShortString(), path, format.getSampleRate(), channels);
 

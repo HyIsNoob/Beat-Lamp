@@ -20,6 +20,7 @@ import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.block.StageLightMode;
 import com.beatlamp.client.audio.AudioAnalyzer;
 import com.beatlamp.client.audio.JukeboxAudioTracker;
+import com.beatlamp.client.config.BeatLampClientConfig;
 import com.beatlamp.block.DmxConsoleBlockEntity;
 import com.beatlamp.client.gui.DmxConsoleScreen;
 import com.beatlamp.client.gui.FogGeneratorConfigScreen;

@@ -2,6 +2,7 @@ package com.beatlamp.client.gui;
 
 import com.beatlamp.block.DmxConsoleBlockEntity;
 import com.beatlamp.client.DmxMasterTracker;
+import com.beatlamp.client.config.BeatLampClientConfig;
 import com.beatlamp.network.DmxConsolePayload;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -27,6 +28,7 @@ public class DmxConsoleScreen extends Screen {
 	private Button strobeButton;
 	private ValueSlider dimmerSlider;
 	private ValueSlider speedSlider;
+	private Button qualityButton;
 
 	public DmxConsoleScreen(DmxConsoleBlockEntity dmx) {
 		super(Component.translatable("screen.beatlamp.dmx.title"));
@@ -41,7 +43,7 @@ public class DmxConsoleScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 70;
+		int y = this.height / 2 - 80;
 
 		this.blackoutButton = this.addRenderableWidget(
 			Button.builder(this.blackoutLabel(), button -> {
@@ -56,11 +58,11 @@ public class DmxConsoleScreen extends Screen {
 				this.strobeAll = !this.strobeAll;
 				button.setMessage(this.strobeLabel());
 				this.sendConfig();
-			}).bounds(centerX - 100, y + 30, 200, 24).build()
+			}).bounds(centerX - 100, y + 28, 200, 24).build()
 		);
 
 		this.dimmerSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 60, Component.translatable("screen.beatlamp.dmx.dimmer"), this.masterDimmer, 0.0, 1.0, "%d%%") {
+			new ValueSlider(centerX - 100, y + 56, Component.translatable("screen.beatlamp.dmx.dimmer"), this.masterDimmer, 0.0, 1.0, "%d%%") {
 				@Override
 				protected void applyValue() {
 					DmxConsoleScreen.this.masterDimmer = (float) this.value;
@@ -70,7 +72,7 @@ public class DmxConsoleScreen extends Screen {
 		);
 
 		this.speedSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 86, Component.translatable("screen.beatlamp.speed"), this.masterSpeed, 0.2, 3.0, "%.1fx") {
+			new ValueSlider(centerX - 100, y + 80, Component.translatable("screen.beatlamp.speed"), this.masterSpeed, 0.2, 3.0, "%.1fx") {
 				@Override
 				protected void applyValue() {
 					DmxConsoleScreen.this.masterSpeed = (float) Mth.lerp(this.value, 0.2, 3.0);
@@ -79,9 +81,16 @@ public class DmxConsoleScreen extends Screen {
 			}
 		);
 
+		this.qualityButton = this.addRenderableWidget(
+			Button.builder(this.qualityLabel(), button -> {
+				BeatLampClientConfig.setQualityProfile(BeatLampClientConfig.getQualityProfile().next());
+				button.setMessage(this.qualityLabel());
+			}).bounds(centerX - 100, y + 104, 200, 20).build()
+		);
+
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX - 100, y + 120, 200, 20)
+				.bounds(centerX - 100, y + 128, 200, 20)
 				.build()
 		);
 	}
@@ -100,6 +109,13 @@ public class DmxConsoleScreen extends Screen {
 		} else {
 			return Component.literal("STROBE ALL: OFF").withStyle(ChatFormatting.GRAY);
 		}
+	}
+
+	private Component qualityLabel() {
+		BeatLampClientConfig.AudioQualityProfile p = BeatLampClientConfig.getQualityProfile();
+		String key = p == BeatLampClientConfig.AudioQualityProfile.LITE ? "screen.beatlamp.quality.lite" : "screen.beatlamp.quality.studio";
+		ChatFormatting color = p == BeatLampClientConfig.AudioQualityProfile.LITE ? ChatFormatting.GREEN : ChatFormatting.LIGHT_PURPLE;
+		return Component.translatable("screen.beatlamp.dmx.quality", Component.translatable(key).withStyle(color, ChatFormatting.BOLD));
 	}
 
 	private void sendConfig() {
@@ -122,17 +138,25 @@ public class DmxConsoleScreen extends Screen {
 		super.render(graphics, mouseX, mouseY, delta);
 
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 70;
+		int y = this.height / 2 - 80;
 
 		graphics.drawCenteredString(this.font, this.title, centerX, y - 28, 0xFFE0E0E0);
 		graphics.drawCenteredString(this.font, Component.literal("Range: 64 Blocks Radius").withStyle(ChatFormatting.DARK_GRAY), centerX, y - 14, 0xFF888888);
 
 		if (this.blackout) {
-			graphics.fill(centerX - 104, y - 2, centerX + 104, y + 26, 0x40FF0000);
+			graphics.fill(centerX - 104, y - 4, centerX - 101, y + 28, 0xFFFF2020);
+			graphics.fill(centerX + 101, y - 4, centerX + 104, y + 28, 0xFFFF2020);
 		}
+
 		if (this.strobeAll) {
-			graphics.fill(centerX - 104, y + 28, centerX + 104, y + 56, 0x40FFFF00);
+			graphics.fill(centerX - 104, y + 24, centerX - 101, y + 56, 0xFFFFE020);
+			graphics.fill(centerX + 101, y + 24, centerX + 104, y + 56, 0xFFFFE020);
 		}
+	}
+
+	@Override
+	public boolean isPauseScreen() {
+		return false;
 	}
 
 	private abstract static class ValueSlider extends AbstractSliderButton {
@@ -141,8 +165,8 @@ public class DmxConsoleScreen extends Screen {
 		private final double max;
 		private final String format;
 
-		public ValueSlider(int x, int y, Component prefix, double current, double min, double max, String format) {
-			super(x, y, 200, 20, Component.empty(), (current - min) / (max - min));
+		ValueSlider(int x, int y, Component prefix, float initial, double min, double max, String format) {
+			super(x, y, 200, 20, Component.empty(), (initial - min) / (max - min));
 			this.prefix = prefix;
 			this.min = min;
 			this.max = max;
@@ -153,8 +177,18 @@ public class DmxConsoleScreen extends Screen {
 		@Override
 		protected void updateMessage() {
 			double val = Mth.lerp(this.value, this.min, this.max);
-			String formatted = this.format.contains("%d%%") ? String.format(this.format, (int) (val * 100.0)) : String.format(this.format, val);
-			this.setMessage(Component.empty().append(this.prefix).append(": ").append(formatted));
+			if (this.format.contains("%d")) {
+				int percent = (int) Math.round(val * 100.0);
+				this.setMessage(Component.translatable("screen.beatlamp.slider.value", this.prefix, percent + "%"));
+			} else {
+				this.setMessage(Component.translatable("screen.beatlamp.slider.value", this.prefix, String.format(this.format, val)));
+			}
+		}
+
+		public void updateVal(float initial) {
+			this.value = (initial - this.min) / (this.max - this.min);
+			this.updateMessage();
+			this.applyValue();
 		}
 	}
 }
