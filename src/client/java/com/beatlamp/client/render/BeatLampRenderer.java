@@ -25,7 +25,7 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 
 	@Override
 	public int getViewDistance() {
-		return 512;
+		return 192;
 	}
 
 	@Override
@@ -44,22 +44,14 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float beat = Mth.clamp(beatLamp.beatPulse, 0.0F, 1.0F);
 		float intensity = Math.max(Math.max(pulse, bar), beat);
 
+		if (intensity <= 0.02F || beatLamp.displayColor == 0) {
+			return;
+		}
+
 		poseStack.pushPose();
 		poseStack.translate(0.5F, 0.5F, 0.5F);
 		PoseStack.Pose pose = poseStack.last();
 		Matrix4f matrix = pose.pose();
-
-		if (intensity <= 0.02F) {
-			if (!blackback) {
-				poseStack.popPose();
-				return;
-			}
-
-			VertexConsumer black = multiBufferSource.getBuffer(RenderType.entityCutoutNoCull(CORE_TEXTURE));
-			drawCube(black, pose, matrix, FULL_HALF, FULL_HALF, FULL_HALF, 0.0F, 0.0F, 0.0F, 1.0F, 0xF000F0);
-			poseStack.popPose();
-			return;
-		}
 
 		int color = beatLamp.displayColor;
 		float red = ((color >> 16) & 0xFF) / 255.0F;

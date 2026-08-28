@@ -32,7 +32,7 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
 	@Override
 	public int getViewDistance() {
-		return 512;
+		return 192;
 	}
 
 	@Override

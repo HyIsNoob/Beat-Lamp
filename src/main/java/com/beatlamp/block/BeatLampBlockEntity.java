@@ -334,7 +334,8 @@ public class BeatLampBlockEntity extends BlockEntity {
 	}
 
 	public static void serverTick(Level level, BlockPos blockPos, BlockState blockState, BeatLampBlockEntity beatLamp) {
-		if (level.getGameTime() % 10L != 0L) {
+		long gameTime = level.getGameTime();
+		if ((gameTime + Math.abs(blockPos.hashCode())) % 20L != 0L) {
 			return;
 		}
 

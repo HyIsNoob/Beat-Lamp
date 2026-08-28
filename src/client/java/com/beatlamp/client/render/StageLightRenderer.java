@@ -29,7 +29,7 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 
 	@Override
 	public int getViewDistance() {
-		return 512;
+		return 192;
 	}
 
 	@Override
