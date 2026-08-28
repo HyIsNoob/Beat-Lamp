@@ -191,23 +191,20 @@ public class BeatLampClient implements ClientModInitializer {
 		float sensitivity = beatLamp.getSensitivity();
 		float speed = beatLamp.getSpeed() * DmxMasterTracker.getMasterSpeedNear(blockPos);
 
-		LampMode mode = beatLamp.getMode();
-		float rawLevel = JukeboxAudioTracker.getRawLevelAt(center, source);
-		float target = Mth.clamp((mode == LampMode.PULSE ? rawLevel : JukeboxAudioTracker.getLevelAt(center, source)) * sensitivity, 0.0F, 1.0F);
+		float target = Mth.clamp(JukeboxAudioTracker.getLevelAt(center, source) * sensitivity, 0.0F, 1.0F);
 		float diff = target - beatLamp.smoothLevel;
-		beatLamp.smoothLevel += diff * (diff > 0.0F ? 0.55F : 0.22F);
-		if (mode == LampMode.PULSE && beatLamp.smoothLevel < 0.02F) {
-			beatLamp.smoothLevel = 0.0F;
-		}
+		beatLamp.smoothLevel += diff * (diff > 0.0F ? 0.5F : 0.15F);
 		beatLamp.pulse = beatLamp.smoothLevel;
 		beatLamp.beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
+
+		LampMode mode = beatLamp.getMode();
 
 		if (needsTopology(mode) && shouldRefreshTopology(level, blockPos)) {
 			updateGroupInfo(level, beatLamp, blockPos);
 		}
 
 		float time = JukeboxAudioTracker.getEffectTime() * speed;
-		float energy = (mode == LampMode.PULSE) ? beatLamp.pulse : Mth.clamp(Math.max(beatLamp.pulse, beatLamp.beatPulse * 0.8F), 0.0F, 1.0F);
+		float energy = Mth.clamp(Math.max(beatLamp.pulse, beatLamp.beatPulse * 0.8F), 0.0F, 1.0F);
 
 		switch (mode) {
 			case PULSE -> beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, -1.0F, energy);
@@ -642,7 +639,7 @@ public class BeatLampClient implements ClientModInitializer {
 				hue = (hue + hueOffset) % 1.0F;
 			}
 
-			float value = Math.min(1.0F, energy * 1.15F);
+			float value = Math.min(1.0F, 0.35F + energy * 0.9F);
 			return java.awt.Color.HSBtoRGB(hue, 0.9F, value);
 		}
 

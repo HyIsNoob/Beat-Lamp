@@ -251,10 +251,13 @@ public final class JukeboxAudioTracker {
 			if (song.analyzer.consumeBeat()) {
 				song.beatPulse = 1.0F;
 			} else {
-				song.beatPulse *= 0.78F;
-				if (song.beatPulse < 0.01F) {
-					song.beatPulse = 0.0F;
-				}
+				song.beatPulse *= 0.80F;
+			}
+
+			// Sustain internal rhythmic pulse (~0.35) during vocal breakdown
+			float grid = song.analyzer.getGridPulse();
+			if (song.beatPulse < grid * 0.40F) {
+				song.beatPulse = grid * 0.40F;
 			}
 
 			if (song.analyzer.consumeKick()) {
