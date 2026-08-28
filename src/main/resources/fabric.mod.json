@@ -3,7 +3,7 @@
 	"id": "beatlamp",
 	"version": "${version}",
 	"name": "Beat Lamp",
-	"description": "Audio-reactive lamps and redstone emitters that pulse to the beat of jukebox music. Works with vanilla discs, resource pack music, and modded music discs.\n\nFeatures:\n- Beat Lamp: 6 reactive modes (Pulse, RGB, Spectrum, Ripple, Wave, Scan), 16 dye colors + OLED rainbow, frameless styling, and particle effects.\n- Beat Emitter: Outputs redstone power (0-15) dynamically reacting to jukebox bass and music energy.\n- Lamp Controller: Link lamps into synchronized groups with live preview, bind to specific jukeboxes, or configure all settings.",
+	"description": "Audio-reactive concert lighting, stage effects, and redstone signals synced to jukebox music in real time.\n\nFeatures:\n- Beat Lamp: 6 reactive modes (Pulse, RGB, Spectrum, Ripple, Wave, Scan), 16 dye colors + OLED rainbow, frameless styling, and particle effects.\n- Stage Light: 5 concert lighting modes (Sweep, Beat Step, Static, Strobe, Chase) with dual-layer atmospheric beams and beat color cycles.\n- Beat Fountain: Stage pyro jets, customizable drop thresholds, smoke control, 7 particle styles, and real fireworks launches.\n- Beat Emitter: Redstone power (0-15) and beat pulse clocks dynamically driven by music.\n- Group Linker: Fast 2-corner area linking tool for multi-fixture synchronization.\n- Lamp Controller: Direct GUI configuration and Jukebox audio source binding.",
 	"authors": [
 		"khang"
 	],
