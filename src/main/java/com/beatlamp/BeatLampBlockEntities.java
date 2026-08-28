@@ -5,6 +5,7 @@ import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LaserProjectorBlockEntity;
+import com.beatlamp.block.StageJukeboxBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 
 import net.minecraft.core.Registry;
@@ -47,6 +48,12 @@ public class BeatLampBlockEntities {
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
 		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "fog_generator"),
 		BlockEntityType.Builder.of(FogGeneratorBlockEntity::new, BeatLampBlocks.FOG_GENERATOR).build(null)
+	);
+
+	public static final BlockEntityType<StageJukeboxBlockEntity> STAGE_JUKEBOX = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE,
+		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "stage_jukebox"),
+		BlockEntityType.Builder.of(StageJukeboxBlockEntity::new, BeatLampBlocks.STAGE_JUKEBOX).build(null)
 	);
 
 	public static void register() {
