@@ -1,0 +1,28 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+issueTrackerURL="https://github.com/HyIsNoob/modMinecraft/issues"
+
+[[mods]]
+modId="beatlamp"
+version="0.2.0-beta.2"
+displayName="Beat Lamp"
+authors="HyIsNoob"
+description='''
+Audio-reactive concert lighting, stage effects, RGB Laser Projector, Stage Fog Generator, and redstone signals synced to jukebox music in real time.
+'''
+logoFile="icon.png"
+
+[[dependencies.beatlamp]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.0,)"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.beatlamp]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.22)"
+ordering="NONE"
+side="BOTH"
