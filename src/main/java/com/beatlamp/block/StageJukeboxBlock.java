@@ -26,6 +26,8 @@ import net.minecraft.world.level.block.state.properties.BooleanProperty;
 import net.minecraft.world.level.gameevent.GameEvent;
 import net.minecraft.world.phys.BlockHitResult;
 
+import org.jetbrains.annotations.Nullable;
+
 public class StageJukeboxBlock extends BaseEntityBlock {
 	public static final BooleanProperty HAS_RECORD = BlockStateProperties.HAS_RECORD;
 	public static final MapCodec<StageJukeboxBlock> CODEC = simpleCodec(StageJukeboxBlock::new);
@@ -43,7 +45,7 @@ public class StageJukeboxBlock extends BaseEntityBlock {
 	@Override
 	protected ItemInteractionResult useItemOn(ItemStack itemStack, BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult) {
 		if (blockState.getValue(HAS_RECORD)) {
-			this.dropRecording(level, blockPos);
+			this.dropRecording(level, blockPos, player);
 			return ItemInteractionResult.sidedSuccess(level.isClientSide);
 		}
 
@@ -54,7 +56,9 @@ public class StageJukeboxBlock extends BaseEntityBlock {
 					BlockEntity blockEntity = level.getBlockEntity(blockPos);
 					if (blockEntity instanceof StageJukeboxBlockEntity jukebox) {
 						ItemStack singleDisc = itemStack.copyWithCount(1);
-						itemStack.shrink(1);
+						if (!player.getAbilities().instabuild) {
+							itemStack.shrink(1);
+						}
 						jukebox.setRecord(singleDisc);
 						level.setBlock(blockPos, blockState.setValue(HAS_RECORD, true), 3);
 
@@ -69,7 +73,7 @@ public class StageJukeboxBlock extends BaseEntityBlock {
 		return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 	}
 
-	private void dropRecording(Level level, BlockPos blockPos) {
+	private void dropRecording(Level level, BlockPos blockPos, @Nullable Player player) {
 		if (!level.isClientSide) {
 			BlockEntity blockEntity = level.getBlockEntity(blockPos);
 			if (blockEntity instanceof StageJukeboxBlockEntity jukebox) {
@@ -77,9 +81,16 @@ public class StageJukeboxBlock extends BaseEntityBlock {
 				if (!record.isEmpty()) {
 					jukebox.stopSong();
 					jukebox.setRecord(ItemStack.EMPTY);
-					Containers.dropItemStack(level, blockPos.getX() + 0.5, blockPos.getY() + 0.9, blockPos.getZ() + 0.5, record);
 					level.setBlock(blockPos, level.getBlockState(blockPos).setValue(HAS_RECORD, false), 3);
 					level.gameEvent(null, GameEvent.JUKEBOX_STOP_PLAY, blockPos);
+
+					if (player != null && !player.getAbilities().instabuild) {
+						if (!player.getInventory().add(record)) {
+							Containers.dropItemStack(level, blockPos.getX() + 0.5, blockPos.getY() + 0.9, blockPos.getZ() + 0.5, record);
+						}
+					} else if (player == null) {
+						Containers.dropItemStack(level, blockPos.getX() + 0.5, blockPos.getY() + 0.9, blockPos.getZ() + 0.5, record);
+					}
 				}
 			}
 		}
@@ -88,7 +99,7 @@ public class StageJukeboxBlock extends BaseEntityBlock {
 	@Override
 	protected void onRemove(BlockState blockState, Level level, BlockPos blockPos, BlockState newState, boolean isMoving) {
 		if (!blockState.is(newState.getBlock())) {
-			this.dropRecording(level, blockPos);
+			this.dropRecording(level, blockPos, null);
 			super.onRemove(blockState, level, blockPos, newState, isMoving);
 		}
 	}

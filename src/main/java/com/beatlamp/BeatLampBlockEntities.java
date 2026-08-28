@@ -56,6 +56,12 @@ public class BeatLampBlockEntities {
 		BlockEntityType.Builder.of(StageJukeboxBlockEntity::new, BeatLampBlocks.STAGE_JUKEBOX).build(null)
 	);
 
+	public static final BlockEntityType<com.beatlamp.block.DmxConsoleBlockEntity> DMX_CONSOLE = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE,
+		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "dmx_console"),
+		BlockEntityType.Builder.of(com.beatlamp.block.DmxConsoleBlockEntity::new, BeatLampBlocks.DMX_CONSOLE).build(null)
+	);
+
 	public static void register() {
 	}
 }

@@ -68,6 +68,7 @@ public class BeatLamp implements ModInitializer {
 		PayloadTypeRegistry.playC2S().register(LampSourcePayload.ID, LampSourcePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(EmitterSignalPayload.ID, EmitterSignalPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(FountainFirePayload.ID, FountainFirePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(com.beatlamp.network.DmxConsolePayload.ID, com.beatlamp.network.DmxConsolePayload.CODEC);
 
 		// 1. Lamp config receiver
 		ServerPlayNetworking.registerGlobalReceiver(LampConfigurePayload.ID, (payload, context) -> {
@@ -276,6 +277,17 @@ public class BeatLamp implements ModInitializer {
 					fountain.markFired(gameTime);
 					spawnFirework(serverLevel, payload.pos(), fountain.getColor());
 				}
+			}
+		});
+
+		// 9. DMX Console config receiver
+		ServerPlayNetworking.registerGlobalReceiver(com.beatlamp.network.DmxConsolePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+			if (level.getBlockEntity(payload.pos()) instanceof com.beatlamp.block.DmxConsoleBlockEntity dmx) {
+				dmx.setBlackout(payload.blackout());
+				dmx.setStrobeAll(payload.strobeAll());
+				dmx.setMasterDimmer(payload.masterDimmer());
+				dmx.setMasterSpeed(payload.masterSpeed());
 			}
 		});
 	}

@@ -251,13 +251,10 @@ public final class JukeboxAudioTracker {
 			if (song.analyzer.consumeBeat()) {
 				song.beatPulse = 1.0F;
 			} else {
-				song.beatPulse *= 0.80F;
-			}
-
-			// Sustain internal rhythmic pulse (~0.35) during vocal breakdown
-			float grid = song.analyzer.getGridPulse();
-			if (song.beatPulse < grid * 0.40F) {
-				song.beatPulse = grid * 0.40F;
+				song.beatPulse *= 0.78F;
+				if (song.beatPulse < 0.01F) {
+					song.beatPulse = 0.0F;
+				}
 			}
 
 			if (song.analyzer.consumeKick()) {
@@ -317,6 +314,50 @@ public final class JukeboxAudioTracker {
 
 	public static float getLevelAt(Vec3 position) {
 		return getLevelAt(position, null);
+	}
+
+	public static float getRawLevelAt(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song == null ? 0.0F : song.analyzer.getLevel();
+		}
+
+		float best = 0.0F;
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
+			float falloff = falloff(song.position.distanceTo(position));
+			if (falloff <= 0.0F) {
+				continue;
+			}
+
+			float level = song.analyzer.getLevel() * falloff;
+			if (level > best) {
+				best = level;
+			}
+		}
+
+		return best;
+	}
+
+	public static float getGridPulseAt(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song == null ? 0.0F : song.analyzer.getGridPulse();
+		}
+
+		float best = 0.0F;
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
+			float falloff = falloff(song.position.distanceTo(position));
+			if (falloff <= 0.0F) {
+				continue;
+			}
+
+			float grid = song.analyzer.getGridPulse() * falloff;
+			if (grid > best) {
+				best = grid;
+			}
+		}
+
+		return best;
 	}
 
 	public static float getLevelAt(Vec3 position, BlockPos source) {

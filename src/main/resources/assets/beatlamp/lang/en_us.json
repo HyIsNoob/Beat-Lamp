@@ -23,46 +23,46 @@
 
 	"item.beatlamp.tag.decoration": "Decoration",
 	"item.beatlamp.tag.hold_shift": "Hold [Shift] for Guide",
-	"item.beatlamp.tag.guide_header": "▪ Stage Device Guide ▪",
+	"item.beatlamp.tag.guide_header": "▪ Stage Guide ▪",
 
 	"item.beatlamp.beat_lamp.tooltip.summary": "Audio-reactive neon lamp with 9 visualizer modes.",
-	"item.beatlamp.beat_lamp.tooltip.details": "• 9 Modes: VU Meter, Waveform, Matrix, RGB...\n• Realtime audio frequency visualizer\n• Link multiple lamps with Group Linker\n• Right-click with Controller to configure",
+	"item.beatlamp.beat_lamp.tooltip.details": "• Lights up to music. 9 Visualizer Modes.\n• Right-click with Controller to configure.",
 
 	"item.beatlamp.stage_light.tooltip.summary": "Concert moving-head spotlight beam.",
-	"item.beatlamp.stage_light.tooltip.details": "• Moving-head concert beam (up to 34 blocks)\n• 5 Modes: Sweep, Beat Step, Static, Strobe, Chase\n• Right-click with Controller to adjust angle & speed",
+	"item.beatlamp.stage_light.tooltip.details": "• Concert spotlight beam (up to 34 blocks).\n• Right-click with Controller to configure.",
 
 	"item.beatlamp.laser_projector.tooltip.summary": "3D multi-beam concert laser fixture.",
-	"item.beatlamp.laser_projector.tooltip.details": "• 1 to 8 high-energy neon lasers\n• 4 Modes: Fan Sweep, Cone Spin, Static, Burst\n• Adjustable spread (10°-120°) and speed\n• Right-click with Controller to configure",
+	"item.beatlamp.laser_projector.tooltip.details": "• 1 to 8 beams 3D concert laser.\n• Right-click with Controller to configure.",
 
 	"item.beatlamp.fog_generator.tooltip.summary": "Low-lying dry-ice stage fog & CO2 jet blast.",
-	"item.beatlamp.fog_generator.tooltip.details": "• Low-lying dry-ice floor fog (4-16 blocks)\n• Automatic CO2 jet blasts on beat drops\n• Supports all 6 directional angles\n• Right-click with Controller to configure",
+	"item.beatlamp.fog_generator.tooltip.details": "• Emits ground fog & CO2 jet blasts on beat.\n• Right-click with Controller to configure.",
 
 	"item.beatlamp.fountain.tooltip.summary": "Stage pyro fountain & fireworks launcher.",
-	"item.beatlamp.fountain.tooltip.details": "• Pyro spark fountain & fireworks launcher\n• Independent spray & impact drop thresholds\n• 7 particle types (Flame, Glow, Spark...)\n• Right-click with Controller to configure",
+	"item.beatlamp.fountain.tooltip.details": "• Shoots sparks on beat & rockets on drop.\n• Right-click with Controller to configure.",
 
 	"item.beatlamp.beat_emitter.tooltip.summary": "Converts music beats into Redstone signals.",
-	"item.beatlamp.beat_emitter.tooltip.details": "• Converts music beats into Redstone pulses\n• 1-tick clock pulse or analog signal (0-15)\n• Sneak + Right Click to cycle target source",
+	"item.beatlamp.beat_emitter.tooltip.details": "• Emits Redstone pulses on music beat.\n• Sneak + Right Click to cycle source.",
 
 	"item.beatlamp.stage_jukebox.tooltip.summary": "Modern titanium jukebox for stage performances.",
-	"item.beatlamp.stage_jukebox.tooltip.details": "• Titanium jukebox with DSP beat tracking\n• Obsidian chassis with neon indicator LEDs\n• Fully compatible with vanilla music discs",
+	"item.beatlamp.stage_jukebox.tooltip.details": "• Plays music discs with beat tracking.\n• Right-click with disc to play, click to eject.",
 
 	"item.beatlamp.dmx_console.tooltip.summary": "Master lighting control desk for stage productions.",
-	"item.beatlamp.dmx_console.tooltip.details": "• Master lighting desk (Decoration)\n• OLED waveform monitor & tactile faders",
+	"item.beatlamp.dmx_console.tooltip.details": "• Master stage controller (Blackout & Strobe).\n• Right-click to open DMX control board.",
 
 	"item.beatlamp.dj_deck.tooltip.summary": "Dual-jog professional DJ performance station.",
-	"item.beatlamp.dj_deck.tooltip.details": "• Professional DJ deck (Decoration)\n• Dual jog wheels & RGB performance pads",
+	"item.beatlamp.dj_deck.tooltip.details": "• Professional DJ stage setup.\n• Decorative prop.",
 
 	"item.beatlamp.stage_speaker.tooltip.summary": "High-power line array concert speaker cabinet.",
-	"item.beatlamp.stage_speaker.tooltip.details": "• Concert line array speaker (Decoration)\n• Heavy wooden cabinet, stackable vertically",
+	"item.beatlamp.stage_speaker.tooltip.details": "• High-power concert line array speaker.\n• Decorative prop, stackable.",
 
 	"item.beatlamp.linker": "Group Linker",
 	"item.beatlamp.linker.tooltip.summary": "Smart bounding-box stage device linker.",
-	"item.beatlamp.linker.tooltip.details": "• Click 1st corner to select device type\n• Click 2nd corner to link matching devices\n• Sneak + Right Click anywhere to cancel",
+	"item.beatlamp.linker.tooltip.details": "• Click Corner 1, then Corner 2 to link group.\n• Sneak + Right Click to cancel.",
 	"item.beatlamp.linker.anchor": "Selection corner: %s, %s, %s",
 
 	"item.beatlamp.controller": "Lamp Controller",
 	"item.beatlamp.controller.tooltip.summary": "Universal stage remote controller & jukebox binder.",
-	"item.beatlamp.controller.tooltip.details": "• Right-click any stage device to open settings\n• Sneak + Right Click Jukebox to select source\n• Right-click devices with source to bind",
+	"item.beatlamp.controller.tooltip.details": "• Right-click devices to open config GUI.\n• Sneak + Right Click Jukebox to bind source.",
 	"item.beatlamp.controller.source": "Pending audio source: %s, %s, %s",
 	"message.beatlamp.mode.pulse": "Mode: Pulse (scale to beat)",
 	"message.beatlamp.mode.rgb": "Mode: RGB (color cycle)",
@@ -165,6 +165,8 @@
 	"message.beatlamp.source.bound": "Bound %s devices to Jukebox",
 	"message.beatlamp.source.bound_emitter": "Bound Beat Emitter to Jukebox",
 	"message.beatlamp.source.cancel": "Jukebox selection cancelled",
+	"screen.beatlamp.dmx.title": "Master DMX Stage Console",
+	"screen.beatlamp.dmx.dimmer": "Master Dimmer",
 	"message.beatlamp.emitter.mode.pulse": "Emitter mode: Beat Pulse Clock (1-tick spike on drop)",
 	"message.beatlamp.emitter.mode.level": "Emitter mode: Continuous Energy (0-15 signal)"
 }

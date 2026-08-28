@@ -20,6 +20,8 @@ import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.block.StageLightMode;
 import com.beatlamp.client.audio.AudioAnalyzer;
 import com.beatlamp.client.audio.JukeboxAudioTracker;
+import com.beatlamp.block.DmxConsoleBlockEntity;
+import com.beatlamp.client.gui.DmxConsoleScreen;
 import com.beatlamp.client.gui.FogGeneratorConfigScreen;
 import com.beatlamp.client.gui.FountainConfigScreen;
 import com.beatlamp.client.gui.LampConfigScreen;
@@ -119,6 +121,14 @@ public class BeatLampClient implements ClientModInitializer {
 				}
 			});
 		};
+		DmxConsoleBlockEntity.controllerUser = dmx -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new DmxConsoleScreen(dmx));
+				}
+			});
+		};
 
 		WorldRenderEvents.AFTER_TRANSLUCENT.register(LampOutlineRenderer::render);
 
@@ -159,25 +169,45 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 
 		BlockPos blockPos = beatLamp.getBlockPos();
+		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+			beatLamp.pulse = 0.0F;
+			beatLamp.smoothLevel = 0.0F;
+			beatLamp.beatPulse = 0.0F;
+			beatLamp.displayColor = 0;
+			return;
+		}
+
+		if (DmxMasterTracker.isStrobeAllNear(blockPos)) {
+			long gt = level.getGameTime();
+			boolean flash = (gt % 4) < 2;
+			beatLamp.displayColor = flash ? 0xFFFFFFFF : 0x00000000;
+			beatLamp.pulse = flash ? 1.0F : 0.0F;
+			beatLamp.smoothLevel = beatLamp.pulse;
+			return;
+		}
+
 		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = beatLamp.getSource();
 		float sensitivity = beatLamp.getSensitivity();
-		float speed = beatLamp.getSpeed();
-
-		float target = Mth.clamp(JukeboxAudioTracker.getLevelAt(center, source) * sensitivity, 0.0F, 1.0F);
-		float diff = target - beatLamp.smoothLevel;
-		beatLamp.smoothLevel += diff * (diff > 0.0F ? 0.5F : 0.15F);
-		beatLamp.pulse = beatLamp.smoothLevel;
-		beatLamp.beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
+		float speed = beatLamp.getSpeed() * DmxMasterTracker.getMasterSpeedNear(blockPos);
 
 		LampMode mode = beatLamp.getMode();
+		float rawLevel = JukeboxAudioTracker.getRawLevelAt(center, source);
+		float target = Mth.clamp((mode == LampMode.PULSE ? rawLevel : JukeboxAudioTracker.getLevelAt(center, source)) * sensitivity, 0.0F, 1.0F);
+		float diff = target - beatLamp.smoothLevel;
+		beatLamp.smoothLevel += diff * (diff > 0.0F ? 0.55F : 0.22F);
+		if (mode == LampMode.PULSE && beatLamp.smoothLevel < 0.02F) {
+			beatLamp.smoothLevel = 0.0F;
+		}
+		beatLamp.pulse = beatLamp.smoothLevel;
+		beatLamp.beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
 
 		if (needsTopology(mode) && shouldRefreshTopology(level, blockPos)) {
 			updateGroupInfo(level, beatLamp, blockPos);
 		}
 
 		float time = JukeboxAudioTracker.getEffectTime() * speed;
-		float energy = Mth.clamp(Math.max(beatLamp.pulse, beatLamp.beatPulse * 0.8F), 0.0F, 1.0F);
+		float energy = (mode == LampMode.PULSE) ? beatLamp.pulse : Mth.clamp(Math.max(beatLamp.pulse, beatLamp.beatPulse * 0.8F), 0.0F, 1.0F);
 
 		switch (mode) {
 			case PULSE -> beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, -1.0F, energy);
@@ -365,6 +395,19 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 
 		BlockPos blockPos = light.getBlockPos();
+		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+			light.beamEnergy = 0.0F;
+			light.beamBeat = 0.0F;
+			return;
+		}
+
+		if (DmxMasterTracker.isStrobeAllNear(blockPos)) {
+			long gt = level.getGameTime();
+			light.beamEnergy = ((gt % 4) < 2) ? 1.0F : 0.0F;
+			light.beamBeat = light.beamEnergy;
+			return;
+		}
+
 		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = light.getSource();
 		light.beamEnergy = JukeboxAudioTracker.getLevelAt(center, source);
@@ -399,6 +442,11 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 
 		BlockPos blockPos = fountain.getBlockPos();
+		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+			fountain.fountainEnergy = 0.0F;
+			fountain.fountainImpact = 0.0F;
+			return;
+		}
 		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = fountain.getSource();
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
@@ -594,7 +642,7 @@ public class BeatLampClient implements ClientModInitializer {
 				hue = (hue + hueOffset) % 1.0F;
 			}
 
-			float value = Math.min(1.0F, 0.35F + energy * 0.9F);
+			float value = Math.min(1.0F, energy * 1.15F);
 			return java.awt.Color.HSBtoRGB(hue, 0.9F, value);
 		}
 
@@ -825,6 +873,17 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 
 		BlockPos blockPos = laser.getBlockPos();
+		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+			laser.activeIntensity = 0.0F;
+			return;
+		}
+
+		if (DmxMasterTracker.isStrobeAllNear(blockPos)) {
+			long gt = level.getGameTime();
+			laser.activeIntensity = ((gt % 4) < 2) ? 1.0F : 0.0F;
+			return;
+		}
+
 		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = laser.getSource();
 
@@ -852,6 +911,9 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 
 		BlockPos blockPos = fog.getBlockPos();
+		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+			return;
+		}
 		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = fog.getSource();
 
