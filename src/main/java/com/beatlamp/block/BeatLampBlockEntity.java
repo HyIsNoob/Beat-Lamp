@@ -60,6 +60,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 	public float smoothLevel;
 	public float barValue;
 	public float spectrumLevel;
+	public float peakLevel;
 	public int displayColor = COLOR_OLED;
 	public int groupIndex;
 	public int groupSize = 1;

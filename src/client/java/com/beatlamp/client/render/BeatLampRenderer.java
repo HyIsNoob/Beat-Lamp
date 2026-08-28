@@ -70,7 +70,7 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float brightness;
 
 		switch (mode) {
-			case SPECTRUM, RIPPLE, WAVE, SCAN -> {
+			case SPECTRUM, VU_METER, OSCILLOSCOPE, MATRIX_RAIN, RIPPLE, WAVE, SCAN -> {
 				half = FULL_HALF;
 				brightness = bar * 1.5F;
 			}

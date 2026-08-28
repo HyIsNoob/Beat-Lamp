@@ -170,6 +170,88 @@ public class BeatLampClient implements ClientModInitializer {
 				beatLamp.barValue = Mth.clamp(coverage, 0.0F, 1.0F);
 				beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, (float) band / (AudioAnalyzer.BAND_COUNT - 1), energy);
 			}
+			case VU_METER -> {
+				int rows = Math.max(1, beatLamp.columnSize);
+				float normLevel = Mth.clamp(beatLamp.smoothLevel * sensitivity, 0.0F, 1.0F);
+
+				if (normLevel > beatLamp.peakLevel) {
+					beatLamp.peakLevel = normLevel;
+				} else {
+					beatLamp.peakLevel = Math.max(0.0F, beatLamp.peakLevel - 0.012F);
+				}
+
+				float segFraction = rows > 1 ? (float) beatLamp.columnIndex / (rows - 1) : 0.5F;
+				float coverage = normLevel * rows - beatLamp.columnIndex;
+				boolean isPeak = Math.abs(beatLamp.peakLevel * (rows - 1) - beatLamp.columnIndex) < 0.65F && beatLamp.peakLevel > 0.08F;
+
+				beatLamp.barValue = Math.max(Mth.clamp(coverage, 0.0F, 1.0F), isPeak ? 1.0F : 0.0F);
+
+				if (beatLamp.getColor() == BeatLampBlockEntity.COLOR_OLED) {
+					if (segFraction < 0.60F) {
+						beatLamp.displayColor = 0x00E676;
+					} else if (segFraction < 0.85F) {
+						beatLamp.displayColor = 0xFFD600;
+					} else {
+						beatLamp.displayColor = 0xFF1744;
+					}
+				} else {
+					beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, segFraction, energy);
+				}
+			}
+			case OSCILLOSCOPE -> {
+				int width = Math.max(1, beatLamp.groupSize);
+				int height = Math.max(1, beatLamp.columnSize);
+
+				float x = width > 1 ? (float) beatLamp.groupIndex / (width - 1) : 0.5F;
+				if (beatLamp.isReverse()) {
+					x = 1.0F - x;
+				}
+				float y = height > 1 ? (float) beatLamp.columnIndex / (height - 1) : 0.5F;
+
+				float wave1 = (float) Math.sin(x * Math.PI * 4.0 - time * 0.35F) * beatLamp.smoothLevel * 0.42F;
+				float wave2 = (float) Math.sin(x * Math.PI * 8.0 + time * 0.55F) * beatLamp.beatPulse * 0.28F;
+				float targetY = 0.5F + wave1 + wave2;
+
+				float dist = Math.abs(y - targetY);
+				float thickness = height > 1 ? (1.2F / height) : 0.5F;
+				float val = Mth.clamp(1.0F - dist / thickness, 0.0F, 1.0F);
+				beatLamp.barValue = val * (0.35F + energy * 0.65F);
+
+				if (beatLamp.getColor() == BeatLampBlockEntity.COLOR_OLED) {
+					float hue = ((time * 2.0F + x * 90.0F) % 360.0F) / 360.0F;
+					beatLamp.displayColor = java.awt.Color.HSBtoRGB(hue, 0.88F, 1.0F);
+				} else {
+					beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, x, energy);
+				}
+			}
+			case MATRIX_RAIN -> {
+				int height = Math.max(1, beatLamp.columnSize);
+				int yIdx = height - 1 - beatLamp.columnIndex;
+
+				float colOffset = (float) ((beatLamp.groupIndex * 7 + (blockPos.getX() ^ blockPos.getZ()) * 11) % 23);
+				float dropPos = ((time * 0.35F * speed + colOffset) % (height + 4));
+
+				float distFromDrop = dropPos - yIdx;
+				float trailLength = 4.0F;
+
+				if (distFromDrop >= 0.0F && distFromDrop < trailLength) {
+					float intensity = 1.0F - (distFromDrop / trailLength);
+					beatLamp.barValue = intensity * (0.3F + energy * 0.7F);
+
+					if (beatLamp.getColor() == BeatLampBlockEntity.COLOR_OLED) {
+						if (distFromDrop < 0.7F) {
+							beatLamp.displayColor = 0xE0FFFF;
+						} else {
+							beatLamp.displayColor = 0x00FF66;
+						}
+					} else {
+						beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, 1.0F - distFromDrop / trailLength, energy);
+					}
+				} else {
+					beatLamp.barValue = beatLamp.beatPulse > 0.6F ? (0.25F * beatLamp.beatPulse) : 0.0F;
+					beatLamp.displayColor = resolveColor(beatLamp, blockPos, time, 0.0F, energy);
+				}
+			}
 			case RIPPLE -> {
 				float phase = (time * 0.15F + (beatLamp.isReverse() ? 0.35F : -0.35F) * beatLamp.groupDistance) % 1.0F;
 				if (phase < 0.0F) {
@@ -509,7 +591,8 @@ public class BeatLampClient implements ClientModInitializer {
 	}
 
 	private static boolean needsTopology(LampMode mode) {
-		return mode == LampMode.SPECTRUM || mode == LampMode.RIPPLE || mode == LampMode.WAVE || mode == LampMode.SCAN;
+		return mode == LampMode.SPECTRUM || mode == LampMode.VU_METER || mode == LampMode.OSCILLOSCOPE || mode == LampMode.MATRIX_RAIN
+			|| mode == LampMode.RIPPLE || mode == LampMode.WAVE || mode == LampMode.SCAN;
 	}
 
 	private static boolean shouldRefreshTopology(Level level, BlockPos blockPos) {

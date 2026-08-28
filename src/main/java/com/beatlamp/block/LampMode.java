@@ -6,6 +6,9 @@ public enum LampMode implements StringRepresentable {
 	PULSE("pulse"),
 	RGB("rgb"),
 	SPECTRUM("spectrum"),
+	VU_METER("vu_meter"),
+	OSCILLOSCOPE("oscilloscope"),
+	MATRIX_RAIN("matrix_rain"),
 	RIPPLE("ripple"),
 	WAVE("wave"),
 	SCAN("scan");
