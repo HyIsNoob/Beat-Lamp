@@ -2,20 +2,24 @@ package com.beatlamp;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
+import com.beatlamp.block.LaserProjectorBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.network.EmitterSignalPayload;
+import com.beatlamp.network.FogGeneratorConfigurePayload;
 import com.beatlamp.network.FountainConfigurePayload;
 import com.beatlamp.network.FountainFirePayload;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
+import com.beatlamp.network.LaserProjectorConfigurePayload;
 import com.beatlamp.network.StageLightConfigurePayload;
 
 import net.fabricmc.api.ModInitializer;
@@ -26,9 +30,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -39,18 +43,28 @@ import org.slf4j.LoggerFactory;
 public class BeatLamp implements ModInitializer {
 	public static final String MOD_ID = "beatlamp";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+
 	public static final int MAX_GROUP_SIZE = 512;
 	public static final int LINK_RANGE = 48;
 
+	public static ResourceLocation id(String path) {
+		return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+	}
+
 	@Override
 	public void onInitialize() {
+		LOGGER.info("Beat Lamp initializing (1.21.1)");
+
 		BeatLampBlocks.register();
 		BeatLampBlockEntities.register();
 		BeatLampItems.register();
 
+		// Register Packets
 		PayloadTypeRegistry.playC2S().register(LampConfigurePayload.ID, LampConfigurePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(StageLightConfigurePayload.ID, StageLightConfigurePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(FountainConfigurePayload.ID, FountainConfigurePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(LaserProjectorConfigurePayload.ID, LaserProjectorConfigurePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(FogGeneratorConfigurePayload.ID, FogGeneratorConfigurePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(LampSourcePayload.ID, LampSourcePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(EmitterSignalPayload.ID, EmitterSignalPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(FountainFirePayload.ID, FountainFirePayload.CODEC);
@@ -68,6 +82,7 @@ public class BeatLamp implements ModInitializer {
 			if (level.getBlockEntity(payload.pos()) instanceof BeatLampBlockEntity lamp && lamp.getManualGroup().size() >= 2) {
 				members = lamp.getManualGroup();
 			}
+
 			if (members == null) {
 				members = floodFill(level, payload.pos());
 			}
@@ -146,7 +161,61 @@ public class BeatLamp implements ModInitializer {
 			}
 		});
 
-		// 4. Source clear receiver
+		// 4. Laser Projector config receiver
+		ServerPlayNetworking.registerGlobalReceiver(LaserProjectorConfigurePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+
+			if (payload.unlink()) {
+				unlinkLaserGroup(level, payload.pos());
+				return;
+			}
+
+			List<BlockPos> members = null;
+			if (level.getBlockEntity(payload.pos()) instanceof LaserProjectorBlockEntity laser && laser.getManualGroup().size() >= 2) {
+				members = laser.getManualGroup();
+			}
+			if (members == null) {
+				members = List.of(payload.pos());
+			}
+
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof LaserProjectorBlockEntity laser) {
+					laser.setMode(payload.mode());
+					laser.setBeamCount(payload.beamCount());
+					laser.setSpread(payload.spread());
+					laser.setSpeed(payload.speed());
+					laser.setColor(payload.color());
+				}
+			}
+		});
+
+		// 5. Fog Generator config receiver
+		ServerPlayNetworking.registerGlobalReceiver(FogGeneratorConfigurePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+
+			if (payload.unlink()) {
+				unlinkFogGroup(level, payload.pos());
+				return;
+			}
+
+			List<BlockPos> members = null;
+			if (level.getBlockEntity(payload.pos()) instanceof FogGeneratorBlockEntity fog && fog.getManualGroup().size() >= 2) {
+				members = fog.getManualGroup();
+			}
+			if (members == null) {
+				members = List.of(payload.pos());
+			}
+
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof FogGeneratorBlockEntity fog) {
+					fog.setDensity(payload.density());
+					fog.setRadius(payload.radius());
+					fog.setColor(payload.color());
+				}
+			}
+		});
+
+		// 6. Source clear receiver
 		ServerPlayNetworking.registerGlobalReceiver(LampSourcePayload.ID, (payload, context) -> {
 			Level level = context.player().level();
 
@@ -171,33 +240,44 @@ public class BeatLamp implements ModInitializer {
 						f.setSource(null);
 					}
 				}
+			} else if (level.getBlockEntity(payload.pos()) instanceof LaserProjectorBlockEntity laser) {
+				List<BlockPos> members = laser.getManualGroup().size() >= 2 ? laser.getManualGroup() : List.of(payload.pos());
+				for (BlockPos member : members) {
+					if (level.getBlockEntity(member) instanceof LaserProjectorBlockEntity l) {
+						l.setSource(null);
+					}
+				}
+			} else if (level.getBlockEntity(payload.pos()) instanceof FogGeneratorBlockEntity fog) {
+				List<BlockPos> members = fog.getManualGroup().size() >= 2 ? fog.getManualGroup() : List.of(payload.pos());
+				for (BlockPos member : members) {
+					if (level.getBlockEntity(member) instanceof FogGeneratorBlockEntity f) {
+						f.setSource(null);
+					}
+				}
 			}
 		});
 
-		// 5. Emitter signal receiver
+		// 7. Emitter signal receiver
 		ServerPlayNetworking.registerGlobalReceiver(EmitterSignalPayload.ID, (payload, context) -> {
 			Level level = context.player().level();
 
-			if (level.getBlockEntity(payload.pos()) instanceof BeatEmitterBlockEntity emitter
-				&& context.player().distanceToSqr(payload.pos().getX() + 0.5, payload.pos().getY() + 0.5, payload.pos().getZ() + 0.5) < 4096.0) {
-				emitter.setSignal(Math.max(0, Math.min(15, payload.signal())), level.getGameTime());
-				level.updateNeighborsAt(payload.pos(), BeatLampBlocks.BEAT_EMITTER);
+			if (level.getBlockEntity(payload.pos()) instanceof BeatEmitterBlockEntity emitter) {
+				emitter.setSignal(payload.signal(), level.getGameTime());
 			}
 		});
 
-		// 6. Fountain firework spawn receiver
+		// 8. Fountain fire payload receiver
 		ServerPlayNetworking.registerGlobalReceiver(FountainFirePayload.ID, (payload, context) -> {
-			Level level = context.player().level();
-
-			if (level.getBlockEntity(payload.pos()) instanceof FountainBlockEntity fountain
-				&& context.player().distanceToSqr(payload.pos().getX() + 0.5, payload.pos().getY() + 0.5, payload.pos().getZ() + 0.5) < 4096.0
-				&& fountain.canFire(level.getGameTime())) {
-				fountain.markFired(level.getGameTime());
-				spawnFirework((ServerLevel) level, payload.pos(), fountain.getColor());
+			ServerPlayer player = context.player();
+			Level level = player.level();
+			if (level instanceof ServerLevel serverLevel && serverLevel.getBlockEntity(payload.pos()) instanceof FountainBlockEntity fountain) {
+				long gameTime = serverLevel.getGameTime();
+				if (fountain.canFire(gameTime)) {
+					fountain.markFired(gameTime);
+					spawnFirework(serverLevel, payload.pos(), fountain.getColor());
+				}
 			}
 		});
-
-		LOGGER.info("Beat Lamp initialized");
 	}
 
 	private static void spawnFirework(ServerLevel level, BlockPos pos, int color) {
@@ -234,7 +314,8 @@ public class BeatLamp implements ModInitializer {
 		if (anchor == null) {
 			BlockEntity startBe = level.getBlockEntity(pos);
 			if (!(startBe instanceof BeatLampBlockEntity || startBe instanceof StageLightBlockEntity
-				|| startBe instanceof FountainBlockEntity || startBe instanceof BeatEmitterBlockEntity)) {
+				|| startBe instanceof FountainBlockEntity || startBe instanceof LaserProjectorBlockEntity
+				|| startBe instanceof FogGeneratorBlockEntity || startBe instanceof BeatEmitterBlockEntity)) {
 				message(player, "message.beatlamp.link.invalid_start");
 				return;
 			}
@@ -322,6 +403,40 @@ public class BeatLamp implements ModInitializer {
 					member.setManualGroup(positions);
 				}
 			}
+		} else if (anchorBe instanceof LaserProjectorBlockEntity) {
+			List<LaserProjectorBlockEntity> lasers = new ArrayList<>();
+			for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+				if (level.getBlockEntity(memberPos) instanceof LaserProjectorBlockEntity laser) {
+					lasers.add(laser);
+					positions.add(laser.getBlockPos().immutable());
+					if (lasers.size() >= MAX_GROUP_SIZE) {
+						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+						break;
+					}
+				}
+			}
+			if (lasers.size() >= 2) {
+				for (LaserProjectorBlockEntity member : lasers) {
+					member.setManualGroup(positions);
+				}
+			}
+		} else if (anchorBe instanceof FogGeneratorBlockEntity) {
+			List<FogGeneratorBlockEntity> fogs = new ArrayList<>();
+			for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+				if (level.getBlockEntity(memberPos) instanceof FogGeneratorBlockEntity fog) {
+					fogs.add(fog);
+					positions.add(fog.getBlockPos().immutable());
+					if (fogs.size() >= MAX_GROUP_SIZE) {
+						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+						break;
+					}
+				}
+			}
+			if (fogs.size() >= 2) {
+				for (FogGeneratorBlockEntity member : fogs) {
+					member.setManualGroup(positions);
+				}
+			}
 		}
 
 		if (positions.size() < 2) {
@@ -372,6 +487,32 @@ public class BeatLamp implements ModInitializer {
 		}
 	}
 
+	public static void unlinkLaserGroup(Level level, BlockPos pos) {
+		if (!(level.getBlockEntity(pos) instanceof LaserProjectorBlockEntity laser)) {
+			return;
+		}
+
+		List<BlockPos> targets = laser.getManualGroup().size() >= 2 ? laser.getManualGroup() : List.of(pos);
+		for (BlockPos target : targets) {
+			if (level.getBlockEntity(target) instanceof LaserProjectorBlockEntity other) {
+				other.clearManualGroup();
+			}
+		}
+	}
+
+	public static void unlinkFogGroup(Level level, BlockPos pos) {
+		if (!(level.getBlockEntity(pos) instanceof FogGeneratorBlockEntity fog)) {
+			return;
+		}
+
+		List<BlockPos> targets = fog.getManualGroup().size() >= 2 ? fog.getManualGroup() : List.of(pos);
+		for (BlockPos target : targets) {
+			if (level.getBlockEntity(target) instanceof FogGeneratorBlockEntity other) {
+				other.clearManualGroup();
+			}
+		}
+	}
+
 	public static void bindTarget(ServerLevel level, BlockPos pos, ServerPlayer player, ItemStack controller, BlockPos source) {
 		if (level.getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
 			emitter.setSource(source);
@@ -394,6 +535,28 @@ public class BeatLamp implements ModInitializer {
 			List<BlockPos> members = fountain.getManualGroup().size() >= 2 ? fountain.getManualGroup() : List.of(pos);
 			for (BlockPos member : members) {
 				if (level.getBlockEntity(member) instanceof FountainBlockEntity f) {
+					f.setSource(source);
+				}
+			}
+			message(player, "message.beatlamp.source.bound", members.size());
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof LaserProjectorBlockEntity laser) {
+			List<BlockPos> members = laser.getManualGroup().size() >= 2 ? laser.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof LaserProjectorBlockEntity l) {
+					l.setSource(source);
+				}
+			}
+			message(player, "message.beatlamp.source.bound", members.size());
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof FogGeneratorBlockEntity fog) {
+			List<BlockPos> members = fog.getManualGroup().size() >= 2 ? fog.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof FogGeneratorBlockEntity f) {
 					f.setSource(source);
 				}
 			}
@@ -448,33 +611,30 @@ public class BeatLamp implements ModInitializer {
 	}
 
 	private static void message(ServerPlayer player, String key, Object... args) {
-		player.displayClientMessage(Component.translatable(key, args).withStyle(ChatFormatting.AQUA), true);
+		player.displayClientMessage(Component.translatable(key, args).withStyle(ChatFormatting.GOLD), true);
 	}
 
 	public static List<BlockPos> floodFill(Level level, BlockPos start) {
-		List<BlockPos> members = new ArrayList<>();
+		List<BlockPos> result = new ArrayList<>();
 		Set<BlockPos> visited = new HashSet<>();
-		Deque<BlockPos> queue = new ArrayDeque<>();
-		queue.add(start);
-		visited.add(start);
+		Queue<BlockPos> queue = new ArrayDeque<>();
 
-		while (!queue.isEmpty() && members.size() < MAX_GROUP_SIZE) {
+		queue.add(start.immutable());
+		visited.add(start.immutable());
+
+		while (!queue.isEmpty() && result.size() < MAX_GROUP_SIZE) {
 			BlockPos current = queue.poll();
-			members.add(current);
+			result.add(current);
 
-			for (Direction direction : Direction.values()) {
-				BlockPos neighbor = current.relative(direction);
-
-				if (visited.add(neighbor) && level.getBlockState(neighbor).is(BeatLampBlocks.BEAT_LAMP)) {
+			for (Direction dir : Direction.values()) {
+				BlockPos neighbor = current.relative(dir);
+				if (!visited.contains(neighbor) && level.getBlockEntity(neighbor) instanceof BeatLampBlockEntity) {
+					visited.add(neighbor);
 					queue.add(neighbor);
 				}
 			}
 		}
 
-		return members;
-	}
-
-	public static ResourceLocation id(String path) {
-		return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
+		return result;
 	}
 }

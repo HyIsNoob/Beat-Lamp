@@ -2,7 +2,9 @@ package com.beatlamp;
 
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
+import com.beatlamp.block.LaserProjectorBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 
 import net.minecraft.core.Registry;
@@ -33,6 +35,18 @@ public class BeatLampBlockEntities {
 		BuiltInRegistries.BLOCK_ENTITY_TYPE,
 		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "fountain"),
 		BlockEntityType.Builder.of(FountainBlockEntity::new, BeatLampBlocks.FOUNTAIN).build(null)
+	);
+
+	public static final BlockEntityType<LaserProjectorBlockEntity> LASER_PROJECTOR = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE,
+		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "laser_projector"),
+		BlockEntityType.Builder.of(LaserProjectorBlockEntity::new, BeatLampBlocks.LASER_PROJECTOR).build(null)
+	);
+
+	public static final BlockEntityType<FogGeneratorBlockEntity> FOG_GENERATOR = Registry.register(
+		BuiltInRegistries.BLOCK_ENTITY_TYPE,
+		ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "fog_generator"),
+		BlockEntityType.Builder.of(FogGeneratorBlockEntity::new, BeatLampBlocks.FOG_GENERATOR).build(null)
 	);
 
 	public static void register() {

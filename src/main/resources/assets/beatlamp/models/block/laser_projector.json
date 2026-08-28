@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/cube_bottom_top",
+	"textures": {
+		"top": "beatlamp:block/laser_projector_top",
+		"bottom": "beatlamp:block/laser_projector_bottom",
+		"side": "beatlamp:block/laser_projector_side"
+	}
+}

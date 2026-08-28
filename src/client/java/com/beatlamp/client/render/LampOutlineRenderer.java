@@ -207,6 +207,24 @@ public final class LampOutlineRenderer {
 			}
 			return members;
 		}
+		if (level.getBlockEntity(target) instanceof com.beatlamp.block.LaserProjectorBlockEntity laser && laser.getManualGroup().size() >= 2) {
+			List<BlockPos> members = new java.util.ArrayList<>();
+			for (BlockPos member : laser.getManualGroup()) {
+				if (isSupportedDevice(level, member)) {
+					members.add(member);
+				}
+			}
+			return members;
+		}
+		if (level.getBlockEntity(target) instanceof com.beatlamp.block.FogGeneratorBlockEntity fog && fog.getManualGroup().size() >= 2) {
+			List<BlockPos> members = new java.util.ArrayList<>();
+			for (BlockPos member : fog.getManualGroup()) {
+				if (isSupportedDevice(level, member)) {
+					members.add(member);
+				}
+			}
+			return members;
+		}
 
 		return BeatLamp.floodFill(level, target);
 	}
@@ -215,6 +233,8 @@ public final class LampOutlineRenderer {
 		return level.getBlockState(pos).is(BeatLampBlocks.BEAT_LAMP)
 			|| level.getBlockState(pos).is(BeatLampBlocks.STAGE_LIGHT)
 			|| level.getBlockState(pos).is(BeatLampBlocks.FOUNTAIN)
+			|| level.getBlockState(pos).is(BeatLampBlocks.LASER_PROJECTOR)
+			|| level.getBlockState(pos).is(BeatLampBlocks.FOG_GENERATOR)
 			|| level.getBlockState(pos).is(BeatLampBlocks.BEAT_EMITTER);
 	}
 

@@ -21,6 +21,8 @@ public class BeatLampItems {
 	public static final BlockItem BEAT_EMITTER = new BlockItem(BeatLampBlocks.BEAT_EMITTER, new Item.Properties());
 	public static final BlockItem STAGE_LIGHT = new BlockItem(BeatLampBlocks.STAGE_LIGHT, new Item.Properties());
 	public static final BlockItem FOUNTAIN = new BlockItem(BeatLampBlocks.FOUNTAIN, new Item.Properties());
+	public static final BlockItem LASER_PROJECTOR = new BlockItem(BeatLampBlocks.LASER_PROJECTOR, new Item.Properties());
+	public static final BlockItem FOG_GENERATOR = new BlockItem(BeatLampBlocks.FOG_GENERATOR, new Item.Properties());
 	public static final GroupLinkerItem LINKER = new GroupLinkerItem(new Item.Properties().stacksTo(1));
 	public static final LampControllerItem CONTROLLER = new LampControllerItem(new Item.Properties().stacksTo(1));
 
@@ -33,7 +35,9 @@ public class BeatLampItems {
 			.displayItems((parameters, output) -> {
 				output.accept(BEAT_LAMP);
 				output.accept(STAGE_LIGHT);
+				output.accept(LASER_PROJECTOR);
 				output.accept(FOUNTAIN);
+				output.accept(FOG_GENERATOR);
 				output.accept(BEAT_EMITTER);
 				output.accept(LINKER);
 				output.accept(CONTROLLER);
@@ -58,6 +62,8 @@ public class BeatLampItems {
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_emitter"), BEAT_EMITTER);
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "stage_light"), STAGE_LIGHT);
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "fountain"), FOUNTAIN);
+		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "laser_projector"), LASER_PROJECTOR);
+		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "fog_generator"), FOG_GENERATOR);
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "linker"), LINKER);
 		Registry.register(BuiltInRegistries.ITEM, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "controller"), CONTROLLER);
 	}

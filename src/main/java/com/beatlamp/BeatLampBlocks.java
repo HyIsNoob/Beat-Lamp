@@ -2,7 +2,9 @@ package com.beatlamp;
 
 import com.beatlamp.block.BeatEmitterBlock;
 import com.beatlamp.block.BeatLampBlock;
+import com.beatlamp.block.FogGeneratorBlock;
 import com.beatlamp.block.FountainBlock;
+import com.beatlamp.block.LaserProjectorBlock;
 import com.beatlamp.block.StageLightBlock;
 
 import net.minecraft.core.Registry;
@@ -31,10 +33,20 @@ public class BeatLampBlocks {
 		BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.STONE)
 	);
 
+	public static final LaserProjectorBlock LASER_PROJECTOR = new LaserProjectorBlock(
+		BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.METAL)
+	);
+
+	public static final FogGeneratorBlock FOG_GENERATOR = new FogGeneratorBlock(
+		BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.STONE)
+	);
+
 	public static void register() {
 		Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_lamp"), BEAT_LAMP);
 		Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "beat_emitter"), BEAT_EMITTER);
 		Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "stage_light"), STAGE_LIGHT);
 		Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "fountain"), FOUNTAIN);
+		Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "laser_projector"), LASER_PROJECTOR);
+		Registry.register(BuiltInRegistries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, "fog_generator"), FOG_GENERATOR);
 	}
 }

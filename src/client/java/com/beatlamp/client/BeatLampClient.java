@@ -6,20 +6,27 @@ import com.beatlamp.BeatLampBlockEntities;
 import com.beatlamp.BeatLampBlocks;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.FogDensity;
+import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.FountainParticles;
 import com.beatlamp.block.LampMode;
 import com.beatlamp.block.LampOrientation;
 import com.beatlamp.block.LampParticles;
+import com.beatlamp.block.LaserMode;
+import com.beatlamp.block.LaserProjectorBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.block.StageLightMode;
 import com.beatlamp.client.audio.AudioAnalyzer;
 import com.beatlamp.client.audio.JukeboxAudioTracker;
+import com.beatlamp.client.gui.FogGeneratorConfigScreen;
 import com.beatlamp.client.gui.FountainConfigScreen;
 import com.beatlamp.client.gui.LampConfigScreen;
+import com.beatlamp.client.gui.LaserProjectorConfigScreen;
 import com.beatlamp.client.gui.StageLightConfigScreen;
 import com.beatlamp.client.render.BeatLampRenderer;
 import com.beatlamp.client.render.LampOutlineRenderer;
+import com.beatlamp.client.render.LaserProjectorRenderer;
 import com.beatlamp.client.render.StageLightRenderer;
 import com.beatlamp.network.EmitterSignalPayload;
 import com.beatlamp.network.FountainFirePayload;
@@ -62,11 +69,15 @@ public class BeatLampClient implements ClientModInitializer {
 		BlockRenderLayerMap.INSTANCE.putBlock(BeatLampBlocks.BEAT_LAMP, RenderType.cutout());
 		BlockEntityRenderers.register(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);
 		BlockEntityRenderers.register(BeatLampBlockEntities.STAGE_LIGHT, StageLightRenderer::new);
+		BlockEntityRenderers.register(BeatLampBlockEntities.LASER_PROJECTOR, LaserProjectorRenderer::new);
 
 		BeatLampBlockEntity.clientTicker = BeatLampClient::tickLamp;
 		BeatEmitterBlockEntity.clientTicker = BeatLampClient::tickEmitter;
 		StageLightBlockEntity.clientTicker = BeatLampClient::tickStageLight;
 		FountainBlockEntity.clientTicker = BeatLampClient::tickFountain;
+		LaserProjectorBlockEntity.clientTicker = BeatLampClient::tickLaserProjector;
+		FogGeneratorBlockEntity.clientTicker = BeatLampClient::tickFogGenerator;
+
 		BeatLampBlockEntity.controllerUser = beatLamp -> {
 			Minecraft minecraft = Minecraft.getInstance();
 			minecraft.execute(() -> {
@@ -88,6 +99,22 @@ public class BeatLampClient implements ClientModInitializer {
 			minecraft.execute(() -> {
 				if (minecraft.screen == null && minecraft.player != null) {
 					minecraft.setScreen(new FountainConfigScreen(fountain));
+				}
+			});
+		};
+		LaserProjectorBlockEntity.controllerUser = laser -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new LaserProjectorConfigScreen(laser));
+				}
+			});
+		};
+		FogGeneratorBlockEntity.controllerUser = fog -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new FogGeneratorConfigScreen(fog));
 				}
 			});
 		};
@@ -679,5 +706,81 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 
 		return count;
+	}
+
+	private static void tickLaserProjector(LaserProjectorBlockEntity laser) {
+		Level level = laser.getLevel();
+		if (level == null) {
+			return;
+		}
+
+		BlockPos blockPos = laser.getBlockPos();
+		Vec3 center = Vec3.atCenterOf(blockPos);
+		BlockPos source = laser.getSource();
+
+		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
+		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
+		float targetIntensity = Mth.clamp(Math.max(audioLevel, beatPulse * 0.9F), 0.0F, 1.0F);
+
+		float diff = targetIntensity - laser.activeIntensity;
+		laser.activeIntensity += diff * (diff > 0.0F ? 0.65F : 0.15F);
+
+		if (laser.getMode() == LaserMode.BEAT_BURST) {
+			if (beatPulse > 0.55F) {
+				laser.targetBurst = 1.35F;
+			} else {
+				laser.targetBurst = 0.35F;
+			}
+			laser.burstExpansion = Mth.lerp(0.18F, laser.burstExpansion, laser.targetBurst);
+		}
+	}
+
+	private static void tickFogGenerator(FogGeneratorBlockEntity fog) {
+		Level level = fog.getLevel();
+		if (level == null) {
+			return;
+		}
+
+		BlockPos blockPos = fog.getBlockPos();
+		Vec3 center = Vec3.atCenterOf(blockPos);
+		BlockPos source = fog.getSource();
+
+		boolean active = JukeboxAudioTracker.isAnyJukeboxPlayingNear(center, source);
+		if (!active) {
+			return;
+		}
+
+		RandomSource random = level.getRandom();
+		int count = fog.getDensity().getParticleCount();
+		double originX = blockPos.getX() + 0.5;
+		double originY = blockPos.getY() + 0.5;
+		double originZ = blockPos.getZ() + 0.5;
+
+		int color = fog.getColor();
+		float r = 1.0F, g = 1.0F, b = 1.0F;
+		if (color != BeatLampBlockEntity.COLOR_OLED) {
+			r = ((color >> 16) & 0xFF) / 255.0F;
+			g = ((color >> 8) & 0xFF) / 255.0F;
+			b = (color & 0xFF) / 255.0F;
+		}
+
+		for (int i = 0; i < count; i++) {
+			double angle = random.nextDouble() * Math.PI * 2.0;
+			double speed = fog.getDensity().getSpeed() * (0.5 + random.nextDouble() * 0.5);
+			double vx = Math.cos(angle) * speed;
+			double vy = 0.015 + random.nextDouble() * 0.02;
+			double vz = Math.sin(angle) * speed;
+
+			double px = originX + (random.nextDouble() - 0.5) * 0.4;
+			double py = originY + (random.nextDouble() - 0.5) * 0.2;
+			double pz = originZ + (random.nextDouble() - 0.5) * 0.4;
+
+			if (color == BeatLampBlockEntity.COLOR_OLED) {
+				level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, py, pz, vx, vy, vz);
+			} else {
+				level.addParticle(new net.minecraft.core.particles.DustParticleOptions(new org.joml.Vector3f(r, g, b), 1.6F), px, py, pz, vx, vy, vz);
+				level.addParticle(ParticleTypes.SMOKE, px, py, pz, vx * 0.6, vy, vz * 0.6);
+			}
+		}
 	}
 }

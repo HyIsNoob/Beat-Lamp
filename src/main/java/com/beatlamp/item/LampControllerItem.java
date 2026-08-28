@@ -6,7 +6,9 @@ import com.beatlamp.BeatLamp;
 import com.beatlamp.BeatLampItems;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
+import com.beatlamp.block.LaserProjectorBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 
 import net.minecraft.ChatFormatting;
@@ -58,6 +60,8 @@ public class LampControllerItem extends Item {
 						BeatLamp.bindSource(serverLevel, blockPos, serverPlayer, controller, pendingSource);
 					} else if (level.getBlockEntity(blockPos) instanceof StageLightBlockEntity
 						|| level.getBlockEntity(blockPos) instanceof FountainBlockEntity
+						|| level.getBlockEntity(blockPos) instanceof LaserProjectorBlockEntity
+						|| level.getBlockEntity(blockPos) instanceof FogGeneratorBlockEntity
 						|| level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
 						BeatLamp.bindTarget(serverLevel, blockPos, serverPlayer, controller, pendingSource);
 					}
@@ -81,6 +85,8 @@ public class LampControllerItem extends Item {
 					BeatLamp.bindSource(serverLevel, blockPos, serverPlayer, controller, pendingSource);
 				} else if (level.getBlockEntity(blockPos) instanceof StageLightBlockEntity
 					|| level.getBlockEntity(blockPos) instanceof FountainBlockEntity
+					|| level.getBlockEntity(blockPos) instanceof LaserProjectorBlockEntity
+					|| level.getBlockEntity(blockPos) instanceof FogGeneratorBlockEntity
 					|| level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
 					BeatLamp.bindTarget(serverLevel, blockPos, serverPlayer, controller, pendingSource);
 				}
@@ -97,6 +103,12 @@ public class LampControllerItem extends Item {
 				return InteractionResult.SUCCESS;
 			} else if (level.getBlockEntity(blockPos) instanceof FountainBlockEntity fountain) {
 				FountainBlockEntity.controllerUser.use(fountain);
+				return InteractionResult.SUCCESS;
+			} else if (level.getBlockEntity(blockPos) instanceof LaserProjectorBlockEntity laser) {
+				LaserProjectorBlockEntity.controllerUser.use(laser);
+				return InteractionResult.SUCCESS;
+			} else if (level.getBlockEntity(blockPos) instanceof FogGeneratorBlockEntity fog) {
+				FogGeneratorBlockEntity.controllerUser.use(fog);
 				return InteractionResult.SUCCESS;
 			}
 		}
