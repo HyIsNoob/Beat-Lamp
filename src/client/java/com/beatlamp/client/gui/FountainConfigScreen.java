@@ -22,6 +22,7 @@ public class FountainConfigScreen extends Screen {
 
 	private final BlockPos pos;
 	private boolean fireworkMode;
+	private float sprayThreshold;
 	private float impactThreshold;
 	private boolean smokeEnabled;
 	private FountainParticles particleType;
@@ -34,12 +35,14 @@ public class FountainConfigScreen extends Screen {
 	private Button particleButton;
 	private Button colorButton;
 	private Button sourceButton;
-	private ValueSlider thresholdSlider;
+	private ValueSlider spraySlider;
+	private ValueSlider impactSlider;
 
 	public FountainConfigScreen(FountainBlockEntity fountain) {
 		super(Component.translatable("screen.beatlamp.fountain.config"));
 		this.pos = fountain.getBlockPos().immutable();
 		this.fireworkMode = fountain.isFireworkMode();
+		this.sprayThreshold = fountain.getSprayThreshold();
 		this.impactThreshold = fountain.getImpactThreshold();
 		this.smokeEnabled = fountain.isSmokeEnabled();
 		this.particleType = fountain.getParticleType();
@@ -62,7 +65,7 @@ public class FountainConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 90;
+		int y = this.height / 2 - 102;
 
 		this.fireworkButton = this.addRenderableWidget(
 			Button.builder(this.fireworkLabel(), button -> {
@@ -71,8 +74,17 @@ public class FountainConfigScreen extends Screen {
 			}).bounds(centerX - 100, y, 200, 20).build()
 		);
 
-		this.thresholdSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 24, Component.translatable("screen.beatlamp.fountain.threshold"), this.impactThreshold, 0.50, 0.95) {
+		this.spraySlider = this.addRenderableWidget(
+			new ValueSlider(centerX - 100, y + 24, Component.translatable("screen.beatlamp.fountain.spray_threshold"), this.sprayThreshold, 0.00, 0.80) {
+				@Override
+				protected void applyValue() {
+					FountainConfigScreen.this.sprayThreshold = (float) Mth.lerp(this.value, 0.00, 0.80);
+				}
+			}
+		);
+
+		this.impactSlider = this.addRenderableWidget(
+			new ValueSlider(centerX - 100, y + 48, Component.translatable("screen.beatlamp.fountain.threshold"), this.impactThreshold, 0.50, 0.95) {
 				@Override
 				protected void applyValue() {
 					FountainConfigScreen.this.impactThreshold = (float) Mth.lerp(this.value, 0.50, 0.95);
@@ -84,14 +96,14 @@ public class FountainConfigScreen extends Screen {
 			Button.builder(this.smokeLabel(), button -> {
 				this.smokeEnabled = !this.smokeEnabled;
 				button.setMessage(this.smokeLabel());
-			}).bounds(centerX - 100, y + 48, 200, 20).build()
+			}).bounds(centerX - 100, y + 72, 200, 20).build()
 		);
 
 		this.particleButton = this.addRenderableWidget(
 			Button.builder(this.particleLabel(), button -> {
 				this.particleType = this.particleType.next();
 				button.setMessage(this.particleLabel());
-			}).bounds(centerX - 100, y + 72, 200, 20).build()
+			}).bounds(centerX - 100, y + 96, 200, 20).build()
 		);
 
 		this.colorButton = this.addRenderableWidget(
@@ -99,7 +111,7 @@ public class FountainConfigScreen extends Screen {
 				int index = this.colorIndex();
 				this.color = PALETTE[(index + 1) % PALETTE.length];
 				button.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 96, 200, 20).build()
+			}).bounds(centerX - 100, y + 120, 200, 20).build()
 		);
 
 		this.sourceButton = this.addRenderableWidget(
@@ -109,12 +121,13 @@ public class FountainConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX - 100, y + 120, 200, 20).build()
+			}).bounds(centerX - 100, y + 144, 200, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.reset"), button -> {
 				this.fireworkMode = false;
+				this.sprayThreshold = 0.12F;
 				this.impactThreshold = 0.75F;
 				this.smokeEnabled = true;
 				this.particleType = FountainParticles.FLAME;
@@ -123,20 +136,21 @@ public class FountainConfigScreen extends Screen {
 				this.smokeButton.setMessage(this.smokeLabel());
 				this.particleButton.setMessage(this.particleLabel());
 				this.colorButton.setMessage(this.colorLabel());
-				this.thresholdSlider.updateVal(0.75F);
-			}).bounds(centerX - 100, y + 146, 98, 20).build()
+				this.spraySlider.updateVal(0.12F);
+				this.impactSlider.updateVal(0.75F);
+			}).bounds(centerX - 100, y + 170, 98, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX + 2, y + 146, 98, 20).build()
+			}).bounds(centerX + 2, y + 170, 98, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX - 100, y + 170, 200, 20)
+				.bounds(centerX - 100, y + 194, 200, 20)
 				.build()
 		);
 	}
@@ -194,6 +208,7 @@ public class FountainConfigScreen extends Screen {
 		ClientPlayNetworking.send(new FountainConfigurePayload(
 			this.pos,
 			this.fireworkMode,
+			this.sprayThreshold,
 			this.impactThreshold,
 			this.smokeEnabled,
 			this.particleType,
@@ -206,7 +221,7 @@ public class FountainConfigScreen extends Screen {
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 104, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 116, 0xFFFFFF);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 

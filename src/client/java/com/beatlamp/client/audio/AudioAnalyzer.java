@@ -32,8 +32,10 @@ public final class AudioAnalyzer {
 	private float previousEnvelope;
 	private long lastBeatSample = -1_000_000L;
 
-	private final float[] prevBassMagnitude;
-	private final float[] prevMidMagnitude;
+	// Complex Spectral Difference tracking
+	private final float[] prevMag;
+	private final float[] prevPhase1;
+	private final float[] prevPhase2;
 
 	private static final int FLUX_HISTORY_SIZE = 64;
 	private static final float FLUX_WINDOW_SECONDS = 1.0F;
@@ -66,15 +68,18 @@ public final class AudioAnalyzer {
 			this.bandAverages[b] = 0.001F;
 		}
 
-		// Bass band (Kick drums: 30 - 150 Hz)
+		// Bass band (Kick drums: 30 - 160 Hz)
 		this.lowBassBin = Math.max(1, (int) (30.0F / binHz));
-		this.highBassBin = Math.min(this.fftSize / 2 - 1, (int) (150.0F / binHz));
-		this.prevBassMagnitude = new float[Math.max(1, this.highBassBin - this.lowBassBin + 1)];
+		this.highBassBin = Math.min(this.fftSize / 2 - 1, (int) (160.0F / binHz));
 
-		// Mid-high transient band (Snare/Clap/Hi-hat: 1200 - 4500 Hz)
-		this.lowMidBin = Math.max(1, (int) (1200.0F / binHz));
-		this.highMidBin = Math.min(this.fftSize / 2 - 1, (int) (4500.0F / binHz));
-		this.prevMidMagnitude = new float[Math.max(1, this.highMidBin - this.lowMidBin + 1)];
+		// Mid-high transient band (Snare/Clap/Hi-hat: 1000 - 5000 Hz)
+		this.lowMidBin = Math.max(1, (int) (1000.0F / binHz));
+		this.highMidBin = Math.min(this.fftSize / 2 - 1, (int) (5000.0F / binHz));
+
+		int maxTrackedBin = Math.max(this.highBassBin, this.highMidBin) + 1;
+		this.prevMag = new float[maxTrackedBin];
+		this.prevPhase1 = new float[maxTrackedBin];
+		this.prevPhase2 = new float[maxTrackedBin];
 	}
 
 	public void push(float[] samples, int count) {
@@ -135,39 +140,67 @@ public final class AudioAnalyzer {
 
 		Fft.fft(this.fftReal, this.fftImag);
 
-		// 1. Bass spectral flux
-		float bass = 0.0F;
-		float bassFlux = 0.0F;
+		float bassEnergy = 0.0F;
+		float complexBassFlux = 0.0F;
+
+		// 1. Complex-Domain Spectral Difference for Bass (Kick Transient Detection)
 		for (int bin = this.lowBassBin; bin <= this.highBassBin; bin++) {
-			float magnitude = magnitude(bin);
-			float previous = this.prevBassMagnitude[bin - this.lowBassBin];
-			this.prevBassMagnitude[bin - this.lowBassBin] = magnitude;
-			bassFlux += Math.max(0.0F, magnitude - previous);
-			bass += magnitude;
+			float mag = magnitude(bin);
+			float phase = (float) Math.atan2(this.fftImag[bin], this.fftReal[bin]);
+
+			// Expected phase prediction: phi_t = 2*phi_{t-1} - phi_{t-2}
+			float expectedPhase = 2.0F * this.prevPhase1[bin] - this.prevPhase2[bin];
+			float phaseDiff = phase - expectedPhase;
+			float pMag = this.prevMag[bin];
+
+			// Complex Euclidean distance: |X_t - \hat{X}_t|
+			float csd = (float) Math.sqrt(Math.max(0.0F, mag * mag + pMag * pMag - 2.0F * mag * pMag * (float) Math.cos(phaseDiff)));
+			
+			// Rectified onset weight: only count positive transient spikes
+			if (mag >= pMag) {
+				complexBassFlux += csd;
+			} else {
+				complexBassFlux += csd * 0.2F;
+			}
+
+			this.prevPhase2[bin] = this.prevPhase1[bin];
+			this.prevPhase1[bin] = phase;
+			this.prevMag[bin] = mag;
+			bassEnergy += mag;
 		}
+
 		int bassBins = this.highBassBin - this.lowBassBin + 1;
-		bass /= bassBins * this.fftSize * 0.5F;
-		bassFlux /= bassBins * this.fftSize * 0.5F;
+		bassEnergy /= bassBins * this.fftSize * 0.5F;
+		complexBassFlux /= bassBins * this.fftSize * 0.5F;
 
-		// 2. Mid transient flux (snare/clap)
-		float mid = 0.0F;
-		float midFlux = 0.0F;
+		// 2. Mid Transient Detection (Snare / Clap Transients)
+		float complexMidFlux = 0.0F;
 		for (int bin = this.lowMidBin; bin <= this.highMidBin; bin++) {
-			float magnitude = magnitude(bin);
-			float previous = this.prevMidMagnitude[bin - this.lowMidBin];
-			this.prevMidMagnitude[bin - this.lowMidBin] = magnitude;
-			midFlux += Math.max(0.0F, magnitude - previous);
-			mid += magnitude;
-		}
-		int midBins = this.highMidBin - this.lowMidBin + 1;
-		mid /= midBins * this.fftSize * 0.5F;
-		midFlux /= midBins * this.fftSize * 0.5F;
+			float mag = magnitude(bin);
+			float phase = (float) Math.atan2(this.fftImag[bin], this.fftReal[bin]);
 
-		// Combined dual-band flux (weighted for kick prominence + crisp snare detection)
-		float flux = bassFlux * 1.0F + midFlux * 0.4F;
+			float expectedPhase = 2.0F * this.prevPhase1[bin] - this.prevPhase2[bin];
+			float phaseDiff = phase - expectedPhase;
+			float pMag = this.prevMag[bin];
+
+			float csd = (float) Math.sqrt(Math.max(0.0F, mag * mag + pMag * pMag - 2.0F * mag * pMag * (float) Math.cos(phaseDiff)));
+			if (mag >= pMag) {
+				complexMidFlux += csd;
+			}
+
+			this.prevPhase2[bin] = this.prevPhase1[bin];
+			this.prevPhase1[bin] = phase;
+			this.prevMag[bin] = mag;
+		}
+
+		int midBins = this.highMidBin - this.lowMidBin + 1;
+		complexMidFlux /= midBins * this.fftSize * 0.5F;
+
+		// Combined Complex Onset Flux
+		float totalFlux = complexBassFlux * 1.0F + complexMidFlux * 0.35F;
 
 		this.fluxTimes[this.fluxCursor] = this.totalSamples;
-		this.fluxValues[this.fluxCursor] = flux;
+		this.fluxValues[this.fluxCursor] = totalFlux;
 		this.fluxCursor = (this.fluxCursor + 1) % FLUX_HISTORY_SIZE;
 		if (this.fluxFilled < FLUX_HISTORY_SIZE) {
 			this.fluxFilled++;
@@ -175,17 +208,17 @@ public final class AudioAnalyzer {
 
 		float localAvg = this.localFluxAverage();
 		float localVariance = this.localFluxVariance(localAvg);
-		boolean rising = flux > this.previousFlux;
-		this.previousFlux = flux;
+		boolean rising = totalFlux > this.previousFlux;
+		this.previousFlux = totalFlux;
 
 		float previousAverage = this.bassAverage;
-		this.bassAverage = this.bassAverage * 0.995F + bass * 0.005F;
+		this.bassAverage = this.bassAverage * 0.995F + bassEnergy * 0.005F;
 
-		float target = clamp01(bass / (previousAverage * 2.3F + 0.0001F));
+		float target = clamp01(bassEnergy / (previousAverage * 2.3F + 0.0001F));
 		float diff = target - this.envelope;
-		this.envelope += diff * (diff > 0.0F ? 0.60F : 0.12F);
+		this.envelope += diff * (diff > 0.0F ? 0.65F : 0.12F);
 
-		// Impact / Drop detection on envelope sudden jump
+		// Drop / Heavy Impact Detection
 		if (this.envelope > 0.52F && this.previousEnvelope <= 0.38F) {
 			this.impactReady = true;
 		}
@@ -208,11 +241,11 @@ public final class AudioAnalyzer {
 			this.bands[b] += bandDiff * (bandDiff > 0.0F ? 0.55F : 0.14F);
 		}
 
-		// Adaptive threshold: local mean + variance offset
-		float adaptiveThreshold = localAvg * 1.25F + (float) Math.sqrt(localVariance) * 0.35F + 0.0009F;
-		long minBeatGap = (long) (this.sampleRate * 0.12); // ~120ms min gap (allows up to 500 BPM)
+		// Adaptive Dynamic Threshold
+		float adaptiveThreshold = localAvg * 1.25F + (float) Math.sqrt(localVariance) * 0.38F + 0.0008F;
+		long minBeatGap = (long) (this.sampleRate * 0.115); // ~115ms min gap
 
-		if (flux > adaptiveThreshold && rising && (bass > 0.006F || mid > 0.008F) && (this.totalSamples - this.lastBeatSample > minBeatGap)) {
+		if (totalFlux > adaptiveThreshold && rising && (bassEnergy > 0.005F || complexMidFlux > 0.006F) && (this.totalSamples - this.lastBeatSample > minBeatGap)) {
 			this.lastBeatSample = this.totalSamples;
 			this.beatReady = true;
 		}

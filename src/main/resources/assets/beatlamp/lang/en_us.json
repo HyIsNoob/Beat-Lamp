@@ -90,6 +90,7 @@
 	"screen.beatlamp.stagelight.mode.chase": "Chase",
 	"screen.beatlamp.fountain.config": "Beat Fountain Settings",
 	"screen.beatlamp.fountain.firework": "Firework: %s",
+	"screen.beatlamp.fountain.spray_threshold": "Spray Threshold",
 	"screen.beatlamp.fountain.threshold": "Drop Threshold",
 	"screen.beatlamp.fountain.smoke": "Stage Smoke: %s",
 	"screen.beatlamp.fountain.particle": "Particles: %s",

@@ -36,6 +36,7 @@ public class FountainBlockEntity extends BlockEntity {
 
 	private int color = BeatLampBlockEntity.COLOR_OLED;
 	private boolean fireworkMode;
+	private float sprayThreshold = 0.12F;
 	private float impactThreshold = 0.75F;
 	private boolean smokeEnabled = true;
 	private FountainParticles particleType = FountainParticles.FLAME;
@@ -77,6 +78,15 @@ public class FountainBlockEntity extends BlockEntity {
 
 	public void toggleFirework() {
 		this.fireworkMode = !this.fireworkMode;
+		this.markUpdated();
+	}
+
+	public float getSprayThreshold() {
+		return this.sprayThreshold;
+	}
+
+	public void setSprayThreshold(float threshold) {
+		this.sprayThreshold = Math.clamp(threshold, 0.00F, 0.80F);
 		this.markUpdated();
 	}
 
@@ -164,6 +174,7 @@ public class FountainBlockEntity extends BlockEntity {
 		super.saveAdditional(compoundTag, provider);
 		compoundTag.putInt("color", this.color);
 		compoundTag.putBoolean("firework", this.fireworkMode);
+		compoundTag.putFloat("sprayThreshold", this.sprayThreshold);
 		compoundTag.putFloat("impactThreshold", this.impactThreshold);
 		compoundTag.putBoolean("smokeEnabled", this.smokeEnabled);
 		compoundTag.putString("particleType", this.particleType.name());
@@ -186,6 +197,7 @@ public class FountainBlockEntity extends BlockEntity {
 		super.loadAdditional(compoundTag, provider);
 		this.color = compoundTag.contains("color") ? compoundTag.getInt("color") : BeatLampBlockEntity.COLOR_OLED;
 		this.fireworkMode = compoundTag.getBoolean("firework");
+		this.sprayThreshold = compoundTag.contains("sprayThreshold") ? compoundTag.getFloat("sprayThreshold") : 0.12F;
 		this.impactThreshold = compoundTag.contains("impactThreshold") ? compoundTag.getFloat("impactThreshold") : 0.75F;
 		this.smokeEnabled = !compoundTag.contains("smokeEnabled") || compoundTag.getBoolean("smokeEnabled");
 		this.particleType = compoundTag.contains("particleType") ? FountainParticles.byName(compoundTag.getString("particleType")) : FountainParticles.FLAME;

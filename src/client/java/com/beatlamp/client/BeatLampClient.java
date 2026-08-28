@@ -289,15 +289,17 @@ public class BeatLampClient implements ClientModInitializer {
 
 		// Resolve particle type
 		FountainParticles pType = fountain.getParticleType();
+		float sprayThreshold = fountain.getSprayThreshold();
 
-		// 1. Continuous stage pyro jet
-		if (energy > 0.04F) {
-			int count = 1 + (int) (energy * 3.5F);
+		// 1. Continuous stage pyro jet (controlled by sprayThreshold)
+		if (energy >= sprayThreshold) {
+			float activeIntensity = (energy - sprayThreshold) / Math.max(0.001F, 1.0F - sprayThreshold);
+			int count = 1 + (int) (activeIntensity * 4.0F);
 			for (int i = 0; i < count; i++) {
 				double px = originX + (random.nextDouble() - 0.5) * 0.22;
 				double pz = originZ + (random.nextDouble() - 0.5) * 0.22;
 				double vx = (random.nextDouble() - 0.5) * 0.04;
-				double vy = 0.22 + energy * 0.45 + random.nextDouble() * 0.15;
+				double vy = 0.20 + activeIntensity * 0.48 + random.nextDouble() * 0.15;
 				double vz = (random.nextDouble() - 0.5) * 0.04;
 
 				spawnFountainParticle(level, pType, px, originY, pz, vx, vy, vz, dust, random);
@@ -309,7 +311,7 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 
 		// 2. Bass beat spurts (thumping bass drum accents)
-		if (beatPulse > 0.5F) {
+		if (beatPulse > 0.5F && energy >= sprayThreshold * 0.8F) {
 			int beatSparks = 2 + (int) (beatPulse * 4.0F);
 			for (int i = 0; i < beatSparks; i++) {
 				double px = originX + (random.nextDouble() - 0.5) * 0.18;

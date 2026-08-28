@@ -11,6 +11,7 @@ import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 public record FountainConfigurePayload(
 	BlockPos pos,
 	boolean fireworkMode,
+	float sprayThreshold,
 	float impactThreshold,
 	boolean smokeEnabled,
 	FountainParticles particleType,
@@ -26,6 +27,7 @@ public record FountainConfigurePayload(
 	private static void write(FriendlyByteBuf buf, FountainConfigurePayload payload) {
 		buf.writeBlockPos(payload.pos());
 		buf.writeBoolean(payload.fireworkMode());
+		buf.writeFloat(payload.sprayThreshold());
 		buf.writeFloat(payload.impactThreshold());
 		buf.writeBoolean(payload.smokeEnabled());
 		buf.writeVarInt(payload.particleType().ordinal());
@@ -37,6 +39,7 @@ public record FountainConfigurePayload(
 		return new FountainConfigurePayload(
 			buf.readBlockPos(),
 			buf.readBoolean(),
+			buf.readFloat(),
 			buf.readFloat(),
 			buf.readBoolean(),
 			FountainParticles.values()[buf.readVarInt() % FountainParticles.values().length],

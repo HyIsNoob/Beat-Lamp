@@ -137,6 +137,7 @@ public class BeatLamp implements ModInitializer {
 			for (BlockPos member : members) {
 				if (level.getBlockEntity(member) instanceof FountainBlockEntity fountain) {
 					fountain.setFireworkMode(payload.fireworkMode());
+					fountain.setSprayThreshold(payload.sprayThreshold());
 					fountain.setImpactThreshold(payload.impactThreshold());
 					fountain.setSmokeEnabled(payload.smokeEnabled());
 					fountain.setParticleType(payload.particleType());
