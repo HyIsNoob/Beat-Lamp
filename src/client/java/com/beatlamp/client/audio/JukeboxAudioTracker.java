@@ -1,8 +1,12 @@
 package com.beatlamp.client.audio;
 
 import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import javax.sound.sampled.AudioFormat;
 
 import com.beatlamp.BeatLamp;
 import com.beatlamp.client.BeatLampClientConfig;
@@ -19,11 +23,8 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.phys.Vec3;
 
-import javax.sound.sampled.AudioFormat;
-
 public final class JukeboxAudioTracker {
 	private static final double AUDIBLE_RADIUS = 64.0;
-	private static final int MAX_CONSECUTIVE_ERRORS = 64;
 	private static final Map<BlockPos, ActiveSong> ACTIVE_SONGS = new ConcurrentHashMap<>();
 	private static float effectTime;
 
@@ -36,6 +37,9 @@ public final class JukeboxAudioTracker {
 		Thread thread;
 		volatile boolean running = true;
 		volatile float beatPulse;
+		volatile float kickPulse;
+		volatile float snarePulse;
+		volatile float hihatPulse;
 		volatile float impactPulse;
 
 		ActiveSong(Vec3 position, AudioAnalyzer analyzer, Thread thread) {
@@ -122,81 +126,80 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static void clear() {
-		ACTIVE_SONGS.values().forEach(song -> {
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
 			song.running = false;
 			if (song.thread != null) {
 				song.thread.interrupt();
 			}
-		});
+		}
 		ACTIVE_SONGS.clear();
 	}
 
-	private static void decodeLoop(Minecraft minecraft, JOrbisAudioStream audioStream, AudioAnalyzer analyzer, int channels, ActiveSong song) {
-		float[] raw = new float[16384];
-		float[] mono = new float[16384];
-		long startNanos = System.nanoTime();
-		long pauseStartNanos = 0L;
-		boolean wasPaused = false;
-		int consecutiveErrors = 0;
+	public static boolean isJukeboxPlayingAt(BlockPos pos) {
+		return ACTIVE_SONGS.containsKey(pos);
+	}
+
+	public static boolean isAnyJukeboxPlayingNear(Vec3 position) {
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
+			if (song.position.distanceTo(position) < AUDIBLE_RADIUS) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static boolean isAnyJukeboxPlayingNear(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song != null && song.position.distanceTo(position) < AUDIBLE_RADIUS;
+		}
+		return isAnyJukeboxPlayingNear(position);
+	}
+
+	private static void decodeLoop(
+		Minecraft minecraft,
+		JOrbisAudioStream audioStream,
+		AudioAnalyzer analyzer,
+		int channels,
+		ActiveSong song
+	) {
+		float[] interleaved = new float[4096 * channels];
+		float[] mono = new float[4096];
+		long startNanos = -1L;
 
 		try {
-			while (song.running && !Thread.currentThread().isInterrupted()) {
+			while (song.running) {
 				if (minecraft.isPaused()) {
-					if (!wasPaused) {
-						pauseStartNanos = System.nanoTime();
-						wasPaused = true;
-					}
-
 					try {
-						Thread.sleep(50L);
+						Thread.sleep(20L);
 					} catch (InterruptedException interruptedException) {
 						Thread.currentThread().interrupt();
 						break;
 					}
-
 					continue;
 				}
 
-				if (wasPaused) {
-					startNanos += System.nanoTime() - pauseStartNanos;
-					wasPaused = false;
-				}
-
-				int[] count = {0};
-				boolean more;
-
+				ByteBuffer byteBuffer;
 				try {
-					more = audioStream.readChunk(sample -> {
-						if (count[0] < raw.length) {
-							raw[count[0]++] = sample;
-						}
-					});
-					consecutiveErrors = 0;
+					byteBuffer = audioStream.read(4096);
 				} catch (Exception exception) {
-					if (++consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-						BeatLamp.LOGGER.warn("Beat Lamp decode giving up after {} consecutive errors", consecutiveErrors, exception);
-						break;
-					}
-
-					try {
-						Thread.sleep(10L);
-					} catch (InterruptedException interruptedException) {
-						Thread.currentThread().interrupt();
-						break;
-					}
-
-					continue;
-				}
-
-				int monoCount = toMono(raw, count[0], channels, mono);
-
-				for (int offset = 0; offset < monoCount; offset += 1024) {
-					analyzer.push(mono, offset, Math.min(1024, monoCount - offset));
-				}
-
-				if (!more) {
 					break;
 				}
+
+				if (byteBuffer == null || !byteBuffer.hasRemaining()) {
+					break;
+				}
+
+				int frames = decodePcmToMono(byteBuffer, channels, interleaved, mono);
+				if (frames <= 0) {
+					continue;
+				}
+
+				if (startNanos < 0L) {
+					startNanos = System.nanoTime();
+				}
+
+				analyzer.push(mono, frames);
 
 				long elapsedNanos = System.nanoTime() - startNanos;
 				double expectedSeconds = (double) analyzer.getTotalSamples() / analyzer.getSampleRate();
@@ -219,13 +222,16 @@ public final class JukeboxAudioTracker {
 		}
 	}
 
-	private static int toMono(float[] raw, int count, int channels, float[] mono) {
-		if (channels <= 1) {
-			System.arraycopy(raw, 0, mono, 0, count);
-			return count;
+	private static int decodePcmToMono(ByteBuffer byteBuffer, int channels, float[] raw, float[] mono) {
+		ByteBuffer buffer = byteBuffer.order(ByteOrder.LITTLE_ENDIAN);
+		int sampleCount = 0;
+
+		while (buffer.remaining() >= 2 && sampleCount < raw.length) {
+			short s = buffer.getShort();
+			raw[sampleCount++] = s / 32768.0F;
 		}
 
-		int frames = count / channels;
+		int frames = sampleCount / channels;
 		for (int frame = 0; frame < frames; frame++) {
 			float sum = 0.0F;
 			for (int channel = 0; channel < channels; channel++) {
@@ -246,6 +252,24 @@ public final class JukeboxAudioTracker {
 				song.beatPulse = 1.0F;
 			} else {
 				song.beatPulse *= 0.80F;
+			}
+
+			if (song.analyzer.consumeKick()) {
+				song.kickPulse = 1.0F;
+			} else {
+				song.kickPulse *= 0.78F;
+			}
+
+			if (song.analyzer.consumeSnare()) {
+				song.snarePulse = 1.0F;
+			} else {
+				song.snarePulse *= 0.82F;
+			}
+
+			if (song.analyzer.consumeHihat()) {
+				song.hihatPulse = 1.0F;
+			} else {
+				song.hihatPulse *= 0.85F;
 			}
 
 			if (song.analyzer.consumeImpact()) {
@@ -321,6 +345,36 @@ public final class JukeboxAudioTracker {
 		return best;
 	}
 
+	public static float getKickPulseAt(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song == null ? 0.0F : song.kickPulse;
+		}
+
+		float best = 0.0F;
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
+			float falloff = falloff(song.position.distanceTo(position));
+			float pulse = song.kickPulse * falloff;
+			if (pulse > best) best = pulse;
+		}
+		return best;
+	}
+
+	public static float getSnarePulseAt(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song == null ? 0.0F : song.snarePulse;
+		}
+
+		float best = 0.0F;
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
+			float falloff = falloff(song.position.distanceTo(position));
+			float pulse = song.snarePulse * falloff;
+			if (pulse > best) best = pulse;
+		}
+		return best;
+	}
+
 	public static float getBandAt(Vec3 position, int band) {
 		float best = -1.0F;
 		ActiveSong bestSong = null;
@@ -335,8 +389,6 @@ public final class JukeboxAudioTracker {
 			float level = song.analyzer.getLevel() * falloff;
 			if (level > best) {
 				best = level;
-				bestSong = song;
-				bestFalloff = falloff;
 			}
 		}
 
