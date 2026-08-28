@@ -389,6 +389,8 @@ public final class JukeboxAudioTracker {
 			float level = song.analyzer.getLevel() * falloff;
 			if (level > best) {
 				best = level;
+				bestSong = song;
+				bestFalloff = falloff;
 			}
 		}
 

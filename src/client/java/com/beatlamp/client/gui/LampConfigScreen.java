@@ -4,7 +4,6 @@ import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.LampMode;
 import com.beatlamp.block.LampOrientation;
 import com.beatlamp.block.LampParticles;
-import com.beatlamp.client.BeatLampClientConfig;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
 
@@ -34,19 +33,18 @@ public class LampConfigScreen extends Screen {
 	private LampParticles particles;
 	private LampOrientation orientation;
 	private boolean unlink;
+	private BlockPos sourcePos;
 
 	private Button modeButton;
-	private Button colorButton;
-	private Button framelessButton;
-	private Button blackbackButton;
-	private Button idleLightButton;
-	private Button sourceButton;
-	private Button directionButton;
-	private Button particlesButton;
-	private Button orientationButton;
 	private ValueSlider sensitivitySlider;
 	private ValueSlider speedSlider;
-	private BlockPos sourcePos;
+	private Button colorButton;
+	private Button particlesButton;
+	private Button framelessButton;
+	private Button blackbackButton;
+	private Button orientationButton;
+	private Button idleLightButton;
+	private Button sourceButton;
 
 	public LampConfigScreen(BeatLampBlockEntity beatLamp) {
 		super(Component.translatable("screen.beatlamp.config"));
@@ -79,8 +77,9 @@ public class LampConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 100;
+		int y = this.height / 2 - 84;
 
+		// Row 1: Mode
 		this.modeButton = this.addRenderableWidget(
 			Button.builder(this.modeLabel(), button -> {
 				this.mode = this.mode.next();
@@ -88,8 +87,9 @@ public class LampConfigScreen extends Screen {
 			}).bounds(centerX - 100, y, 200, 20).build()
 		);
 
+		// Row 2: Sensitivity & Speed
 		this.sensitivitySlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 24, Component.translatable("screen.beatlamp.sensitivity"), this.sensitivity, 0.25, 3.0) {
+			new ValueSlider(centerX - 100, y + 24, Component.translatable("screen.beatlamp.sensitivity"), this.sensitivity, 0.25, 3.0, "%.2fx") {
 				@Override
 				protected void applyValue() {
 					LampConfigScreen.this.sensitivity = (float) Mth.lerp(this.value, 0.25, 3.0);
@@ -98,7 +98,7 @@ public class LampConfigScreen extends Screen {
 		);
 
 		this.speedSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 48, Component.translatable("screen.beatlamp.speed"), this.speed, 0.25, 3.0) {
+			new ValueSlider(centerX + 2, y + 24, Component.translatable("screen.beatlamp.speed"), this.speed, 0.25, 3.0, "%.2fx") {
 				@Override
 				protected void applyValue() {
 					LampConfigScreen.this.speed = (float) Mth.lerp(this.value, 0.25, 3.0);
@@ -106,49 +106,53 @@ public class LampConfigScreen extends Screen {
 			}
 		);
 
+		// Row 3: Color & Sparks
 		this.colorButton = this.addRenderableWidget(
 			Button.builder(this.colorLabel(), button -> {
 				int index = this.colorIndex();
 				this.color = PALETTE[(index + 1) % PALETTE.length];
 				button.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 72, 200, 20).build()
-		);
-
-		this.framelessButton = this.addRenderableWidget(
-			Button.builder(this.framelessLabel(), button -> {
-				this.frameless = !this.frameless;
-				button.setMessage(this.framelessLabel());
-			}).bounds(centerX - 100, y + 96, 98, 20).build()
-		);
-
-		this.blackbackButton = this.addRenderableWidget(
-			Button.builder(this.blackbackLabel(), button -> {
-				this.blackback = !this.blackback;
-				button.setMessage(this.blackbackLabel());
-			}).bounds(centerX + 2, y + 96, 98, 20).build()
-		);
-
-		this.orientationButton = this.addRenderableWidget(
-			Button.builder(this.orientationLabel(), button -> {
-				this.orientation = this.orientation.next();
-				button.setMessage(this.orientationLabel());
-			}).bounds(centerX - 100, y + 120, 98, 20).build()
+			}).bounds(centerX - 100, y + 48, 98, 20).build()
 		);
 
 		this.particlesButton = this.addRenderableWidget(
 			Button.builder(this.particlesLabel(), button -> {
 				this.particles = this.particles.next();
 				button.setMessage(this.particlesLabel());
-			}).bounds(centerX + 2, y + 120, 98, 20).build()
+			}).bounds(centerX + 2, y + 48, 98, 20).build()
+		);
+
+		// Row 4: Bezel & Backing
+		this.framelessButton = this.addRenderableWidget(
+			Button.builder(this.framelessLabel(), button -> {
+				this.frameless = !this.frameless;
+				button.setMessage(this.framelessLabel());
+			}).bounds(centerX - 100, y + 72, 98, 20).build()
+		);
+
+		this.blackbackButton = this.addRenderableWidget(
+			Button.builder(this.blackbackLabel(), button -> {
+				this.blackback = !this.blackback;
+				button.setMessage(this.blackbackLabel());
+			}).bounds(centerX + 2, y + 72, 98, 20).build()
+		);
+
+		// Row 5: Orientation & Idle Glow
+		this.orientationButton = this.addRenderableWidget(
+			Button.builder(this.orientationLabel(), button -> {
+				this.orientation = this.orientation.next();
+				button.setMessage(this.orientationLabel());
+			}).bounds(centerX - 100, y + 96, 98, 20).build()
 		);
 
 		this.idleLightButton = this.addRenderableWidget(
 			Button.builder(this.idleLightLabel(), button -> {
 				this.idleLight = !this.idleLight;
 				button.setMessage(this.idleLightLabel());
-			}).bounds(centerX - 100, y + 144, 98, 20).build()
+			}).bounds(centerX + 2, y + 96, 98, 20).build()
 		);
 
+		// Row 6: Audio Source
 		this.sourceButton = this.addRenderableWidget(
 			Button.builder(this.sourceLabel(), button -> {
 				if (this.sourcePos != null) {
@@ -156,27 +160,13 @@ public class LampConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX + 2, y + 144, 98, 20).build()
+			}).bounds(centerX - 100, y + 120, 200, 20).build()
 		);
 
-		this.directionButton = this.addRenderableWidget(
-			Button.builder(this.directionLabel(), button -> {
-				this.reverse = !this.reverse;
-				button.setMessage(this.directionLabel());
-			}).bounds(centerX - 100, y + 168, 98, 20).build()
-		);
-
-		this.addRenderableWidget(
-			Button.builder(Component.translatable("screen.beatlamp.beatquality").append(": ").append(Component.translatable(BeatLampClientConfig.highQualityBeat ? "screen.beatlamp.beatquality.high" : "screen.beatlamp.beatquality.low")), button -> {
-				BeatLampClientConfig.highQualityBeat = !BeatLampClientConfig.highQualityBeat;
-				BeatLampClientConfig.save();
-				button.setMessage(Component.translatable("screen.beatlamp.beatquality").append(": ").append(Component.translatable(BeatLampClientConfig.highQualityBeat ? "screen.beatlamp.beatquality.high" : "screen.beatlamp.beatquality.low")));
-			}).bounds(centerX + 2, y + 168, 98, 20).build()
-		);
-
+		// Row 7: Reset, Unlink, Done
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.reset"), button -> this.resetToDefault())
-				.bounds(centerX - 100, y + 192, 65, 20)
+				.bounds(centerX - 100, y + 144, 64, 20)
 				.build()
 		);
 
@@ -184,12 +174,12 @@ public class LampConfigScreen extends Screen {
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX - 33, y + 192, 65, 20).build()
+			}).bounds(centerX - 32, y + 144, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX + 34, y + 192, 66, 20)
+				.bounds(centerX + 36, y + 144, 64, 20)
 				.build()
 		);
 	}
@@ -211,61 +201,55 @@ public class LampConfigScreen extends Screen {
 		this.framelessButton.setMessage(this.framelessLabel());
 		this.blackbackButton.setMessage(this.blackbackLabel());
 		this.idleLightButton.setMessage(this.idleLightLabel());
-		this.directionButton.setMessage(this.directionLabel());
 		this.particlesButton.setMessage(this.particlesLabel());
 		this.orientationButton.setMessage(this.orientationLabel());
-		this.sensitivitySlider.reset(1.0F, 0.25, 3.0);
-		this.speedSlider.reset(1.0F, 0.25, 3.0);
+		this.sensitivitySlider.updateVal(1.0F);
+		this.speedSlider.updateVal(1.0F);
 	}
 
 	private Component modeLabel() {
-		return Component.translatable("screen.beatlamp.mode").append(": ").append(Component.translatable("screen.beatlamp.mode." + this.mode.getSerializedName()));
+		return Component.translatable("screen.beatlamp.mode", Component.translatable("screen.beatlamp.mode." + this.mode.getSerializedName()));
 	}
 
 	private Component colorLabel() {
 		if (this.color == BeatLampBlockEntity.COLOR_OLED) {
-			return Component.translatable("screen.beatlamp.color").append(": ").append(Component.translatable("screen.beatlamp.color.oled"));
+			return Component.translatable("screen.beatlamp.color", Component.translatable("screen.beatlamp.color.oled"));
 		}
 
-		return Component.translatable("screen.beatlamp.color").append(": #").append(Integer.toHexString(this.color).toUpperCase());
+		for (DyeColor dye : DyeColor.values()) {
+			if (dye.getFireworkColor() == this.color) {
+				return Component.translatable("screen.beatlamp.color", Component.translatable("color.minecraft." + dye.getName()));
+			}
+		}
+
+		return Component.translatable("screen.beatlamp.color", Component.literal(String.format("#%06X", this.color)));
 	}
 
 	private Component framelessLabel() {
-		return Component.translatable("screen.beatlamp.frameless").append(": ").append(Component.translatable(this.frameless ? "gui.yes" : "gui.no"));
+		return Component.translatable("screen.beatlamp.frameless", Component.translatable(this.frameless ? "screen.beatlamp.frameless.enabled" : "screen.beatlamp.frameless.disabled"));
 	}
 
 	private Component blackbackLabel() {
-		return Component.translatable("screen.beatlamp.solidback").append(": ").append(Component.translatable(this.blackback ? "gui.yes" : "gui.no"));
+		return Component.translatable("screen.beatlamp.solid_back", Component.translatable(this.blackback ? "screen.beatlamp.solid_back.solid" : "screen.beatlamp.solid_back.glass"));
 	}
 
 	private Component idleLightLabel() {
-		return Component.translatable("screen.beatlamp.idlelight").append(": ").append(Component.translatable(this.idleLight ? "gui.yes" : "gui.no"));
-	}
-
-	private Component directionLabel() {
-		return Component.translatable("screen.beatlamp.direction")
-			.append(": ")
-			.append(Component.translatable(this.reverse ? "screen.beatlamp.direction.reverse" : "screen.beatlamp.direction.forward"));
+		return Component.translatable("screen.beatlamp.idle_light", Component.translatable(this.idleLight ? "screen.beatlamp.enabled" : "screen.beatlamp.disabled"));
 	}
 
 	private Component sourceLabel() {
 		if (this.sourcePos == null) {
 			return Component.translatable("screen.beatlamp.source.none");
 		}
-
 		return Component.translatable("screen.beatlamp.source.bound", this.sourcePos.getX(), this.sourcePos.getY(), this.sourcePos.getZ());
 	}
 
 	private Component particlesLabel() {
-		return Component.translatable("screen.beatlamp.particles")
-			.append(": ")
-			.append(Component.translatable("screen.beatlamp.particles." + this.particles.getSerializedName()));
+		return Component.translatable("screen.beatlamp.particles", Component.translatable("screen.beatlamp.particles." + this.particles.getSerializedName()));
 	}
 
 	private Component orientationLabel() {
-		return Component.translatable("screen.beatlamp.orientation")
-			.append(": ")
-			.append(Component.translatable("screen.beatlamp.orientation." + this.orientation.getSerializedName()));
+		return Component.translatable("screen.beatlamp.orientation", Component.translatable("screen.beatlamp.orientation." + this.orientation.getSerializedName()));
 	}
 
 	private int colorIndex() {
@@ -274,15 +258,19 @@ public class LampConfigScreen extends Screen {
 				return i;
 			}
 		}
-
 		return 0;
 	}
 
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-		this.renderTransparentBackground(guiGraphics);
-		guiGraphics.drawString(this.font, this.title, this.width / 2 - this.font.width(this.title) / 2, this.height / 2 - 116, 0xFFFFFF);
+		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 98, 0xFFFFFF);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
+	}
+
+	@Override
+	public boolean isPauseScreen() {
+		return false;
 	}
 
 	@Override
@@ -296,27 +284,30 @@ public class LampConfigScreen extends Screen {
 	}
 
 	private abstract static class ValueSlider extends AbstractSliderButton {
-		private final Component label;
+		private final Component prefix;
 		private final double min;
 		private final double max;
+		private final String format;
 
-		protected ValueSlider(int x, int y, Component label, double currentValue, double min, double max) {
-			super(x, y, 200, 20, label, (currentValue - min) / (max - min));
-			this.label = label;
+		ValueSlider(int x, int y, Component prefix, float initial, double min, double max, String format) {
+			super(x, y, 98, 20, Component.empty(), (initial - min) / (max - min));
+			this.prefix = prefix;
 			this.min = min;
 			this.max = max;
-			this.updateMessage();
-		}
-
-		protected void reset(double currentValue, double min, double max) {
-			this.value = (currentValue - min) / (max - min);
+			this.format = format;
 			this.updateMessage();
 		}
 
 		@Override
 		protected void updateMessage() {
-			double current = Mth.lerp(this.value, this.min, this.max);
-			this.setMessage(this.label.copy().append(": ").append(String.format("%.2f", current)));
+			double val = Mth.lerp(this.value, this.min, this.max);
+			this.setMessage(Component.translatable("screen.beatlamp.slider.value", this.prefix, String.format(this.format, val)));
+		}
+
+		public void updateVal(float initial) {
+			this.value = (initial - this.min) / (this.max - this.min);
+			this.updateMessage();
+			this.applyValue();
 		}
 	}
 }
