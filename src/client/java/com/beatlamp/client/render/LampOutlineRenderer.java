@@ -122,11 +122,18 @@ public final class LampOutlineRenderer {
 			(float) area.minX, (float) area.maxX,
 			(float) area.minY, (float) area.maxY,
 			(float) area.minZ, (float) area.maxZ,
-			1.0F, 0.85F, 0.25F, 0.28F
+			0.15F, 0.85F, 1.0F, 0.22F
 		);
 
 		VertexConsumer linesAfterFill = context.consumers().getBuffer(RenderType.lines());
-		LevelRenderer.renderLineBox(poseStack, linesAfterFill, area, 1.0F, 0.95F, 0.45F, 0.9F);
+		LevelRenderer.renderLineBox(poseStack, linesAfterFill, area, 0.3F, 0.95F, 1.0F, 0.9F);
+
+		var anchorBlock = context.world().getBlockState(anchor).getBlock();
+		for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+			if (context.world().getBlockState(memberPos).is(anchorBlock)) {
+				LevelRenderer.renderLineBox(poseStack, linesAfterFill, new AABB(memberPos).inflate(0.003), 1.0F, 0.85F, 0.2F, 0.95F);
+			}
+		}
 	}
 
 	private static void fillBox(

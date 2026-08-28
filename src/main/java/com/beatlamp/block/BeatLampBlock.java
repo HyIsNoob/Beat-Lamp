@@ -1,22 +1,16 @@
 package com.beatlamp.block;
 
-import com.beatlamp.BeatLamp;
 import com.beatlamp.BeatLampBlockEntities;
-import com.beatlamp.BeatLampBlocks;
-import com.beatlamp.BeatLampItems;
 
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.DyeItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -87,39 +81,11 @@ public class BeatLampBlock extends BaseEntityBlock {
 	protected ItemInteractionResult useItemOn(
 		ItemStack itemStack, BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult
 	) {
-		if (itemStack.getItem() instanceof DyeItem dyeItem) {
-			if (!level.isClientSide
-				&& level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity beatLamp
-				&& beatLamp.setColor(dyeItem.getDyeColor().getFireworkColor())) {
-				if (!player.isCreative()) {
-					itemStack.shrink(1);
-				}
-
-				return ItemInteractionResult.CONSUME;
-			}
-
-			return ItemInteractionResult.CONSUME;
-		}
-
 		return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 	}
 
 	@Override
 	protected InteractionResult useWithoutItem(BlockState blockState, Level level, BlockPos blockPos, Player player, BlockHitResult blockHitResult) {
-		if (level.isClientSide) {
-			return InteractionResult.SUCCESS;
-		}
-
-		if (level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity beatLamp) {
-			if (player.isShiftKeyDown()) {
-				beatLamp.cycleColor(player);
-			} else {
-				beatLamp.cycleMode(player);
-			}
-
-			return InteractionResult.CONSUME;
-		}
-
 		return InteractionResult.PASS;
 	}
 }

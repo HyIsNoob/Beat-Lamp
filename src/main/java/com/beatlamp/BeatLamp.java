@@ -231,6 +231,13 @@ public class BeatLamp implements ModInitializer {
 		BlockPos anchor = linker.get(BeatLampItems.ANCHOR_POS);
 
 		if (anchor == null) {
+			BlockEntity startBe = level.getBlockEntity(pos);
+			if (!(startBe instanceof BeatLampBlockEntity || startBe instanceof StageLightBlockEntity
+				|| startBe instanceof FountainBlockEntity || startBe instanceof BeatEmitterBlockEntity)) {
+				message(player, "message.beatlamp.link.invalid_start");
+				return;
+			}
+
 			linker.set(BeatLampItems.ANCHOR_POS, pos.immutable());
 			message(player, "message.beatlamp.link.anchor");
 			return;
@@ -247,6 +254,13 @@ public class BeatLamp implements ModInitializer {
 			return;
 		}
 
+		BlockEntity anchorBe = level.getBlockEntity(anchor);
+		if (anchorBe == null) {
+			linker.remove(BeatLampItems.ANCHOR_POS);
+			message(player, "message.beatlamp.link.cancel");
+			return;
+		}
+
 		int minX = Math.min(anchor.getX(), pos.getX());
 		int minY = Math.min(anchor.getY(), pos.getY());
 		int minZ = Math.min(anchor.getZ(), pos.getZ());
@@ -254,54 +268,68 @@ public class BeatLamp implements ModInitializer {
 		int maxY = Math.max(anchor.getY(), pos.getY());
 		int maxZ = Math.max(anchor.getZ(), pos.getZ());
 
-		List<BeatLampBlockEntity> lamps = new ArrayList<>();
-		List<StageLightBlockEntity> lights = new ArrayList<>();
-		List<FountainBlockEntity> fountains = new ArrayList<>();
+		List<BlockPos> positions = new ArrayList<>();
 
-		for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
-			BlockEntity be = level.getBlockEntity(memberPos);
-			if (be instanceof BeatLampBlockEntity lamp) {
-				lamps.add(lamp);
-			} else if (be instanceof StageLightBlockEntity light) {
-				lights.add(light);
-			} else if (be instanceof FountainBlockEntity fountain) {
-				fountains.add(fountain);
+		if (anchorBe instanceof BeatLampBlockEntity) {
+			List<BeatLampBlockEntity> lamps = new ArrayList<>();
+			for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+				if (level.getBlockEntity(memberPos) instanceof BeatLampBlockEntity lamp) {
+					lamps.add(lamp);
+					positions.add(lamp.getBlockPos().immutable());
+					if (lamps.size() >= MAX_GROUP_SIZE) {
+						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+						break;
+					}
+				}
 			}
-
-			if (lamps.size() + lights.size() + fountains.size() >= MAX_GROUP_SIZE) {
-				message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
-				return;
+			if (lamps.size() >= 2) {
+				for (BeatLampBlockEntity member : lamps) {
+					member.setManualGroup(positions);
+				}
+			}
+		} else if (anchorBe instanceof StageLightBlockEntity) {
+			List<StageLightBlockEntity> lights = new ArrayList<>();
+			for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+				if (level.getBlockEntity(memberPos) instanceof StageLightBlockEntity light) {
+					lights.add(light);
+					positions.add(light.getBlockPos().immutable());
+					if (lights.size() >= MAX_GROUP_SIZE) {
+						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+						break;
+					}
+				}
+			}
+			if (lights.size() >= 2) {
+				for (StageLightBlockEntity member : lights) {
+					member.setManualGroup(positions);
+				}
+			}
+		} else if (anchorBe instanceof FountainBlockEntity) {
+			List<FountainBlockEntity> fountains = new ArrayList<>();
+			for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
+				if (level.getBlockEntity(memberPos) instanceof FountainBlockEntity fountain) {
+					fountains.add(fountain);
+					positions.add(fountain.getBlockPos().immutable());
+					if (fountains.size() >= MAX_GROUP_SIZE) {
+						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+						break;
+					}
+				}
+			}
+			if (fountains.size() >= 2) {
+				for (FountainBlockEntity member : fountains) {
+					member.setManualGroup(positions);
+				}
 			}
 		}
 
-		int totalLinked = 0;
-
-		if (lamps.size() >= 2) {
-			List<BlockPos> positions = new ArrayList<>(lamps.size());
-			for (BeatLampBlockEntity member : lamps) positions.add(member.getBlockPos().immutable());
-			for (BeatLampBlockEntity member : lamps) member.setManualGroup(positions);
-			totalLinked += positions.size();
-		}
-		if (lights.size() >= 2) {
-			List<BlockPos> positions = new ArrayList<>(lights.size());
-			for (StageLightBlockEntity member : lights) positions.add(member.getBlockPos().immutable());
-			for (StageLightBlockEntity member : lights) member.setManualGroup(positions);
-			totalLinked += positions.size();
-		}
-		if (fountains.size() >= 2) {
-			List<BlockPos> positions = new ArrayList<>(fountains.size());
-			for (FountainBlockEntity member : fountains) positions.add(member.getBlockPos().immutable());
-			for (FountainBlockEntity member : fountains) member.setManualGroup(positions);
-			totalLinked += positions.size();
-		}
-
-		if (totalLinked < 2) {
+		if (positions.size() < 2) {
 			message(player, "message.beatlamp.link.empty");
 			return;
 		}
 
 		linker.remove(BeatLampItems.ANCHOR_POS);
-		message(player, "message.beatlamp.link.added", totalLinked);
+		message(player, "message.beatlamp.link.added", positions.size());
 	}
 
 	public static void unlinkGroup(Level level, BlockPos pos) {

@@ -86,20 +86,6 @@ public class StageLightBlock extends BaseEntityBlock {
 	protected ItemInteractionResult useItemOn(
 		ItemStack itemStack, BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult
 	) {
-		if (itemStack.getItem() instanceof DyeItem dyeItem) {
-			if (!level.isClientSide
-				&& level.getBlockEntity(blockPos) instanceof StageLightBlockEntity light
-				&& light.setColor(dyeItem.getDyeColor().getFireworkColor())) {
-				if (!player.isCreative()) {
-					itemStack.shrink(1);
-				}
-
-				return ItemInteractionResult.CONSUME;
-			}
-
-			return ItemInteractionResult.CONSUME;
-		}
-
 		return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
 	}
 }

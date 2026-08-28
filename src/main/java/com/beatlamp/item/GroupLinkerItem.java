@@ -35,8 +35,24 @@ public class GroupLinkerItem extends Item {
 			return InteractionResult.PASS;
 		}
 
+		ItemStack itemStack = context.getItemInHand();
+
+		// Sneak + Right Click to cancel active selection
+		if (player.isShiftKeyDown()) {
+			if (itemStack.get(BeatLampItems.ANCHOR_POS) != null) {
+				if (!level.isClientSide) {
+					itemStack.remove(BeatLampItems.ANCHOR_POS);
+					player.displayClientMessage(
+						Component.translatable("message.beatlamp.link.cancel").withStyle(ChatFormatting.AQUA), true
+					);
+				}
+				return InteractionResult.sidedSuccess(level.isClientSide);
+			}
+			return InteractionResult.PASS;
+		}
+
 		if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
-			BeatLamp.handleLink(serverLevel, blockPos, serverPlayer, context.getItemInHand());
+			BeatLamp.handleLink(serverLevel, blockPos, serverPlayer, itemStack);
 		}
 
 		return InteractionResult.SUCCESS;
@@ -46,7 +62,8 @@ public class GroupLinkerItem extends Item {
 	public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand interactionHand) {
 		ItemStack itemStack = player.getItemInHand(interactionHand);
 
-		if (itemStack.get(BeatLampItems.ANCHOR_POS) != null) {
+		// Sneak + Right Click in air to cancel active selection
+		if (player.isShiftKeyDown() && itemStack.get(BeatLampItems.ANCHOR_POS) != null) {
 			if (!level.isClientSide) {
 				itemStack.remove(BeatLampItems.ANCHOR_POS);
 				player.displayClientMessage(
