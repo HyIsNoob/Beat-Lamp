@@ -136,7 +136,12 @@ public class BeatLampClient implements ClientModInitializer {
 				if (net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
 					lines.add(net.minecraft.network.chat.Component.empty());
 					lines.add(net.minecraft.network.chat.Component.translatable("item.beatlamp.tag.guide_header").withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD));
-					lines.add(net.minecraft.network.chat.Component.translatable("item.beatlamp." + baseKey + ".tooltip.details").withStyle(net.minecraft.ChatFormatting.AQUA));
+					String raw = net.minecraft.locale.Language.getInstance().getOrDefault("item.beatlamp." + baseKey + ".tooltip.details");
+					for (String subLine : raw.split("\n")) {
+						if (!subLine.trim().isEmpty()) {
+							lines.add(net.minecraft.network.chat.Component.literal(subLine.trim()).withStyle(net.minecraft.ChatFormatting.AQUA));
+						}
+					}
 				} else {
 					lines.add(net.minecraft.network.chat.Component.translatable("item.beatlamp.tag.hold_shift").withStyle(net.minecraft.ChatFormatting.DARK_GRAY, net.minecraft.ChatFormatting.ITALIC));
 				}
