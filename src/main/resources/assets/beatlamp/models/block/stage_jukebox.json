@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "beatlamp:block/stage_jukebox_side",
+    "north": "beatlamp:block/stage_jukebox_side",
+    "south": "beatlamp:block/stage_jukebox_side",
+    "east": "beatlamp:block/stage_jukebox_side",
+    "west": "beatlamp:block/stage_jukebox_side",
+    "up": "beatlamp:block/stage_jukebox_top",
+    "down": "beatlamp:block/stage_jukebox_bottom"
+  }
+}

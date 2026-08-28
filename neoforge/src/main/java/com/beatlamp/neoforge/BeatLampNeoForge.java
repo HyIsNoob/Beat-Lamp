@@ -51,6 +51,10 @@ public class BeatLampNeoForge {
 			output.accept(BeatLampItems.LASER_PROJECTOR);
 			output.accept(BeatLampItems.FOUNTAIN);
 			output.accept(BeatLampItems.FOG_GENERATOR);
+			output.accept(BeatLampItems.STAGE_JUKEBOX);
+			output.accept(BeatLampItems.DMX_CONSOLE);
+			output.accept(BeatLampItems.DJ_DECK);
+			output.accept(BeatLampItems.STAGE_SPEAKER);
 			output.accept(BeatLampItems.BEAT_EMITTER);
 			output.accept(BeatLampItems.LINKER);
 			output.accept(BeatLampItems.CONTROLLER);

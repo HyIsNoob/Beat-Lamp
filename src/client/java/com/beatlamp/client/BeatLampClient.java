@@ -4,6 +4,7 @@ import java.util.List;
 
 import com.beatlamp.BeatLampBlockEntities;
 import com.beatlamp.BeatLampBlocks;
+import com.beatlamp.BeatLampItems;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.FogDensity;
@@ -120,6 +121,27 @@ public class BeatLampClient implements ClientModInitializer {
 		};
 
 		WorldRenderEvents.AFTER_TRANSLUCENT.register(LampOutlineRenderer::render);
+
+		net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
+			String baseKey = null;
+			if (stack.getItem() instanceof com.beatlamp.item.StageBlockItem stageBlockItem) {
+				baseKey = stageBlockItem.getBaseKey();
+			} else if (stack.is(BeatLampItems.LINKER)) {
+				baseKey = "linker";
+			} else if (stack.is(BeatLampItems.CONTROLLER)) {
+				baseKey = "controller";
+			}
+
+			if (baseKey != null) {
+				if (net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
+					lines.add(net.minecraft.network.chat.Component.empty());
+					lines.add(net.minecraft.network.chat.Component.translatable("item.beatlamp.tag.guide_header").withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD));
+					lines.add(net.minecraft.network.chat.Component.translatable("item.beatlamp." + baseKey + ".tooltip.details").withStyle(net.minecraft.ChatFormatting.AQUA));
+				} else {
+					lines.add(net.minecraft.network.chat.Component.translatable("item.beatlamp.tag.hold_shift").withStyle(net.minecraft.ChatFormatting.DARK_GRAY, net.minecraft.ChatFormatting.ITALIC));
+				}
+			}
+		});
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> JukeboxAudioTracker.clientTick());
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> JukeboxAudioTracker.clear());

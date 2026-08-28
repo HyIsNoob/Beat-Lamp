@@ -47,7 +47,7 @@ public class LampControllerItem extends Item {
 
 		// 1. Sneak interaction: Jukebox Source Select or Binding
 		if (player.isShiftKeyDown()) {
-			if (level.getBlockState(blockPos).is(Blocks.JUKEBOX)) {
+			if (level.getBlockState(blockPos).is(Blocks.JUKEBOX) || level.getBlockState(blockPos).is(com.beatlamp.BeatLampBlocks.STAGE_JUKEBOX)) {
 				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
 					BeatLamp.handleSourceSelect(serverPlayer, blockPos, controller);
 				}
@@ -143,12 +143,12 @@ public class LampControllerItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-		tooltipComponents.add(Component.translatable("item.beatlamp.controller.tooltip").withStyle(ChatFormatting.GRAY));
+		tooltipComponents.add(Component.translatable("item.beatlamp.controller.tooltip.summary").withStyle(ChatFormatting.GRAY));
 
 		BlockPos source = itemStack.get(BeatLampItems.SOURCE_POS);
 		if (source != null) {
 			tooltipComponents.add(
-				Component.translatable("item.beatlamp.controller.source", source.getX(), source.getY(), source.getZ()).withStyle(ChatFormatting.AQUA)
+				Component.translatable("item.beatlamp.controller.source", source.getX(), source.getY(), source.getZ()).withStyle(ChatFormatting.GOLD)
 			);
 		}
 	}

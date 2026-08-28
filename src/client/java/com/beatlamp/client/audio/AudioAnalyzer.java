@@ -55,6 +55,12 @@ public final class AudioAnalyzer {
 	private int medianIndex;
 	private int medianFilled;
 
+	// Beat Grid & Online BPM Induction
+	private float estimatedBpm = 124.0F;
+	private float gridPhase = 0.0F;
+	private float gridPulse = 0.0F;
+	private long prevBeatSample = -1_000_000L;
+
 	private static final int FLUX_HISTORY_SIZE = 64;
 	private static final float FLUX_WINDOW_SECONDS = 1.0F;
 	private final long[] fluxTimes = new long[FLUX_HISTORY_SIZE];
@@ -134,7 +140,7 @@ public final class AudioAnalyzer {
 		}
 
 		this.totalSamples += count;
-		this.update();
+		this.update(count);
 	}
 
 	public long getTotalSamples() {
@@ -183,7 +189,7 @@ public final class AudioAnalyzer {
 		return impact;
 	}
 
-	private void update() {
+	private void update(int stepSamples) {
 		if (this.ringFilled < this.fftSize) {
 			return;
 		}
@@ -325,7 +331,24 @@ public final class AudioAnalyzer {
 		boolean hasSnare = complexMidFlux > adaptiveThreshold * 0.65F && complexMidFlux > 0.007F;
 		boolean hasHihat = highFlux > adaptiveThreshold * 0.45F && highFlux > 0.006F;
 
+		// 6. Beat-Grid Metronome Phase Progression
+		float beatPeriodSamples = ((float) this.sampleRate * 60.0F) / Math.max(60.0F, this.estimatedBpm);
+		this.gridPhase = (this.gridPhase + (float) stepSamples / beatPeriodSamples) % 1.0F;
+		float phaseDist = Math.min(this.gridPhase, 1.0F - this.gridPhase);
+		this.gridPulse = (float) Math.exp(-(phaseDist * phaseDist) / 0.016F);
+
 		if (rising && (hasKick || hasSnare) && (this.totalSamples - this.lastBeatSample > minBeatGap)) {
+			long ioiSamples = this.totalSamples - this.prevBeatSample;
+			if (ioiSamples > (long) (this.sampleRate * 0.28) && ioiSamples < (long) (this.sampleRate * 1.5)) {
+				float instantBpm = 60.0F * (float) this.sampleRate / (float) ioiSamples;
+				while (instantBpm < 85.0F) instantBpm *= 2.0F;
+				while (instantBpm > 185.0F) instantBpm *= 0.5F;
+
+				this.estimatedBpm = this.estimatedBpm * 0.88F + instantBpm * 0.12F;
+			}
+			this.prevBeatSample = this.totalSamples;
+			this.gridPhase *= 0.25F; // Lock phase to real beat
+
 			this.lastBeatSample = this.totalSamples;
 			this.lastBeatIntensity = filteredFlux;
 			this.beatReady = true;
@@ -336,6 +359,14 @@ public final class AudioAnalyzer {
 		if (hasHihat) {
 			this.hihatReady = true;
 		}
+	}
+
+	public float getGridPulse() {
+		return this.gridPulse;
+	}
+
+	public float getEstimatedBpm() {
+		return this.estimatedBpm;
 	}
 
 	private float getMedianFlux(float fallback) {

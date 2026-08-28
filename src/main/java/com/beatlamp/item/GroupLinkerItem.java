@@ -79,7 +79,7 @@ public class GroupLinkerItem extends Item {
 
 	@Override
 	public void appendHoverText(ItemStack itemStack, TooltipContext tooltipContext, List<Component> tooltipComponents, TooltipFlag tooltipFlag) {
-		tooltipComponents.add(Component.translatable("item.beatlamp.linker.tooltip").withStyle(ChatFormatting.GRAY));
+		tooltipComponents.add(Component.translatable("item.beatlamp.linker.tooltip.summary").withStyle(ChatFormatting.GRAY));
 
 		BlockPos anchor = itemStack.get(BeatLampItems.ANCHOR_POS);
 		if (anchor != null) {

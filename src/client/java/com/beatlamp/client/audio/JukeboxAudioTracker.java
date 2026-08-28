@@ -254,6 +254,12 @@ public final class JukeboxAudioTracker {
 				song.beatPulse *= 0.80F;
 			}
 
+			// Sustain internal rhythmic pulse (~0.35) during vocal breakdown
+			float grid = song.analyzer.getGridPulse();
+			if (song.beatPulse < grid * 0.40F) {
+				song.beatPulse = grid * 0.40F;
+			}
+
 			if (song.analyzer.consumeKick()) {
 				song.kickPulse = 1.0F;
 			} else {
@@ -310,15 +316,24 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static float getLevelAt(Vec3 position) {
-		float best = 0.0F;
+		return getLevelAt(position, null);
+	}
 
+	public static float getLevelAt(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			if (song == null) return 0.0F;
+			return Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F);
+		}
+
+		float best = 0.0F;
 		for (ActiveSong song : ACTIVE_SONGS.values()) {
 			float falloff = falloff(song.position.distanceTo(position));
 			if (falloff <= 0.0F) {
 				continue;
 			}
 
-			float level = song.analyzer.getLevel() * falloff;
+			float level = Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F) * falloff;
 			if (level > best) {
 				best = level;
 			}
@@ -328,8 +343,16 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static float getBeatPulseAt(Vec3 position) {
-		float best = 0.0F;
+		return getBeatPulseAt(position, null);
+	}
 
+	public static float getBeatPulseAt(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song == null ? 0.0F : song.beatPulse;
+		}
+
+		float best = 0.0F;
 		for (ActiveSong song : ACTIVE_SONGS.values()) {
 			float falloff = falloff(song.position.distanceTo(position));
 			if (falloff <= 0.0F) {
@@ -404,24 +427,6 @@ public final class JukeboxAudioTracker {
 		}
 
 		return bands[band] * bestFalloff;
-	}
-
-	public static float getLevelAt(Vec3 position, BlockPos source) {
-		if (source == null) {
-			return getLevelAt(position);
-		}
-
-		ActiveSong song = ACTIVE_SONGS.get(source);
-		return song == null ? 0.0F : song.analyzer.getLevel();
-	}
-
-	public static float getBeatPulseAt(Vec3 position, BlockPos source) {
-		if (source == null) {
-			return getBeatPulseAt(position);
-		}
-
-		ActiveSong song = ACTIVE_SONGS.get(source);
-		return song == null ? 0.0F : song.beatPulse;
 	}
 
 	public static float getBandAt(Vec3 position, int band, BlockPos source) {
