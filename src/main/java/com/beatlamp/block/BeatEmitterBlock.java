@@ -17,14 +17,18 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 
 import org.jetbrains.annotations.Nullable;
 
 public class BeatEmitterBlock extends BaseEntityBlock {
 	public static final MapCodec<BeatEmitterBlock> CODEC = simpleCodec(BeatEmitterBlock::new);
+	public static final IntegerProperty POWER = BlockStateProperties.POWER;
 
 	public BeatEmitterBlock(Properties properties) {
 		super(properties);
+		this.registerDefaultState(this.stateDefinition.any().setValue(POWER, 0));
 	}
 
 	@Override
@@ -34,6 +38,7 @@ public class BeatEmitterBlock extends BaseEntityBlock {
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+		builder.add(POWER);
 	}
 
 	@Override
@@ -61,7 +66,7 @@ public class BeatEmitterBlock extends BaseEntityBlock {
 
 	@Override
 	public int getSignal(BlockState blockState, BlockGetter blockGetter, BlockPos blockPos, Direction direction) {
-		return blockGetter.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity emitter ? emitter.getSignalLevel() : 0;
+		return blockState.getValue(POWER);
 	}
 
 	@Override

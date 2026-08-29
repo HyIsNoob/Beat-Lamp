@@ -48,6 +48,15 @@ public class BeatLampNeoForgeClient {
 			});
 		};
 
+		BeatEmitterBlockEntity.controllerUser = emitter -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new com.beatlamp.client.gui.EmitterConfigScreen(emitter));
+				}
+			});
+		};
+
 		StageLightBlockEntity.controllerUser = light -> {
 			Minecraft minecraft = Minecraft.getInstance();
 			minecraft.execute(() -> {

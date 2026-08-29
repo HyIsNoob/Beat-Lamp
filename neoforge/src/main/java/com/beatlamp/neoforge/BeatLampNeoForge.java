@@ -83,7 +83,30 @@ public class BeatLampNeoForge {
 		registrar.playToServer(FogGeneratorConfigurePayload.ID, FogGeneratorConfigurePayload.CODEC, this::handleFogConfig);
 		registrar.playToServer(LampSourcePayload.ID, LampSourcePayload.CODEC, this::handleLampSource);
 		registrar.playToServer(EmitterSignalPayload.ID, EmitterSignalPayload.CODEC, this::handleEmitterSignal);
+		registrar.playToServer(com.beatlamp.network.EmitterConfigurePayload.ID, com.beatlamp.network.EmitterConfigurePayload.CODEC, this::handleEmitterConfig);
 		registrar.playToServer(FountainFirePayload.ID, FountainFirePayload.CODEC, this::handleFountainFire);
+	}
+
+	private void handleEmitterConfig(com.beatlamp.network.EmitterConfigurePayload payload, IPayloadContext context) {
+		context.enqueueWork(() -> {
+			Level level = context.player().level();
+			if (payload.unlink()) {
+				BeatLamp.unlinkEmitterGroup(level, payload.pos());
+				return;
+			}
+			List<BlockPos> members = null;
+			if (level.getBlockEntity(payload.pos()) instanceof BeatEmitterBlockEntity emitter && emitter.getManualGroup().size() >= 2) {
+				members = emitter.getManualGroup();
+			}
+			if (members == null) {
+				members = List.of(payload.pos());
+			}
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof BeatEmitterBlockEntity emitter) {
+					emitter.applyConfig(payload.mode(), payload.threshold(), payload.inverted(), payload.dmxEnrolled(), payload.customName());
+				}
+			}
+		});
 	}
 
 	private void handleLampConfig(LampConfigurePayload payload, IPayloadContext context) {

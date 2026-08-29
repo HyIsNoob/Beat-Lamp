@@ -23,6 +23,9 @@ import com.beatlamp.block.StageLightMode;
 import com.beatlamp.client.DmxMasterTracker;
 import com.beatlamp.client.config.BeatLampClientConfig;
 import com.beatlamp.network.DmxConsolePayload;
+import com.beatlamp.block.BeatEmitterBlockEntity;
+import com.beatlamp.block.EmitterMode;
+import com.beatlamp.network.EmitterConfigurePayload;
 import com.beatlamp.network.FogGeneratorConfigurePayload;
 import com.beatlamp.network.FountainConfigurePayload;
 import com.beatlamp.network.LampConfigurePayload;
@@ -61,7 +64,8 @@ public class DmxConsoleScreen extends Screen {
 		STAGE_LIGHT("Moving Head"),
 		LASER("Laser"),
 		FOUNTAIN("Fountain"),
-		FOG("Fog Generator");
+		FOG("Fog Generator"),
+		EMITTER("Beat Emitter");
 
 		public final String displayName;
 
@@ -108,6 +112,7 @@ public class DmxConsoleScreen extends Screen {
 			if (be instanceof LaserProjectorBlockEntity laser) return laser.getCustomName();
 			if (be instanceof FountainBlockEntity fountain) return fountain.getCustomName();
 			if (be instanceof FogGeneratorBlockEntity fog) return fog.getCustomName();
+			if (be instanceof BeatEmitterBlockEntity emitter) return emitter.getCustomName();
 			return "";
 		}
 
@@ -136,6 +141,11 @@ public class DmxConsoleScreen extends Screen {
 				this.modeIndex = fog.getDensity().ordinal();
 				this.colorIndex = findPaletteIndex(fog.getColor());
 				this.sensitivity = fog.getRadius() / 16.0F;
+			} else if (this.leadEntity instanceof BeatEmitterBlockEntity emitter) {
+				this.modeIndex = emitter.getMode().ordinal();
+				this.colorIndex = 1;
+				this.sensitivity = emitter.getThreshold();
+				this.speed = emitter.isInverted() ? 1.0F : 0.0F;
 			}
 		}
 
@@ -428,6 +438,7 @@ public class DmxConsoleScreen extends Screen {
 			case LASER -> modeName = LaserMode.values()[g.modeIndex % LaserMode.values().length].name();
 			case FOUNTAIN -> modeName = g.modeIndex == 1 ? "FIREWORK" : "FOUNTAIN";
 			case FOG -> modeName = FogDensity.values()[g.modeIndex % FogDensity.values().length].name();
+			case EMITTER -> modeName = EmitterMode.values()[g.modeIndex % EmitterMode.values().length].name();
 		}
 		return Component.literal("Mode: " + modeName);
 	}
@@ -439,6 +450,7 @@ public class DmxConsoleScreen extends Screen {
 			case LASER -> g.modeIndex = (g.modeIndex + 1) % LaserMode.values().length;
 			case FOUNTAIN -> g.modeIndex = (g.modeIndex + 1) % 2;
 			case FOG -> g.modeIndex = (g.modeIndex + 1) % FogDensity.values().length;
+			case EMITTER -> g.modeIndex = (g.modeIndex + 1) % EmitterMode.values().length;
 		}
 	}
 
@@ -514,6 +526,13 @@ public class DmxConsoleScreen extends Screen {
 					g.leadPos, density, radius, targetColor, false, true, customName
 				));
 			}
+			case EMITTER -> {
+				EmitterMode mode = EmitterMode.values()[g.modeIndex % EmitterMode.values().length];
+				boolean inverted = g.speed > 0.5F;
+				ClientPlayNetworking.send(new EmitterConfigurePayload(
+					g.leadPos, mode, targetSens, inverted, false, true, customName
+				));
+			}
 		}
 	}
 
@@ -528,7 +547,7 @@ public class DmxConsoleScreen extends Screen {
 		int maxChunkZ = (this.pos.getZ() + 64) >> 4;
 
 		Set<BlockPos> processed = new HashSet<>();
-		int lampCount = 0, lightCount = 0, laserCount = 0, fountainCount = 0, fogCount = 0;
+		int lampCount = 0, lightCount = 0, laserCount = 0, fountainCount = 0, fogCount = 0, emitterCount = 0;
 
 		for (int cx = minChunkX; cx <= maxChunkX; cx++) {
 			for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
@@ -577,6 +596,14 @@ public class DmxConsoleScreen extends Screen {
 						processed.addAll(members);
 						fogCount++;
 						StageGroupInfo group = new StageGroupInfo(GroupType.FOG, bePos, members, fog, fogCount);
+						group.pinned = PINNED_POSITIONS.contains(bePos);
+						this.rawGroups.add(group);
+					} else if (be instanceof BeatEmitterBlockEntity emitter) {
+						if (!emitter.isDmxEnrolled()) continue;
+						List<BlockPos> members = emitter.getManualGroup().size() >= 2 ? emitter.getManualGroup() : List.of(bePos);
+						processed.addAll(members);
+						emitterCount++;
+						StageGroupInfo group = new StageGroupInfo(GroupType.EMITTER, bePos, members, emitter, emitterCount);
 						group.pinned = PINNED_POSITIONS.contains(bePos);
 						this.rawGroups.add(group);
 					}

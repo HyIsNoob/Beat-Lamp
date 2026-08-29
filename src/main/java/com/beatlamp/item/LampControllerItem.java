@@ -98,6 +98,9 @@ public class LampControllerItem extends Item {
 			if (level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity beatLamp) {
 				BeatLampBlockEntity.controllerUser.use(beatLamp);
 				return InteractionResult.SUCCESS;
+			} else if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity emitter) {
+				BeatEmitterBlockEntity.controllerUser.use(emitter);
+				return InteractionResult.SUCCESS;
 			} else if (level.getBlockEntity(blockPos) instanceof StageLightBlockEntity stageLight) {
 				StageLightBlockEntity.controllerUser.use(stageLight);
 				return InteractionResult.SUCCESS;
@@ -113,14 +116,7 @@ public class LampControllerItem extends Item {
 			}
 		}
 
-		if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
-			if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
-				BeatLamp.toggleTarget(serverPlayer, blockPos);
-			}
-			return InteractionResult.SUCCESS;
-		}
-
-		return InteractionResult.PASS;
+		return InteractionResult.SUCCESS;
 	}
 
 	@Override

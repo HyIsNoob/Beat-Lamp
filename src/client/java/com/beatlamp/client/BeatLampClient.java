@@ -23,6 +23,7 @@ import com.beatlamp.client.audio.JukeboxAudioTracker;
 import com.beatlamp.client.config.BeatLampClientConfig;
 import com.beatlamp.block.DmxConsoleBlockEntity;
 import com.beatlamp.client.gui.DmxConsoleScreen;
+import com.beatlamp.client.gui.EmitterConfigScreen;
 import com.beatlamp.client.gui.FogGeneratorConfigScreen;
 import com.beatlamp.client.gui.FountainConfigScreen;
 import com.beatlamp.client.gui.LampConfigScreen;
@@ -87,6 +88,14 @@ public class BeatLampClient implements ClientModInitializer {
 			minecraft.execute(() -> {
 				if (minecraft.screen == null && minecraft.player != null) {
 					minecraft.setScreen(new LampConfigScreen(beatLamp));
+				}
+			});
+		};
+		BeatEmitterBlockEntity.controllerUser = emitter -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new EmitterConfigScreen(emitter));
 				}
 			});
 		};
@@ -378,21 +387,33 @@ public class BeatLampClient implements ClientModInitializer {
 		BlockPos source = emitter.getSource();
 
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
-		float beat = JukeboxAudioTracker.getBeatPulseAt(center, source);
-		int signal;
+		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
+		float kickPulse = JukeboxAudioTracker.getKickPulseAt(center, source);
+		float snarePulse = JukeboxAudioTracker.getSnarePulseAt(center, source);
+		float hihatPulse = JukeboxAudioTracker.getHihatPulseAt(center, source);
+		float impactPulse = JukeboxAudioTracker.getImpactPulseAt(center, source);
 
-		if (emitter.isPulseMode()) {
-			signal = beat >= 0.65F ? 15 : 0;
-		} else {
-			float energy = Mth.clamp(Math.max(audioLevel, beat * 0.8F), 0.0F, 1.0F);
-			signal = Math.round(energy * 15.0F);
+		float threshold = emitter.getThreshold();
+		int rawSignal = 0;
+
+		switch (emitter.getMode()) {
+			case PULSE -> rawSignal = beatPulse >= threshold ? 15 : 0;
+			case DROP -> rawSignal = impactPulse >= threshold ? 15 : 0;
+			case ENERGY -> {
+				float energy = Mth.clamp(Math.max(audioLevel, beatPulse * 0.85F) * (1.0F / Math.max(0.1F, threshold)), 0.0F, 1.0F);
+				rawSignal = Math.round(energy * 15.0F);
+			}
+			case KICK -> rawSignal = kickPulse >= threshold ? 15 : 0;
+			case SNARE -> rawSignal = snarePulse >= threshold ? 15 : 0;
+			case HIHAT -> rawSignal = hihatPulse >= threshold ? 15 : 0;
 		}
 
+		int finalSignal = emitter.isInverted() ? (15 - rawSignal) : rawSignal;
 		long gameTime = level.getGameTime();
 
-		if (emitter.shouldSendSignal(gameTime, signal)) {
-			ClientPlayNetworking.send(new EmitterSignalPayload(blockPos, signal));
-			emitter.markSent(gameTime, signal);
+		if (emitter.shouldSendSignal(gameTime, finalSignal)) {
+			ClientPlayNetworking.send(new EmitterSignalPayload(blockPos, finalSignal));
+			emitter.markSent(gameTime, finalSignal);
 		}
 	}
 

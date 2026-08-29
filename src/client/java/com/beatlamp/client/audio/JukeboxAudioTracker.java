@@ -441,6 +441,21 @@ public final class JukeboxAudioTracker {
 		return best;
 	}
 
+	public static float getHihatPulseAt(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song == null ? 0.0F : song.hihatPulse;
+		}
+
+		float best = 0.0F;
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
+			float falloff = falloff(song.position.distanceTo(position));
+			float pulse = song.hihatPulse * falloff;
+			if (pulse > best) best = pulse;
+		}
+		return best;
+	}
+
 	public static float getBandAt(Vec3 position, int band) {
 		float best = -1.0F;
 		ActiveSong bestSong = null;
