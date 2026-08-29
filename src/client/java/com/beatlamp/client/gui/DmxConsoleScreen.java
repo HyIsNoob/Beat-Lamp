@@ -461,13 +461,13 @@ public class DmxConsoleScreen extends Screen {
 				}
 
 				ClientPlayNetworking.send(new LampConfigurePayload(
-					g.leadPos, mode, targetSens, g.speed, targetColor, frameless, blackback, idleLight, reverse, particles, orientation, false, tempoPulse
+					g.leadPos, mode, targetSens, g.speed, targetColor, frameless, blackback, idleLight, reverse, particles, orientation, false, tempoPulse, true
 				));
 			}
 			case STAGE_LIGHT -> {
 				StageLightMode mode = StageLightMode.values()[g.modeIndex % StageLightMode.values().length];
 				ClientPlayNetworking.send(new StageLightConfigurePayload(
-					g.leadPos, mode, targetSens, g.speed, targetColor, false
+					g.leadPos, mode, targetSens, g.speed, targetColor, false, true
 				));
 			}
 			case LASER -> {
@@ -479,7 +479,7 @@ public class DmxConsoleScreen extends Screen {
 					spread = laser.getSpread();
 				}
 				ClientPlayNetworking.send(new LaserProjectorConfigurePayload(
-					g.leadPos, mode, count, spread, g.speed, targetColor, false
+					g.leadPos, mode, count, spread, g.speed, targetColor, false, true
 				));
 			}
 			case FOUNTAIN -> {
@@ -491,14 +491,14 @@ public class DmxConsoleScreen extends Screen {
 					pt = fountain.getParticleType();
 				}
 				ClientPlayNetworking.send(new FountainConfigurePayload(
-					g.leadPos, fw, spray, impact, true, pt, targetColor, false
+					g.leadPos, fw, spray, impact, true, pt, targetColor, false, true
 				));
 			}
 			case FOG -> {
 				FogDensity density = FogDensity.values()[g.modeIndex % FogDensity.values().length];
 				int radius = (int) (g.sensitivity * 16.0F);
 				ClientPlayNetworking.send(new FogGeneratorConfigurePayload(
-					g.leadPos, density, radius, targetColor, false
+					g.leadPos, density, radius, targetColor, false, true
 				));
 			}
 		}
@@ -527,6 +527,7 @@ public class DmxConsoleScreen extends Screen {
 
 					BlockEntity be = chunk.getBlockEntity(bePos);
 					if (be instanceof BeatLampBlockEntity lamp) {
+						if (!lamp.isDmxEnrolled()) continue;
 						List<BlockPos> members = lamp.getManualGroup().size() >= 2 ? lamp.getManualGroup() : BeatLamp.floodFill(level, bePos);
 						processed.addAll(members);
 						lampCount++;
@@ -534,6 +535,7 @@ public class DmxConsoleScreen extends Screen {
 						group.pinned = PINNED_POSITIONS.contains(bePos);
 						this.rawGroups.add(group);
 					} else if (be instanceof StageLightBlockEntity light) {
+						if (!light.isDmxEnrolled()) continue;
 						List<BlockPos> members = light.getManualGroup().size() >= 2 ? light.getManualGroup() : List.of(bePos);
 						processed.addAll(members);
 						lightCount++;
@@ -541,6 +543,7 @@ public class DmxConsoleScreen extends Screen {
 						group.pinned = PINNED_POSITIONS.contains(bePos);
 						this.rawGroups.add(group);
 					} else if (be instanceof LaserProjectorBlockEntity laser) {
+						if (!laser.isDmxEnrolled()) continue;
 						List<BlockPos> members = laser.getManualGroup().size() >= 2 ? laser.getManualGroup() : List.of(bePos);
 						processed.addAll(members);
 						laserCount++;
@@ -548,6 +551,7 @@ public class DmxConsoleScreen extends Screen {
 						group.pinned = PINNED_POSITIONS.contains(bePos);
 						this.rawGroups.add(group);
 					} else if (be instanceof FountainBlockEntity fountain) {
+						if (!fountain.isDmxEnrolled()) continue;
 						List<BlockPos> members = fountain.getManualGroup().size() >= 2 ? fountain.getManualGroup() : List.of(bePos);
 						processed.addAll(members);
 						fountainCount++;
@@ -555,6 +559,7 @@ public class DmxConsoleScreen extends Screen {
 						group.pinned = PINNED_POSITIONS.contains(bePos);
 						this.rawGroups.add(group);
 					} else if (be instanceof FogGeneratorBlockEntity fog) {
+						if (!fog.isDmxEnrolled()) continue;
 						List<BlockPos> members = fog.getManualGroup().size() >= 2 ? fog.getManualGroup() : List.of(bePos);
 						processed.addAll(members);
 						fogCount++;

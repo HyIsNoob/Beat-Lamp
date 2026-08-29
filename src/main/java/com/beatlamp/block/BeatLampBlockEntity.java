@@ -172,6 +172,17 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.markUpdated();
 	}
 
+	private boolean dmxEnrolled = true;
+
+	public boolean isDmxEnrolled() {
+		return this.dmxEnrolled;
+	}
+
+	public void setDmxEnrolled(boolean dmxEnrolled) {
+		this.dmxEnrolled = dmxEnrolled;
+		this.markUpdated();
+	}
+
 	public void applyConfig(
 		LampMode newMode,
 		float newSensitivity,
@@ -183,7 +194,8 @@ public class BeatLampBlockEntity extends BlockEntity {
 		boolean newReverse,
 		LampParticles newParticles,
 		LampOrientation newOrientation,
-		boolean newTempoPulse
+		boolean newTempoPulse,
+		boolean newDmxEnrolled
 	) {
 		this.mode = newMode;
 		this.sensitivity = newSensitivity;
@@ -195,6 +207,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.particles = newParticles;
 		this.orientation = newOrientation;
 		this.tempoPulse = newTempoPulse;
+		this.dmxEnrolled = newDmxEnrolled;
 		this.setFrameless(newFrameless);
 		this.markUpdated();
 	}
@@ -273,6 +286,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		compoundTag.putBoolean("idleLight", this.idleLight);
 		compoundTag.putBoolean("reverse", this.reverse);
 		compoundTag.putBoolean("tempoPulse", this.tempoPulse);
+		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
 		compoundTag.putString("particles", this.particles.getSerializedName());
 		compoundTag.putString("orientation", this.orientation.getSerializedName());
 
@@ -303,6 +317,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.idleLight = compoundTag.contains("idleLight") && compoundTag.getBoolean("idleLight");
 		this.reverse = compoundTag.getBoolean("reverse");
 		this.tempoPulse = !compoundTag.contains("tempoPulse") || compoundTag.getBoolean("tempoPulse");
+		this.dmxEnrolled = !compoundTag.contains("dmxEnrolled") || compoundTag.getBoolean("dmxEnrolled");
 		this.particles = LampParticles.byName(compoundTag.getString("particles"));
 		this.orientation = LampOrientation.byName(compoundTag.getString("orientation"));
 

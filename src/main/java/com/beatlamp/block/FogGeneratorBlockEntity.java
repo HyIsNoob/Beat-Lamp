@@ -37,7 +37,17 @@ public class FogGeneratorBlockEntity extends BlockEntity {
 	private FogDensity density = FogDensity.MEDIUM;
 	private int radius = 8; // 4, 8, 16 blocks
 	private int color = BeatLampBlockEntity.COLOR_OLED;
+	private boolean dmxEnrolled = true;
 	private BlockPos sourcePos;
+
+	public boolean isDmxEnrolled() {
+		return this.dmxEnrolled;
+	}
+
+	public void setDmxEnrolled(boolean dmxEnrolled) {
+		this.dmxEnrolled = dmxEnrolled;
+		this.markUpdated();
+	}
 	private final List<BlockPos> manualGroup = new java.util.ArrayList<>();
 
 	public FogGeneratorBlockEntity(BlockPos blockPos, BlockState blockState) {
@@ -124,6 +134,7 @@ public class FogGeneratorBlockEntity extends BlockEntity {
 		compoundTag.putString("density", this.density.name());
 		compoundTag.putInt("radius", this.radius);
 		compoundTag.putInt("color", this.color);
+		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
 
 		if (this.sourcePos != null) {
 			compoundTag.putLong("source", this.sourcePos.asLong());
@@ -144,6 +155,7 @@ public class FogGeneratorBlockEntity extends BlockEntity {
 		this.density = compoundTag.contains("density") ? FogDensity.byName(compoundTag.getString("density")) : FogDensity.MEDIUM;
 		this.radius = compoundTag.contains("radius") ? compoundTag.getInt("radius") : 8;
 		this.color = compoundTag.contains("color") ? compoundTag.getInt("color") : BeatLampBlockEntity.COLOR_OLED;
+		this.dmxEnrolled = !compoundTag.contains("dmxEnrolled") || compoundTag.getBoolean("dmxEnrolled");
 		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;
 
 		this.manualGroup.clear();

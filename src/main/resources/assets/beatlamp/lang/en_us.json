@@ -123,6 +123,7 @@
 	"screen.beatlamp.unlink": "Unlink",
 	"screen.beatlamp.enabled": "Enabled",
 	"screen.beatlamp.disabled": "Disabled",
+	"screen.beatlamp.dmx_link": "DMX Link: %s",
 	"screen.beatlamp.slider.value": "%s: %s",
 	"screen.beatlamp.stagelight.config": "Stage Light Settings",
 	"screen.beatlamp.stagelight.mode": "Mode: %s",

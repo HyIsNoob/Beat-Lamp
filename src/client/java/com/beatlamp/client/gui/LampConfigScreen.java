@@ -31,6 +31,7 @@ public class LampConfigScreen extends Screen {
 	private boolean idleLight;
 	private boolean reverse;
 	private boolean tempoPulse;
+	private boolean dmxEnrolled;
 	private LampParticles particles;
 	private LampOrientation orientation;
 	private boolean unlink;
@@ -46,6 +47,7 @@ public class LampConfigScreen extends Screen {
 	private Button orientationButton;
 	private Button tempoPulseButton;
 	private Button idleLightButton;
+	private Button dmxButton;
 	private Button sourceButton;
 
 	public LampConfigScreen(BeatLampBlockEntity beatLamp) {
@@ -60,6 +62,7 @@ public class LampConfigScreen extends Screen {
 		this.idleLight = beatLamp.isIdleLight();
 		this.reverse = beatLamp.isReverse();
 		this.tempoPulse = beatLamp.isTempoPulse();
+		this.dmxEnrolled = beatLamp.isDmxEnrolled();
 		this.particles = beatLamp.getParticles();
 		this.orientation = beatLamp.getOrientation();
 		this.sourcePos = beatLamp.getSource() == null ? null : beatLamp.getSource().immutable();
@@ -80,7 +83,7 @@ public class LampConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 90;
+		int y = this.height / 2 - 100;
 
 		// Row 1: Mode
 		this.modeButton = this.addRenderableWidget(
@@ -155,7 +158,7 @@ public class LampConfigScreen extends Screen {
 			}).bounds(centerX + 2, y + 96, 98, 20).build()
 		);
 
-		// Row 6: Idle Glow & Audio Source
+		// Row 6: Idle Glow & DMX Link
 		this.idleLightButton = this.addRenderableWidget(
 			Button.builder(this.idleLightLabel(), button -> {
 				this.idleLight = !this.idleLight;
@@ -163,6 +166,14 @@ public class LampConfigScreen extends Screen {
 			}).bounds(centerX - 100, y + 120, 98, 20).build()
 		);
 
+		this.dmxButton = this.addRenderableWidget(
+			Button.builder(this.dmxLabel(), button -> {
+				this.dmxEnrolled = !this.dmxEnrolled;
+				button.setMessage(this.dmxLabel());
+			}).bounds(centerX + 2, y + 120, 98, 20).build()
+		);
+
+		// Row 7: Audio Source
 		this.sourceButton = this.addRenderableWidget(
 			Button.builder(this.sourceLabel(), button -> {
 				if (this.sourcePos != null) {
@@ -170,13 +181,13 @@ public class LampConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX + 2, y + 120, 98, 20).build()
+			}).bounds(centerX - 100, y + 144, 200, 20).build()
 		);
 
-		// Row 7: Reset, Unlink, Done
+		// Row 8: Reset, Unlink, Done
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.reset"), button -> this.resetToDefault())
-				.bounds(centerX - 100, y + 144, 64, 20)
+				.bounds(centerX - 100, y + 168, 64, 20)
 				.build()
 		);
 
@@ -184,12 +195,12 @@ public class LampConfigScreen extends Screen {
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX - 32, y + 144, 64, 20).build()
+			}).bounds(centerX - 32, y + 168, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX + 36, y + 144, 64, 20)
+				.bounds(centerX + 36, y + 168, 64, 20)
 				.build()
 		);
 	}
@@ -253,6 +264,10 @@ public class LampConfigScreen extends Screen {
 		return Component.translatable("screen.beatlamp.tempo_pulse", Component.translatable(this.tempoPulse ? "screen.beatlamp.enabled" : "screen.beatlamp.disabled"));
 	}
 
+	private Component dmxLabel() {
+		return Component.translatable("screen.beatlamp.dmx_link", Component.translatable(this.dmxEnrolled ? "screen.beatlamp.enabled" : "screen.beatlamp.disabled"));
+	}
+
 	private Component sourceLabel() {
 		if (this.sourcePos == null) {
 			return Component.translatable("screen.beatlamp.source.none");
@@ -280,7 +295,7 @@ public class LampConfigScreen extends Screen {
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 104, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 114, 0xFFFFFF);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 
@@ -293,7 +308,7 @@ public class LampConfigScreen extends Screen {
 	public void onClose() {
 		ClientPlayNetworking.send(
 			new LampConfigurePayload(
-				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.frameless, this.blackback, this.idleLight, this.reverse, this.particles, this.orientation, this.unlink, this.tempoPulse
+				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.frameless, this.blackback, this.idleLight, this.reverse, this.particles, this.orientation, this.unlink, this.tempoPulse, this.dmxEnrolled
 			)
 		);
 		super.onClose();

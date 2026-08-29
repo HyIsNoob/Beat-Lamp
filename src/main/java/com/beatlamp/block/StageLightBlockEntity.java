@@ -40,7 +40,17 @@ public class StageLightBlockEntity extends BlockEntity {
 	private int color = BeatLampBlockEntity.COLOR_OLED;
 	private float sensitivity = 1.0F;
 	private float speed = 1.0F;
+	private boolean dmxEnrolled = true;
 	private BlockPos sourcePos;
+
+	public boolean isDmxEnrolled() {
+		return this.dmxEnrolled;
+	}
+
+	public void setDmxEnrolled(boolean dmxEnrolled) {
+		this.dmxEnrolled = dmxEnrolled;
+		this.markUpdated();
+	}
 	private final List<BlockPos> manualGroup = new java.util.ArrayList<>();
 
 	public float beamEnergy;
@@ -151,6 +161,7 @@ public class StageLightBlockEntity extends BlockEntity {
 		compoundTag.putInt("color", this.color);
 		compoundTag.putFloat("sensitivity", this.sensitivity);
 		compoundTag.putFloat("speed", this.speed);
+		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
 
 		if (this.sourcePos != null) {
 			compoundTag.putLong("source", this.sourcePos.asLong());
@@ -172,6 +183,7 @@ public class StageLightBlockEntity extends BlockEntity {
 		this.color = compoundTag.contains("color") ? compoundTag.getInt("color") : BeatLampBlockEntity.COLOR_OLED;
 		this.sensitivity = compoundTag.contains("sensitivity") ? compoundTag.getFloat("sensitivity") : 1.0F;
 		this.speed = compoundTag.contains("speed") ? compoundTag.getFloat("speed") : 1.0F;
+		this.dmxEnrolled = !compoundTag.contains("dmxEnrolled") || compoundTag.getBoolean("dmxEnrolled");
 		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;
 
 		this.manualGroup.clear();

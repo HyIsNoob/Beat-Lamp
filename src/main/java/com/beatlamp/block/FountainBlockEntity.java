@@ -40,7 +40,17 @@ public class FountainBlockEntity extends BlockEntity {
 	private float impactThreshold = 0.75F;
 	private boolean smokeEnabled = true;
 	private FountainParticles particleType = FountainParticles.FLAME;
+	private boolean dmxEnrolled = true;
 	private BlockPos sourcePos;
+
+	public boolean isDmxEnrolled() {
+		return this.dmxEnrolled;
+	}
+
+	public void setDmxEnrolled(boolean dmxEnrolled) {
+		this.dmxEnrolled = dmxEnrolled;
+		this.markUpdated();
+	}
 	private final List<BlockPos> manualGroup = new java.util.ArrayList<>();
 
 	public float fountainEnergy;
@@ -177,6 +187,7 @@ public class FountainBlockEntity extends BlockEntity {
 		compoundTag.putFloat("sprayThreshold", this.sprayThreshold);
 		compoundTag.putFloat("impactThreshold", this.impactThreshold);
 		compoundTag.putBoolean("smokeEnabled", this.smokeEnabled);
+		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
 		compoundTag.putString("particleType", this.particleType.name());
 
 		if (this.sourcePos != null) {
@@ -200,6 +211,7 @@ public class FountainBlockEntity extends BlockEntity {
 		this.sprayThreshold = compoundTag.contains("sprayThreshold") ? compoundTag.getFloat("sprayThreshold") : 0.12F;
 		this.impactThreshold = compoundTag.contains("impactThreshold") ? compoundTag.getFloat("impactThreshold") : 0.75F;
 		this.smokeEnabled = !compoundTag.contains("smokeEnabled") || compoundTag.getBoolean("smokeEnabled");
+		this.dmxEnrolled = !compoundTag.contains("dmxEnrolled") || compoundTag.getBoolean("dmxEnrolled");
 		this.particleType = compoundTag.contains("particleType") ? FountainParticles.byName(compoundTag.getString("particleType")) : FountainParticles.FLAME;
 		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;
 

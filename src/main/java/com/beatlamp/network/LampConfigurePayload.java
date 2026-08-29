@@ -23,7 +23,8 @@ public record LampConfigurePayload(
 	LampParticles particles,
 	LampOrientation orientation,
 	boolean unlink,
-	boolean tempoPulse
+	boolean tempoPulse,
+	boolean dmxEnrolled
 ) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<LampConfigurePayload> ID = new CustomPacketPayload.Type<>(BeatLamp.id("configure_lamp"));
 
@@ -45,6 +46,7 @@ public record LampConfigurePayload(
 		buf.writeVarInt(payload.orientation().ordinal());
 		buf.writeBoolean(payload.unlink());
 		buf.writeBoolean(payload.tempoPulse());
+		buf.writeBoolean(payload.dmxEnrolled());
 	}
 
 	private static LampConfigurePayload read(FriendlyByteBuf buf) {
@@ -60,6 +62,7 @@ public record LampConfigurePayload(
 			buf.readBoolean(),
 			LampParticles.values()[buf.readVarInt() % LampParticles.values().length],
 			LampOrientation.values()[buf.readVarInt() % LampOrientation.values().length],
+			buf.readBoolean(),
 			buf.readBoolean(),
 			buf.readBoolean()
 		);

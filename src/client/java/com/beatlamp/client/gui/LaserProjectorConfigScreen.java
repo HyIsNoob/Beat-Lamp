@@ -27,10 +27,12 @@ public class LaserProjectorConfigScreen extends Screen {
 	private float speed;
 	private int color;
 	private boolean unlink;
+	private boolean dmxEnrolled;
 	private BlockPos sourcePos;
 
 	private Button modeButton;
 	private Button beamButton;
+	private Button dmxButton;
 	private ValueSlider spreadSlider;
 	private ValueSlider speedSlider;
 	private Button colorButton;
@@ -44,6 +46,7 @@ public class LaserProjectorConfigScreen extends Screen {
 		this.spread = laser.getSpread();
 		this.speed = laser.getSpeed();
 		this.color = laser.getColor();
+		this.dmxEnrolled = laser.isDmxEnrolled();
 		this.sourcePos = laser.getSource() == null ? null : laser.getSource().immutable();
 	}
 
@@ -62,7 +65,7 @@ public class LaserProjectorConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 90;
+		int y = this.height / 2 - 80;
 
 		this.modeButton = this.addRenderableWidget(
 			Button.builder(this.modeLabel(), button -> {
@@ -83,11 +86,18 @@ public class LaserProjectorConfigScreen extends Screen {
 				}
 				this.beamCount = counts[idx];
 				button.setMessage(this.beamLabel());
-			}).bounds(centerX - 100, y + 24, 200, 20).build()
+			}).bounds(centerX - 100, y + 24, 98, 20).build()
+		);
+
+		this.dmxButton = this.addRenderableWidget(
+			Button.builder(this.dmxLabel(), button -> {
+				this.dmxEnrolled = !this.dmxEnrolled;
+				button.setMessage(this.dmxLabel());
+			}).bounds(centerX + 2, y + 24, 98, 20).build()
 		);
 
 		this.spreadSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 48, Component.translatable("screen.beatlamp.laser.spread"), this.spread, 10.0, 120.0, "%d°") {
+			new ValueSlider(centerX - 100, y + 48, 98, 20, Component.translatable("screen.beatlamp.laser.spread"), this.spread, 10.0, 120.0, "%d°") {
 				@Override
 				protected void applyValue() {
 					LaserProjectorConfigScreen.this.spread = (float) Mth.lerp(this.value, 10.0, 120.0);
@@ -96,7 +106,7 @@ public class LaserProjectorConfigScreen extends Screen {
 		);
 
 		this.speedSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 72, Component.translatable("screen.beatlamp.speed"), this.speed, 0.1, 3.0, "%.1fx") {
+			new ValueSlider(centerX + 2, y + 48, 98, 20, Component.translatable("screen.beatlamp.speed"), this.speed, 0.1, 3.0, "%.1fx") {
 				@Override
 				protected void applyValue() {
 					LaserProjectorConfigScreen.this.speed = (float) Mth.lerp(this.value, 0.1, 3.0);
@@ -109,7 +119,7 @@ public class LaserProjectorConfigScreen extends Screen {
 				int index = this.colorIndex();
 				this.color = PALETTE[(index + 1) % PALETTE.length];
 				button.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 96, 200, 20).build()
+			}).bounds(centerX - 100, y + 72, 200, 20).build()
 		);
 
 		this.sourceButton = this.addRenderableWidget(
@@ -119,7 +129,7 @@ public class LaserProjectorConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX - 100, y + 120, 200, 20).build()
+			}).bounds(centerX - 100, y + 96, 200, 20).build()
 		);
 
 		this.addRenderableWidget(
@@ -134,19 +144,19 @@ public class LaserProjectorConfigScreen extends Screen {
 				this.spreadSlider.updateVal(45.0F);
 				this.speedSlider.updateVal(1.0F);
 				this.colorButton.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 146, 98, 20).build()
+			}).bounds(centerX - 100, y + 120, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX + 2, y + 146, 98, 20).build()
+			}).bounds(centerX - 32, y + 120, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX - 100, y + 170, 200, 20)
+				.bounds(centerX + 36, y + 120, 64, 20)
 				.build()
 		);
 	}
@@ -171,6 +181,10 @@ public class LaserProjectorConfigScreen extends Screen {
 		}
 
 		return Component.translatable("screen.beatlamp.color", Component.literal(String.format("#%06X", this.color)));
+	}
+
+	private Component dmxLabel() {
+		return Component.translatable("screen.beatlamp.dmx_link", Component.translatable(this.dmxEnrolled ? "screen.beatlamp.enabled" : "screen.beatlamp.disabled"));
 	}
 
 	private Component sourceLabel() {
@@ -198,7 +212,8 @@ public class LaserProjectorConfigScreen extends Screen {
 			this.spread,
 			this.speed,
 			this.color,
-			this.unlink
+			this.unlink,
+			this.dmxEnrolled
 		));
 		super.onClose();
 	}
@@ -221,8 +236,8 @@ public class LaserProjectorConfigScreen extends Screen {
 		private final double max;
 		private final String format;
 
-		ValueSlider(int x, int y, Component prefix, float initial, double min, double max, String format) {
-			super(x, y, 200, 20, Component.empty(), (initial - min) / (max - min));
+		ValueSlider(int x, int y, int width, int height, Component prefix, float initial, double min, double max, String format) {
+			super(x, y, width, height, Component.empty(), (initial - min) / (max - min));
 			this.prefix = prefix;
 			this.min = min;
 			this.max = max;

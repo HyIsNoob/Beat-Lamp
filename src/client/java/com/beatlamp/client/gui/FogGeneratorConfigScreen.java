@@ -23,10 +23,12 @@ public class FogGeneratorConfigScreen extends Screen {
 	private int radius;
 	private int color;
 	private boolean unlink;
+	private boolean dmxEnrolled;
 	private BlockPos sourcePos;
 
 	private Button densityButton;
 	private Button radiusButton;
+	private Button dmxButton;
 	private Button colorButton;
 	private Button sourceButton;
 
@@ -36,6 +38,7 @@ public class FogGeneratorConfigScreen extends Screen {
 		this.density = fog.getDensity();
 		this.radius = fog.getRadius();
 		this.color = fog.getColor();
+		this.dmxEnrolled = fog.isDmxEnrolled();
 		this.sourcePos = fog.getSource() == null ? null : fog.getSource().immutable();
 	}
 
@@ -54,7 +57,7 @@ public class FogGeneratorConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 78;
+		int y = this.height / 2 - 76;
 
 		this.densityButton = this.addRenderableWidget(
 			Button.builder(this.densityLabel(), button -> {
@@ -75,7 +78,14 @@ public class FogGeneratorConfigScreen extends Screen {
 				}
 				this.radius = radii[idx];
 				button.setMessage(this.radiusLabel());
-			}).bounds(centerX - 100, y + 24, 200, 20).build()
+			}).bounds(centerX - 100, y + 24, 98, 20).build()
+		);
+
+		this.dmxButton = this.addRenderableWidget(
+			Button.builder(this.dmxLabel(), button -> {
+				this.dmxEnrolled = !this.dmxEnrolled;
+				button.setMessage(this.dmxLabel());
+			}).bounds(centerX + 2, y + 24, 98, 20).build()
 		);
 
 		this.colorButton = this.addRenderableWidget(
@@ -104,19 +114,19 @@ public class FogGeneratorConfigScreen extends Screen {
 				this.densityButton.setMessage(this.densityLabel());
 				this.radiusButton.setMessage(this.radiusLabel());
 				this.colorButton.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 98, 98, 20).build()
+			}).bounds(centerX - 100, y + 96, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX + 2, y + 98, 98, 20).build()
+			}).bounds(centerX - 32, y + 96, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX - 100, y + 122, 200, 20)
+				.bounds(centerX + 36, y + 96, 64, 20)
 				.build()
 		);
 	}
@@ -143,6 +153,10 @@ public class FogGeneratorConfigScreen extends Screen {
 		return Component.translatable("screen.beatlamp.color", Component.literal(String.format("#%06X", this.color)));
 	}
 
+	private Component dmxLabel() {
+		return Component.translatable("screen.beatlamp.dmx_link", Component.translatable(this.dmxEnrolled ? "screen.beatlamp.enabled" : "screen.beatlamp.disabled"));
+	}
+
 	private Component sourceLabel() {
 		if (this.sourcePos == null) {
 			return Component.translatable("screen.beatlamp.source.none");
@@ -166,7 +180,8 @@ public class FogGeneratorConfigScreen extends Screen {
 			this.density,
 			this.radius,
 			this.color,
-			this.unlink
+			this.unlink,
+			this.dmxEnrolled
 		));
 		super.onClose();
 	}

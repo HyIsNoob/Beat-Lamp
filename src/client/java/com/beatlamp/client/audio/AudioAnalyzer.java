@@ -282,10 +282,6 @@ public final class AudioAnalyzer {
 		float diff = target - this.envelope;
 		this.envelope += diff * (diff > 0.0F ? 0.65F : 0.12F);
 
-		// Drop / Heavy Impact Detection: Triggers only on true explosive energy surge/drop
-		if (bassFlux > localAvg * 2.6F && bassEnergy > 0.035F && this.envelope > 0.65F) {
-			this.impactReady = true;
-		}
 		this.previousEnvelope = this.envelope;
 
 		// 16 Frequency Equalizer Bands (Equipped with A-Weighting)
@@ -315,6 +311,11 @@ public final class AudioAnalyzer {
 		boolean hasKick = bassFlux > adaptiveThreshold * 0.95F && bassEnergy > 0.005F;
 		boolean hasSnare = midFlux > adaptiveThreshold * 0.65F && midFlux > 0.007F;
 		boolean hasHihat = highFlux > adaptiveThreshold * 0.45F && highFlux > 0.006F;
+
+		// Drop / Heavy Impact Detection: Triggers on strong rising bass transient or drop surge
+		if (rising && (bassFlux > adaptiveThreshold * 1.12F || (this.envelope > 0.50F && this.previousEnvelope <= 0.36F))) {
+			this.impactReady = true;
+		}
 
 		// 6. Beat-Grid Metronome Phase Progression
 		float beatPeriodSamples = ((float) this.sampleRate * 60.0F) / Math.max(60.0F, this.estimatedBpm);

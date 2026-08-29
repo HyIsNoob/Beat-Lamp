@@ -28,9 +28,11 @@ public class FountainConfigScreen extends Screen {
 	private FountainParticles particleType;
 	private int color;
 	private boolean unlink;
+	private boolean dmxEnrolled;
 	private BlockPos sourcePos;
 
 	private Button fireworkButton;
+	private Button dmxButton;
 	private Button smokeButton;
 	private Button particleButton;
 	private Button colorButton;
@@ -47,6 +49,7 @@ public class FountainConfigScreen extends Screen {
 		this.smokeEnabled = fountain.isSmokeEnabled();
 		this.particleType = fountain.getParticleType();
 		this.color = fountain.getColor();
+		this.dmxEnrolled = fountain.isDmxEnrolled();
 		this.sourcePos = fountain.getSource() == null ? null : fountain.getSource().immutable();
 	}
 
@@ -65,17 +68,24 @@ public class FountainConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 102;
+		int y = this.height / 2 - 80;
 
 		this.fireworkButton = this.addRenderableWidget(
 			Button.builder(this.fireworkLabel(), button -> {
 				this.fireworkMode = !this.fireworkMode;
 				button.setMessage(this.fireworkLabel());
-			}).bounds(centerX - 100, y, 200, 20).build()
+			}).bounds(centerX - 100, y, 98, 20).build()
+		);
+
+		this.dmxButton = this.addRenderableWidget(
+			Button.builder(this.dmxLabel(), button -> {
+				this.dmxEnrolled = !this.dmxEnrolled;
+				button.setMessage(this.dmxLabel());
+			}).bounds(centerX + 2, y, 98, 20).build()
 		);
 
 		this.spraySlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 24, Component.translatable("screen.beatlamp.fountain.spray_threshold"), this.sprayThreshold, 0.00, 0.80) {
+			new ValueSlider(centerX - 100, y + 24, 98, 20, Component.translatable("screen.beatlamp.fountain.spray_threshold"), this.sprayThreshold, 0.00, 0.80) {
 				@Override
 				protected void applyValue() {
 					FountainConfigScreen.this.sprayThreshold = (float) Mth.lerp(this.value, 0.00, 0.80);
@@ -84,10 +94,10 @@ public class FountainConfigScreen extends Screen {
 		);
 
 		this.impactSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 48, Component.translatable("screen.beatlamp.fountain.threshold"), this.impactThreshold, 0.50, 0.95) {
+			new ValueSlider(centerX + 2, y + 24, 98, 20, Component.translatable("screen.beatlamp.fountain.threshold"), this.impactThreshold, 0.20, 0.95) {
 				@Override
 				protected void applyValue() {
-					FountainConfigScreen.this.impactThreshold = (float) Mth.lerp(this.value, 0.50, 0.95);
+					FountainConfigScreen.this.impactThreshold = (float) Mth.lerp(this.value, 0.20, 0.95);
 				}
 			}
 		);
@@ -96,14 +106,14 @@ public class FountainConfigScreen extends Screen {
 			Button.builder(this.smokeLabel(), button -> {
 				this.smokeEnabled = !this.smokeEnabled;
 				button.setMessage(this.smokeLabel());
-			}).bounds(centerX - 100, y + 72, 200, 20).build()
+			}).bounds(centerX - 100, y + 48, 98, 20).build()
 		);
 
 		this.particleButton = this.addRenderableWidget(
 			Button.builder(this.particleLabel(), button -> {
 				this.particleType = this.particleType.next();
 				button.setMessage(this.particleLabel());
-			}).bounds(centerX - 100, y + 96, 200, 20).build()
+			}).bounds(centerX + 2, y + 48, 98, 20).build()
 		);
 
 		this.colorButton = this.addRenderableWidget(
@@ -111,7 +121,7 @@ public class FountainConfigScreen extends Screen {
 				int index = this.colorIndex();
 				this.color = PALETTE[(index + 1) % PALETTE.length];
 				button.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 120, 200, 20).build()
+			}).bounds(centerX - 100, y + 72, 200, 20).build()
 		);
 
 		this.sourceButton = this.addRenderableWidget(
@@ -121,7 +131,7 @@ public class FountainConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX - 100, y + 144, 200, 20).build()
+			}).bounds(centerX - 100, y + 96, 200, 20).build()
 		);
 
 		this.addRenderableWidget(
@@ -138,19 +148,19 @@ public class FountainConfigScreen extends Screen {
 				this.colorButton.setMessage(this.colorLabel());
 				this.spraySlider.updateVal(0.12F);
 				this.impactSlider.updateVal(0.75F);
-			}).bounds(centerX - 100, y + 170, 98, 20).build()
+			}).bounds(centerX - 100, y + 120, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX + 2, y + 170, 98, 20).build()
+			}).bounds(centerX - 32, y + 120, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX - 100, y + 194, 200, 20)
+				.bounds(centerX + 36, y + 120, 64, 20)
 				.build()
 		);
 	}
@@ -187,6 +197,10 @@ public class FountainConfigScreen extends Screen {
 		return Component.translatable("screen.beatlamp.color", Component.literal(String.format("#%06X", this.color)));
 	}
 
+	private Component dmxLabel() {
+		return Component.translatable("screen.beatlamp.dmx_link", Component.translatable(this.dmxEnrolled ? "screen.beatlamp.enabled" : "screen.beatlamp.disabled"));
+	}
+
 	private Component sourceLabel() {
 		if (this.sourcePos == null) {
 			return Component.translatable("screen.beatlamp.source.none");
@@ -213,7 +227,8 @@ public class FountainConfigScreen extends Screen {
 			this.smokeEnabled,
 			this.particleType,
 			this.color,
-			this.unlink
+			this.unlink,
+			this.dmxEnrolled
 		));
 		super.onClose();
 	}
@@ -221,7 +236,7 @@ public class FountainConfigScreen extends Screen {
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 116, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 100, 0xFFFFFF);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 
@@ -235,8 +250,8 @@ public class FountainConfigScreen extends Screen {
 		private final double min;
 		private final double max;
 
-		ValueSlider(int x, int y, Component prefix, float initial, double min, double max) {
-			super(x, y, 200, 20, Component.empty(), (initial - min) / (max - min));
+		ValueSlider(int x, int y, int width, int height, Component prefix, float initial, double min, double max) {
+			super(x, y, width, height, Component.empty(), (initial - min) / (max - min));
 			this.prefix = prefix;
 			this.min = min;
 			this.max = max;

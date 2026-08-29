@@ -15,7 +15,8 @@ public record LaserProjectorConfigurePayload(
 	float spread,
 	float speed,
 	int color,
-	boolean unlink
+	boolean unlink,
+	boolean dmxEnrolled
 ) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<LaserProjectorConfigurePayload> ID = new CustomPacketPayload.Type<>(BeatLamp.id("configure_laser"));
 
@@ -31,6 +32,7 @@ public record LaserProjectorConfigurePayload(
 		buf.writeFloat(payload.speed());
 		buf.writeVarInt(payload.color());
 		buf.writeBoolean(payload.unlink());
+		buf.writeBoolean(payload.dmxEnrolled());
 	}
 
 	private static LaserProjectorConfigurePayload read(FriendlyByteBuf buf) {
@@ -41,6 +43,7 @@ public record LaserProjectorConfigurePayload(
 			buf.readFloat(),
 			buf.readFloat(),
 			buf.readVarInt(),
+			buf.readBoolean(),
 			buf.readBoolean()
 		);
 	}
