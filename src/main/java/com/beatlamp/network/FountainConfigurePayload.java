@@ -17,7 +17,8 @@ public record FountainConfigurePayload(
 	FountainParticles particleType,
 	int color,
 	boolean unlink,
-	boolean dmxEnrolled
+	boolean dmxEnrolled,
+	String customName
 ) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<FountainConfigurePayload> ID = new CustomPacketPayload.Type<>(BeatLamp.id("configure_fountain"));
 
@@ -35,6 +36,7 @@ public record FountainConfigurePayload(
 		buf.writeVarInt(payload.color());
 		buf.writeBoolean(payload.unlink());
 		buf.writeBoolean(payload.dmxEnrolled());
+		buf.writeUtf(payload.customName() == null ? "" : payload.customName(), 32);
 	}
 
 	private static FountainConfigurePayload read(FriendlyByteBuf buf) {
@@ -47,7 +49,8 @@ public record FountainConfigurePayload(
 			FountainParticles.values()[buf.readVarInt() % FountainParticles.values().length],
 			buf.readVarInt(),
 			buf.readBoolean(),
-			buf.readBoolean()
+			buf.readBoolean(),
+			buf.readUtf(32)
 		);
 	}
 

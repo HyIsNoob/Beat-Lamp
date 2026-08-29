@@ -15,7 +15,8 @@ public record StageLightConfigurePayload(
 	float speed,
 	int color,
 	boolean unlink,
-	boolean dmxEnrolled
+	boolean dmxEnrolled,
+	String customName
 ) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<StageLightConfigurePayload> ID = new CustomPacketPayload.Type<>(BeatLamp.id("configure_stage_light"));
 
@@ -31,6 +32,7 @@ public record StageLightConfigurePayload(
 		buf.writeVarInt(payload.color());
 		buf.writeBoolean(payload.unlink());
 		buf.writeBoolean(payload.dmxEnrolled());
+		buf.writeUtf(payload.customName() == null ? "" : payload.customName(), 32);
 	}
 
 	private static StageLightConfigurePayload read(FriendlyByteBuf buf) {
@@ -41,7 +43,8 @@ public record StageLightConfigurePayload(
 			buf.readFloat(),
 			buf.readVarInt(),
 			buf.readBoolean(),
-			buf.readBoolean()
+			buf.readBoolean(),
+			buf.readUtf(32)
 		);
 	}
 

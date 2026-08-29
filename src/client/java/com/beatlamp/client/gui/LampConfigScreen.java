@@ -12,6 +12,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -32,11 +33,13 @@ public class LampConfigScreen extends Screen {
 	private boolean reverse;
 	private boolean tempoPulse;
 	private boolean dmxEnrolled;
+	private String customName;
 	private LampParticles particles;
 	private LampOrientation orientation;
 	private boolean unlink;
 	private BlockPos sourcePos;
 
+	private EditBox nameBox;
 	private Button modeButton;
 	private ValueSlider sensitivitySlider;
 	private ValueSlider speedSlider;
@@ -63,6 +66,7 @@ public class LampConfigScreen extends Screen {
 		this.reverse = beatLamp.isReverse();
 		this.tempoPulse = beatLamp.isTempoPulse();
 		this.dmxEnrolled = beatLamp.isDmxEnrolled();
+		this.customName = beatLamp.getCustomName();
 		this.particles = beatLamp.getParticles();
 		this.orientation = beatLamp.getOrientation();
 		this.sourcePos = beatLamp.getSource() == null ? null : beatLamp.getSource().immutable();
@@ -83,19 +87,26 @@ public class LampConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 100;
+		int y = this.height / 2 - 110;
 
-		// Row 1: Mode
+		// Row 1: Group Name (Optional)
+		this.nameBox = new EditBox(this.font, centerX - 100, y, 200, 18, Component.literal("Group Name"));
+		this.nameBox.setValue(this.customName);
+		this.nameBox.setHint(Component.translatable("screen.beatlamp.name_hint"));
+		this.nameBox.setMaxLength(32);
+		this.addRenderableWidget(this.nameBox);
+
+		// Row 2: Mode
 		this.modeButton = this.addRenderableWidget(
 			Button.builder(this.modeLabel(), button -> {
 				this.mode = this.mode.next();
 				button.setMessage(this.modeLabel());
-			}).bounds(centerX - 100, y, 200, 20).build()
+			}).bounds(centerX - 100, y + 22, 200, 20).build()
 		);
 
-		// Row 2: Sensitivity & Speed
+		// Row 3: Sensitivity & Speed
 		this.sensitivitySlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 24, Component.translatable("screen.beatlamp.sensitivity"), this.sensitivity, 0.25, 3.0, "%.2fx") {
+			new ValueSlider(centerX - 100, y + 44, Component.translatable("screen.beatlamp.sensitivity"), this.sensitivity, 0.25, 3.0, "%.2fx") {
 				@Override
 				protected void applyValue() {
 					LampConfigScreen.this.sensitivity = (float) Mth.lerp(this.value, 0.25, 3.0);
@@ -104,7 +115,7 @@ public class LampConfigScreen extends Screen {
 		);
 
 		this.speedSlider = this.addRenderableWidget(
-			new ValueSlider(centerX + 2, y + 24, Component.translatable("screen.beatlamp.speed"), this.speed, 0.25, 3.0, "%.2fx") {
+			new ValueSlider(centerX + 2, y + 44, Component.translatable("screen.beatlamp.speed"), this.speed, 0.25, 3.0, "%.2fx") {
 				@Override
 				protected void applyValue() {
 					LampConfigScreen.this.speed = (float) Mth.lerp(this.value, 0.25, 3.0);
@@ -112,68 +123,68 @@ public class LampConfigScreen extends Screen {
 			}
 		);
 
-		// Row 3: Color & Sparks
+		// Row 4: Color & Sparks
 		this.colorButton = this.addRenderableWidget(
 			Button.builder(this.colorLabel(), button -> {
 				int index = this.colorIndex();
 				this.color = PALETTE[(index + 1) % PALETTE.length];
 				button.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 48, 98, 20).build()
+			}).bounds(centerX - 100, y + 66, 98, 20).build()
 		);
 
 		this.particlesButton = this.addRenderableWidget(
 			Button.builder(this.particlesLabel(), button -> {
 				this.particles = this.particles.next();
 				button.setMessage(this.particlesLabel());
-			}).bounds(centerX + 2, y + 48, 98, 20).build()
+			}).bounds(centerX + 2, y + 66, 98, 20).build()
 		);
 
-		// Row 4: Bezel & Backing
+		// Row 5: Bezel & Backing
 		this.framelessButton = this.addRenderableWidget(
 			Button.builder(this.framelessLabel(), button -> {
 				this.frameless = !this.frameless;
 				button.setMessage(this.framelessLabel());
-			}).bounds(centerX - 100, y + 72, 98, 20).build()
+			}).bounds(centerX - 100, y + 88, 98, 20).build()
 		);
 
 		this.blackbackButton = this.addRenderableWidget(
 			Button.builder(this.blackbackLabel(), button -> {
 				this.blackback = !this.blackback;
 				button.setMessage(this.blackbackLabel());
-			}).bounds(centerX + 2, y + 72, 98, 20).build()
+			}).bounds(centerX + 2, y + 88, 98, 20).build()
 		);
 
-		// Row 5: Orientation & Tempo Pulse (Beat-Grid)
+		// Row 6: Orientation & Tempo Pulse (Beat-Grid)
 		this.orientationButton = this.addRenderableWidget(
 			Button.builder(this.orientationLabel(), button -> {
 				this.orientation = this.orientation.next();
 				button.setMessage(this.orientationLabel());
-			}).bounds(centerX - 100, y + 96, 98, 20).build()
+			}).bounds(centerX - 100, y + 110, 98, 20).build()
 		);
 
 		this.tempoPulseButton = this.addRenderableWidget(
 			Button.builder(this.tempoPulseLabel(), button -> {
 				this.tempoPulse = !this.tempoPulse;
 				button.setMessage(this.tempoPulseLabel());
-			}).bounds(centerX + 2, y + 96, 98, 20).build()
+			}).bounds(centerX + 2, y + 110, 98, 20).build()
 		);
 
-		// Row 6: Idle Glow & DMX Link
+		// Row 7: Idle Glow & DMX Link
 		this.idleLightButton = this.addRenderableWidget(
 			Button.builder(this.idleLightLabel(), button -> {
 				this.idleLight = !this.idleLight;
 				button.setMessage(this.idleLightLabel());
-			}).bounds(centerX - 100, y + 120, 98, 20).build()
+			}).bounds(centerX - 100, y + 132, 98, 20).build()
 		);
 
 		this.dmxButton = this.addRenderableWidget(
 			Button.builder(this.dmxLabel(), button -> {
 				this.dmxEnrolled = !this.dmxEnrolled;
 				button.setMessage(this.dmxLabel());
-			}).bounds(centerX + 2, y + 120, 98, 20).build()
+			}).bounds(centerX + 2, y + 132, 98, 20).build()
 		);
 
-		// Row 7: Audio Source
+		// Row 8: Audio Source
 		this.sourceButton = this.addRenderableWidget(
 			Button.builder(this.sourceLabel(), button -> {
 				if (this.sourcePos != null) {
@@ -181,13 +192,13 @@ public class LampConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX - 100, y + 144, 200, 20).build()
+			}).bounds(centerX - 100, y + 154, 200, 20).build()
 		);
 
-		// Row 8: Reset, Unlink, Done
+		// Row 9: Reset, Unlink, Done
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.reset"), button -> this.resetToDefault())
-				.bounds(centerX - 100, y + 168, 64, 20)
+				.bounds(centerX - 100, y + 176, 64, 20)
 				.build()
 		);
 
@@ -195,12 +206,12 @@ public class LampConfigScreen extends Screen {
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX - 32, y + 168, 64, 20).build()
+			}).bounds(centerX - 32, y + 176, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX + 36, y + 168, 64, 20)
+				.bounds(centerX + 36, y + 176, 64, 20)
 				.build()
 		);
 	}
@@ -295,7 +306,7 @@ public class LampConfigScreen extends Screen {
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 114, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 124, 0xFFFFFF);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 
@@ -306,9 +317,10 @@ public class LampConfigScreen extends Screen {
 
 	@Override
 	public void onClose() {
+		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
 		ClientPlayNetworking.send(
 			new LampConfigurePayload(
-				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.frameless, this.blackback, this.idleLight, this.reverse, this.particles, this.orientation, this.unlink, this.tempoPulse, this.dmxEnrolled
+				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.frameless, this.blackback, this.idleLight, this.reverse, this.particles, this.orientation, this.unlink, this.tempoPulse, this.dmxEnrolled, finalName
 			)
 		);
 		super.onClose();

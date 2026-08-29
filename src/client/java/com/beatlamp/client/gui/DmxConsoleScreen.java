@@ -90,13 +90,25 @@ public class DmxConsoleScreen extends Screen {
 			this.members = members;
 			this.leadEntity = leadEntity;
 
-			if (members.size() > 1) {
+			String custom = getCustomNameFromEntity(leadEntity);
+			if (custom != null && !custom.isBlank()) {
+				this.name = custom;
+			} else if (members.size() > 1) {
 				this.name = type.displayName + " (" + members.size() + "x)";
 			} else {
 				this.name = type.displayName + " #" + index;
 			}
 
 			this.initFromEntity();
+		}
+
+		public static String getCustomNameFromEntity(BlockEntity be) {
+			if (be instanceof BeatLampBlockEntity lamp) return lamp.getCustomName();
+			if (be instanceof StageLightBlockEntity light) return light.getCustomName();
+			if (be instanceof LaserProjectorBlockEntity laser) return laser.getCustomName();
+			if (be instanceof FountainBlockEntity fountain) return fountain.getCustomName();
+			if (be instanceof FogGeneratorBlockEntity fog) return fog.getCustomName();
+			return "";
 		}
 
 		private void initFromEntity() {
@@ -438,6 +450,7 @@ public class DmxConsoleScreen extends Screen {
 	private void dispatchGroupConfig(StageGroupInfo g) {
 		int targetColor = g.muted ? 0x000000 : PALETTE[g.colorIndex % PALETTE.length];
 		float targetSens = g.muted ? 0.0F : g.sensitivity;
+		String customName = StageGroupInfo.getCustomNameFromEntity(g.leadEntity);
 
 		switch (g.type) {
 			case LAMP -> {
@@ -461,13 +474,13 @@ public class DmxConsoleScreen extends Screen {
 				}
 
 				ClientPlayNetworking.send(new LampConfigurePayload(
-					g.leadPos, mode, targetSens, g.speed, targetColor, frameless, blackback, idleLight, reverse, particles, orientation, false, tempoPulse, true
+					g.leadPos, mode, targetSens, g.speed, targetColor, frameless, blackback, idleLight, reverse, particles, orientation, false, tempoPulse, true, customName
 				));
 			}
 			case STAGE_LIGHT -> {
 				StageLightMode mode = StageLightMode.values()[g.modeIndex % StageLightMode.values().length];
 				ClientPlayNetworking.send(new StageLightConfigurePayload(
-					g.leadPos, mode, targetSens, g.speed, targetColor, false, true
+					g.leadPos, mode, targetSens, g.speed, targetColor, false, true, customName
 				));
 			}
 			case LASER -> {
@@ -479,7 +492,7 @@ public class DmxConsoleScreen extends Screen {
 					spread = laser.getSpread();
 				}
 				ClientPlayNetworking.send(new LaserProjectorConfigurePayload(
-					g.leadPos, mode, count, spread, g.speed, targetColor, false, true
+					g.leadPos, mode, count, spread, g.speed, targetColor, false, true, customName
 				));
 			}
 			case FOUNTAIN -> {
@@ -491,14 +504,14 @@ public class DmxConsoleScreen extends Screen {
 					pt = fountain.getParticleType();
 				}
 				ClientPlayNetworking.send(new FountainConfigurePayload(
-					g.leadPos, fw, spray, impact, true, pt, targetColor, false, true
+					g.leadPos, fw, spray, impact, true, pt, targetColor, false, true, customName
 				));
 			}
 			case FOG -> {
 				FogDensity density = FogDensity.values()[g.modeIndex % FogDensity.values().length];
 				int radius = (int) (g.sensitivity * 16.0F);
 				ClientPlayNetworking.send(new FogGeneratorConfigurePayload(
-					g.leadPos, density, radius, targetColor, false, true
+					g.leadPos, density, radius, targetColor, false, true, customName
 				));
 			}
 		}

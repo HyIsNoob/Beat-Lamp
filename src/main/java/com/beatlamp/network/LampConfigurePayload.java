@@ -24,7 +24,8 @@ public record LampConfigurePayload(
 	LampOrientation orientation,
 	boolean unlink,
 	boolean tempoPulse,
-	boolean dmxEnrolled
+	boolean dmxEnrolled,
+	String customName
 ) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<LampConfigurePayload> ID = new CustomPacketPayload.Type<>(BeatLamp.id("configure_lamp"));
 
@@ -47,6 +48,7 @@ public record LampConfigurePayload(
 		buf.writeBoolean(payload.unlink());
 		buf.writeBoolean(payload.tempoPulse());
 		buf.writeBoolean(payload.dmxEnrolled());
+		buf.writeUtf(payload.customName() == null ? "" : payload.customName(), 32);
 	}
 
 	private static LampConfigurePayload read(FriendlyByteBuf buf) {
@@ -64,7 +66,8 @@ public record LampConfigurePayload(
 			LampOrientation.values()[buf.readVarInt() % LampOrientation.values().length],
 			buf.readBoolean(),
 			buf.readBoolean(),
-			buf.readBoolean()
+			buf.readBoolean(),
+			buf.readUtf(32)
 		);
 	}
 

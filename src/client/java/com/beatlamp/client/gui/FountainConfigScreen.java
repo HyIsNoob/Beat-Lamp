@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -29,8 +30,10 @@ public class FountainConfigScreen extends Screen {
 	private int color;
 	private boolean unlink;
 	private boolean dmxEnrolled;
+	private String customName;
 	private BlockPos sourcePos;
 
+	private EditBox nameBox;
 	private Button fireworkButton;
 	private Button dmxButton;
 	private Button smokeButton;
@@ -50,6 +53,7 @@ public class FountainConfigScreen extends Screen {
 		this.particleType = fountain.getParticleType();
 		this.color = fountain.getColor();
 		this.dmxEnrolled = fountain.isDmxEnrolled();
+		this.customName = fountain.getCustomName();
 		this.sourcePos = fountain.getSource() == null ? null : fountain.getSource().immutable();
 	}
 
@@ -68,24 +72,30 @@ public class FountainConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 80;
+		int y = this.height / 2 - 92;
+
+		this.nameBox = new EditBox(this.font, centerX - 100, y, 200, 18, Component.literal("Group Name"));
+		this.nameBox.setValue(this.customName);
+		this.nameBox.setHint(Component.translatable("screen.beatlamp.name_hint"));
+		this.nameBox.setMaxLength(32);
+		this.addRenderableWidget(this.nameBox);
 
 		this.fireworkButton = this.addRenderableWidget(
 			Button.builder(this.fireworkLabel(), button -> {
 				this.fireworkMode = !this.fireworkMode;
 				button.setMessage(this.fireworkLabel());
-			}).bounds(centerX - 100, y, 98, 20).build()
+			}).bounds(centerX - 100, y + 22, 98, 20).build()
 		);
 
 		this.dmxButton = this.addRenderableWidget(
 			Button.builder(this.dmxLabel(), button -> {
 				this.dmxEnrolled = !this.dmxEnrolled;
 				button.setMessage(this.dmxLabel());
-			}).bounds(centerX + 2, y, 98, 20).build()
+			}).bounds(centerX + 2, y + 22, 98, 20).build()
 		);
 
 		this.spraySlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 24, 98, 20, Component.translatable("screen.beatlamp.fountain.spray_threshold"), this.sprayThreshold, 0.00, 0.80) {
+			new ValueSlider(centerX - 100, y + 44, 98, 20, Component.translatable("screen.beatlamp.fountain.spray_threshold"), this.sprayThreshold, 0.00, 0.80) {
 				@Override
 				protected void applyValue() {
 					FountainConfigScreen.this.sprayThreshold = (float) Mth.lerp(this.value, 0.00, 0.80);
@@ -94,7 +104,7 @@ public class FountainConfigScreen extends Screen {
 		);
 
 		this.impactSlider = this.addRenderableWidget(
-			new ValueSlider(centerX + 2, y + 24, 98, 20, Component.translatable("screen.beatlamp.fountain.threshold"), this.impactThreshold, 0.20, 0.95) {
+			new ValueSlider(centerX + 2, y + 44, 98, 20, Component.translatable("screen.beatlamp.fountain.threshold"), this.impactThreshold, 0.20, 0.95) {
 				@Override
 				protected void applyValue() {
 					FountainConfigScreen.this.impactThreshold = (float) Mth.lerp(this.value, 0.20, 0.95);
@@ -106,14 +116,14 @@ public class FountainConfigScreen extends Screen {
 			Button.builder(this.smokeLabel(), button -> {
 				this.smokeEnabled = !this.smokeEnabled;
 				button.setMessage(this.smokeLabel());
-			}).bounds(centerX - 100, y + 48, 98, 20).build()
+			}).bounds(centerX - 100, y + 66, 98, 20).build()
 		);
 
 		this.particleButton = this.addRenderableWidget(
 			Button.builder(this.particleLabel(), button -> {
 				this.particleType = this.particleType.next();
 				button.setMessage(this.particleLabel());
-			}).bounds(centerX + 2, y + 48, 98, 20).build()
+			}).bounds(centerX + 2, y + 66, 98, 20).build()
 		);
 
 		this.colorButton = this.addRenderableWidget(
@@ -121,7 +131,7 @@ public class FountainConfigScreen extends Screen {
 				int index = this.colorIndex();
 				this.color = PALETTE[(index + 1) % PALETTE.length];
 				button.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 72, 200, 20).build()
+			}).bounds(centerX - 100, y + 88, 200, 20).build()
 		);
 
 		this.sourceButton = this.addRenderableWidget(
@@ -131,7 +141,7 @@ public class FountainConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX - 100, y + 96, 200, 20).build()
+			}).bounds(centerX - 100, y + 110, 200, 20).build()
 		);
 
 		this.addRenderableWidget(
@@ -148,19 +158,19 @@ public class FountainConfigScreen extends Screen {
 				this.colorButton.setMessage(this.colorLabel());
 				this.spraySlider.updateVal(0.12F);
 				this.impactSlider.updateVal(0.75F);
-			}).bounds(centerX - 100, y + 120, 64, 20).build()
+			}).bounds(centerX - 100, y + 132, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX - 32, y + 120, 64, 20).build()
+			}).bounds(centerX - 32, y + 132, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX + 36, y + 120, 64, 20)
+				.bounds(centerX + 36, y + 132, 64, 20)
 				.build()
 		);
 	}
@@ -219,6 +229,7 @@ public class FountainConfigScreen extends Screen {
 
 	@Override
 	public void onClose() {
+		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
 		ClientPlayNetworking.send(new FountainConfigurePayload(
 			this.pos,
 			this.fireworkMode,
@@ -228,7 +239,8 @@ public class FountainConfigScreen extends Screen {
 			this.particleType,
 			this.color,
 			this.unlink,
-			this.dmxEnrolled
+			this.dmxEnrolled,
+			finalName
 		));
 		super.onClose();
 	}
@@ -236,7 +248,7 @@ public class FountainConfigScreen extends Screen {
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 100, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 108, 0xFFFFFF);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 

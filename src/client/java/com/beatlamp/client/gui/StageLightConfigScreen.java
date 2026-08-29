@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -27,8 +28,10 @@ public class StageLightConfigScreen extends Screen {
 	private int color;
 	private boolean unlink;
 	private boolean dmxEnrolled;
+	private String customName;
 	private BlockPos sourcePos;
 
+	private EditBox nameBox;
 	private Button modeButton;
 	private Button colorButton;
 	private Button dmxButton;
@@ -44,6 +47,7 @@ public class StageLightConfigScreen extends Screen {
 		this.speed = light.getSpeed();
 		this.color = light.getColor();
 		this.dmxEnrolled = light.isDmxEnrolled();
+		this.customName = light.getCustomName();
 		this.sourcePos = light.getSource() == null ? null : light.getSource().immutable();
 	}
 
@@ -63,17 +67,23 @@ public class StageLightConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 76;
+		int y = this.height / 2 - 88;
+
+		this.nameBox = new EditBox(this.font, centerX - 100, y, 200, 18, Component.literal("Group Name"));
+		this.nameBox.setValue(this.customName);
+		this.nameBox.setHint(Component.translatable("screen.beatlamp.name_hint"));
+		this.nameBox.setMaxLength(32);
+		this.addRenderableWidget(this.nameBox);
 
 		this.modeButton = this.addRenderableWidget(
 			Button.builder(this.modeLabel(), button -> {
 				this.mode = this.mode.next();
 				button.setMessage(this.modeLabel());
-			}).bounds(centerX - 100, y, 200, 20).build()
+			}).bounds(centerX - 100, y + 22, 200, 20).build()
 		);
 
 		this.sensitivitySlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 24, 98, 20, Component.translatable("screen.beatlamp.sensitivity"), this.sensitivity, 0.25, 3.0) {
+			new ValueSlider(centerX - 100, y + 44, 98, 20, Component.translatable("screen.beatlamp.sensitivity"), this.sensitivity, 0.25, 3.0) {
 				@Override
 				protected void applyValue() {
 					StageLightConfigScreen.this.sensitivity = (float) Mth.lerp(this.value, 0.25, 3.0);
@@ -82,7 +92,7 @@ public class StageLightConfigScreen extends Screen {
 		);
 
 		this.speedSlider = this.addRenderableWidget(
-			new ValueSlider(centerX + 2, y + 24, 98, 20, Component.translatable("screen.beatlamp.speed"), this.speed, 0.25, 3.0) {
+			new ValueSlider(centerX + 2, y + 44, 98, 20, Component.translatable("screen.beatlamp.speed"), this.speed, 0.25, 3.0) {
 				@Override
 				protected void applyValue() {
 					StageLightConfigScreen.this.speed = (float) Mth.lerp(this.value, 0.25, 3.0);
@@ -95,14 +105,14 @@ public class StageLightConfigScreen extends Screen {
 				int index = this.colorIndex();
 				this.color = PALETTE[(index + 1) % PALETTE.length];
 				button.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 48, 98, 20).build()
+			}).bounds(centerX - 100, y + 66, 98, 20).build()
 		);
 
 		this.dmxButton = this.addRenderableWidget(
 			Button.builder(this.dmxLabel(), button -> {
 				this.dmxEnrolled = !this.dmxEnrolled;
 				button.setMessage(this.dmxLabel());
-			}).bounds(centerX + 2, y + 48, 98, 20).build()
+			}).bounds(centerX + 2, y + 66, 98, 20).build()
 		);
 
 		this.sourceButton = this.addRenderableWidget(
@@ -112,7 +122,7 @@ public class StageLightConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX - 100, y + 72, 200, 20).build()
+			}).bounds(centerX - 100, y + 88, 200, 20).build()
 		);
 
 		this.addRenderableWidget(
@@ -125,19 +135,19 @@ public class StageLightConfigScreen extends Screen {
 				this.colorButton.setMessage(this.colorLabel());
 				this.sensitivitySlider.updateVal(1.0F);
 				this.speedSlider.updateVal(1.0F);
-			}).bounds(centerX - 100, y + 96, 64, 20).build()
+			}).bounds(centerX - 100, y + 110, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX - 32, y + 96, 64, 20).build()
+			}).bounds(centerX - 32, y + 110, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX + 36, y + 96, 64, 20)
+				.bounds(centerX + 36, y + 110, 64, 20)
 				.build()
 		);
 	}
@@ -187,6 +197,7 @@ public class StageLightConfigScreen extends Screen {
 
 	@Override
 	public void onClose() {
+		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
 		ClientPlayNetworking.send(new StageLightConfigurePayload(
 			this.pos,
 			this.mode,
@@ -194,7 +205,8 @@ public class StageLightConfigScreen extends Screen {
 			this.speed,
 			this.color,
 			this.unlink,
-			this.dmxEnrolled
+			this.dmxEnrolled,
+			finalName
 		));
 		super.onClose();
 	}
@@ -202,7 +214,7 @@ public class StageLightConfigScreen extends Screen {
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 96, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 104, 0xFFFFFF);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 

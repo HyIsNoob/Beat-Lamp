@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -28,8 +29,10 @@ public class LaserProjectorConfigScreen extends Screen {
 	private int color;
 	private boolean unlink;
 	private boolean dmxEnrolled;
+	private String customName;
 	private BlockPos sourcePos;
 
+	private EditBox nameBox;
 	private Button modeButton;
 	private Button beamButton;
 	private Button dmxButton;
@@ -47,6 +50,7 @@ public class LaserProjectorConfigScreen extends Screen {
 		this.speed = laser.getSpeed();
 		this.color = laser.getColor();
 		this.dmxEnrolled = laser.isDmxEnrolled();
+		this.customName = laser.getCustomName();
 		this.sourcePos = laser.getSource() == null ? null : laser.getSource().immutable();
 	}
 
@@ -65,13 +69,19 @@ public class LaserProjectorConfigScreen extends Screen {
 	@Override
 	protected void init() {
 		int centerX = this.width / 2;
-		int y = this.height / 2 - 80;
+		int y = this.height / 2 - 92;
+
+		this.nameBox = new EditBox(this.font, centerX - 100, y, 200, 18, Component.literal("Group Name"));
+		this.nameBox.setValue(this.customName);
+		this.nameBox.setHint(Component.translatable("screen.beatlamp.name_hint"));
+		this.nameBox.setMaxLength(32);
+		this.addRenderableWidget(this.nameBox);
 
 		this.modeButton = this.addRenderableWidget(
 			Button.builder(this.modeLabel(), button -> {
 				this.mode = this.mode.next();
 				button.setMessage(this.modeLabel());
-			}).bounds(centerX - 100, y, 200, 20).build()
+			}).bounds(centerX - 100, y + 22, 200, 20).build()
 		);
 
 		this.beamButton = this.addRenderableWidget(
@@ -86,18 +96,18 @@ public class LaserProjectorConfigScreen extends Screen {
 				}
 				this.beamCount = counts[idx];
 				button.setMessage(this.beamLabel());
-			}).bounds(centerX - 100, y + 24, 98, 20).build()
+			}).bounds(centerX - 100, y + 44, 98, 20).build()
 		);
 
 		this.dmxButton = this.addRenderableWidget(
 			Button.builder(this.dmxLabel(), button -> {
 				this.dmxEnrolled = !this.dmxEnrolled;
 				button.setMessage(this.dmxLabel());
-			}).bounds(centerX + 2, y + 24, 98, 20).build()
+			}).bounds(centerX + 2, y + 44, 98, 20).build()
 		);
 
 		this.spreadSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 48, 98, 20, Component.translatable("screen.beatlamp.laser.spread"), this.spread, 10.0, 120.0, "%d°") {
+			new ValueSlider(centerX - 100, y + 66, 98, 20, Component.translatable("screen.beatlamp.laser.spread"), this.spread, 10.0, 120.0, "%d°") {
 				@Override
 				protected void applyValue() {
 					LaserProjectorConfigScreen.this.spread = (float) Mth.lerp(this.value, 10.0, 120.0);
@@ -106,7 +116,7 @@ public class LaserProjectorConfigScreen extends Screen {
 		);
 
 		this.speedSlider = this.addRenderableWidget(
-			new ValueSlider(centerX + 2, y + 48, 98, 20, Component.translatable("screen.beatlamp.speed"), this.speed, 0.1, 3.0, "%.1fx") {
+			new ValueSlider(centerX + 2, y + 66, 98, 20, Component.translatable("screen.beatlamp.speed"), this.speed, 0.1, 3.0, "%.1fx") {
 				@Override
 				protected void applyValue() {
 					LaserProjectorConfigScreen.this.speed = (float) Mth.lerp(this.value, 0.1, 3.0);
@@ -119,7 +129,7 @@ public class LaserProjectorConfigScreen extends Screen {
 				int index = this.colorIndex();
 				this.color = PALETTE[(index + 1) % PALETTE.length];
 				button.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 72, 200, 20).build()
+			}).bounds(centerX - 100, y + 88, 200, 20).build()
 		);
 
 		this.sourceButton = this.addRenderableWidget(
@@ -129,7 +139,7 @@ public class LaserProjectorConfigScreen extends Screen {
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
-			}).bounds(centerX - 100, y + 96, 200, 20).build()
+			}).bounds(centerX - 100, y + 110, 200, 20).build()
 		);
 
 		this.addRenderableWidget(
@@ -144,25 +154,27 @@ public class LaserProjectorConfigScreen extends Screen {
 				this.spreadSlider.updateVal(45.0F);
 				this.speedSlider.updateVal(1.0F);
 				this.colorButton.setMessage(this.colorLabel());
-			}).bounds(centerX - 100, y + 120, 64, 20).build()
+			}).bounds(centerX - 100, y + 132, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("screen.beatlamp.unlink"), button -> {
 				this.unlink = true;
 				this.onClose();
-			}).bounds(centerX - 32, y + 120, 64, 20).build()
+			}).bounds(centerX - 32, y + 132, 64, 20).build()
 		);
 
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX + 36, y + 120, 64, 20)
+				.bounds(centerX + 36, y + 132, 64, 20)
 				.build()
 		);
 	}
 
 	private Component modeLabel() {
-		return Component.translatable("screen.beatlamp.laser.mode", this.mode.getDisplayName());
+		return Component.translatable("screen.beatlamp.laser.mode",
+			Component.translatable("screen.beatlamp.laser.mode." + this.mode.name().toLowerCase())
+		);
 	}
 
 	private Component beamLabel() {
@@ -171,7 +183,7 @@ public class LaserProjectorConfigScreen extends Screen {
 
 	private Component colorLabel() {
 		if (this.color == BeatLampBlockEntity.COLOR_OLED) {
-			return Component.translatable("screen.beatlamp.color", Component.translatable("screen.beatlamp.stagelight.color.cycle"));
+			return Component.translatable("screen.beatlamp.color", Component.translatable("screen.beatlamp.color.oled"));
 		}
 
 		for (DyeColor dye : DyeColor.values()) {
@@ -205,6 +217,7 @@ public class LaserProjectorConfigScreen extends Screen {
 
 	@Override
 	public void onClose() {
+		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
 		ClientPlayNetworking.send(new LaserProjectorConfigurePayload(
 			this.pos,
 			this.mode,
@@ -213,7 +226,8 @@ public class LaserProjectorConfigScreen extends Screen {
 			this.speed,
 			this.color,
 			this.unlink,
-			this.dmxEnrolled
+			this.dmxEnrolled,
+			finalName
 		));
 		super.onClose();
 	}
@@ -221,7 +235,7 @@ public class LaserProjectorConfigScreen extends Screen {
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
 		this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 104, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, this.height / 2 - 108, 0xFFFFFF);
 		super.render(guiGraphics, mouseX, mouseY, partialTick);
 	}
 

@@ -37,7 +37,8 @@ public class FogGeneratorBlockEntity extends BlockEntity {
 	private FogDensity density = FogDensity.MEDIUM;
 	private int radius = 8; // 4, 8, 16 blocks
 	private int color = BeatLampBlockEntity.COLOR_OLED;
-	private boolean dmxEnrolled = true;
+	private boolean dmxEnrolled = false;
+	private String customName = "";
 	private BlockPos sourcePos;
 
 	public boolean isDmxEnrolled() {
@@ -46,6 +47,15 @@ public class FogGeneratorBlockEntity extends BlockEntity {
 
 	public void setDmxEnrolled(boolean dmxEnrolled) {
 		this.dmxEnrolled = dmxEnrolled;
+		this.markUpdated();
+	}
+
+	public String getCustomName() {
+		return this.customName;
+	}
+
+	public void setCustomName(String customName) {
+		this.customName = customName == null ? "" : customName.trim();
 		this.markUpdated();
 	}
 	private final List<BlockPos> manualGroup = new java.util.ArrayList<>();
@@ -135,6 +145,9 @@ public class FogGeneratorBlockEntity extends BlockEntity {
 		compoundTag.putInt("radius", this.radius);
 		compoundTag.putInt("color", this.color);
 		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
+		if (!this.customName.isEmpty()) {
+			compoundTag.putString("customName", this.customName);
+		}
 
 		if (this.sourcePos != null) {
 			compoundTag.putLong("source", this.sourcePos.asLong());
@@ -155,7 +168,8 @@ public class FogGeneratorBlockEntity extends BlockEntity {
 		this.density = compoundTag.contains("density") ? FogDensity.byName(compoundTag.getString("density")) : FogDensity.MEDIUM;
 		this.radius = compoundTag.contains("radius") ? compoundTag.getInt("radius") : 8;
 		this.color = compoundTag.contains("color") ? compoundTag.getInt("color") : BeatLampBlockEntity.COLOR_OLED;
-		this.dmxEnrolled = !compoundTag.contains("dmxEnrolled") || compoundTag.getBoolean("dmxEnrolled");
+		this.dmxEnrolled = compoundTag.contains("dmxEnrolled") && compoundTag.getBoolean("dmxEnrolled");
+		this.customName = compoundTag.contains("customName") ? compoundTag.getString("customName") : "";
 		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;
 
 		this.manualGroup.clear();

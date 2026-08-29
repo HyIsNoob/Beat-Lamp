@@ -172,7 +172,8 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.markUpdated();
 	}
 
-	private boolean dmxEnrolled = true;
+	private boolean dmxEnrolled = false;
+	private String customName = "";
 
 	public boolean isDmxEnrolled() {
 		return this.dmxEnrolled;
@@ -180,6 +181,15 @@ public class BeatLampBlockEntity extends BlockEntity {
 
 	public void setDmxEnrolled(boolean dmxEnrolled) {
 		this.dmxEnrolled = dmxEnrolled;
+		this.markUpdated();
+	}
+
+	public String getCustomName() {
+		return this.customName;
+	}
+
+	public void setCustomName(String customName) {
+		this.customName = customName == null ? "" : customName.trim();
 		this.markUpdated();
 	}
 
@@ -195,7 +205,8 @@ public class BeatLampBlockEntity extends BlockEntity {
 		LampParticles newParticles,
 		LampOrientation newOrientation,
 		boolean newTempoPulse,
-		boolean newDmxEnrolled
+		boolean newDmxEnrolled,
+		String newCustomName
 	) {
 		this.mode = newMode;
 		this.sensitivity = newSensitivity;
@@ -208,6 +219,7 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.orientation = newOrientation;
 		this.tempoPulse = newTempoPulse;
 		this.dmxEnrolled = newDmxEnrolled;
+		this.customName = newCustomName == null ? "" : newCustomName.trim();
 		this.setFrameless(newFrameless);
 		this.markUpdated();
 	}
@@ -287,6 +299,9 @@ public class BeatLampBlockEntity extends BlockEntity {
 		compoundTag.putBoolean("reverse", this.reverse);
 		compoundTag.putBoolean("tempoPulse", this.tempoPulse);
 		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
+		if (!this.customName.isEmpty()) {
+			compoundTag.putString("customName", this.customName);
+		}
 		compoundTag.putString("particles", this.particles.getSerializedName());
 		compoundTag.putString("orientation", this.orientation.getSerializedName());
 
@@ -317,7 +332,8 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.idleLight = compoundTag.contains("idleLight") && compoundTag.getBoolean("idleLight");
 		this.reverse = compoundTag.getBoolean("reverse");
 		this.tempoPulse = !compoundTag.contains("tempoPulse") || compoundTag.getBoolean("tempoPulse");
-		this.dmxEnrolled = !compoundTag.contains("dmxEnrolled") || compoundTag.getBoolean("dmxEnrolled");
+		this.dmxEnrolled = compoundTag.contains("dmxEnrolled") && compoundTag.getBoolean("dmxEnrolled");
+		this.customName = compoundTag.contains("customName") ? compoundTag.getString("customName") : "";
 		this.particles = LampParticles.byName(compoundTag.getString("particles"));
 		this.orientation = LampOrientation.byName(compoundTag.getString("orientation"));
 

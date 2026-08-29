@@ -102,7 +102,8 @@ public class BeatLamp implements ModInitializer {
 						payload.particles(),
 						payload.orientation(),
 						payload.tempoPulse(),
-						payload.dmxEnrolled()
+						payload.dmxEnrolled(),
+						payload.customName()
 					);
 				}
 			}
@@ -132,6 +133,7 @@ public class BeatLamp implements ModInitializer {
 					light.setSpeed(payload.speed());
 					light.setColor(payload.color());
 					light.setDmxEnrolled(payload.dmxEnrolled());
+					light.setCustomName(payload.customName());
 				}
 			}
 		});
@@ -162,6 +164,7 @@ public class BeatLamp implements ModInitializer {
 					fountain.setParticleType(payload.particleType());
 					fountain.setColor(payload.color());
 					fountain.setDmxEnrolled(payload.dmxEnrolled());
+					fountain.setCustomName(payload.customName());
 				}
 			}
 		});
@@ -191,6 +194,7 @@ public class BeatLamp implements ModInitializer {
 					laser.setSpeed(payload.speed());
 					laser.setColor(payload.color());
 					laser.setDmxEnrolled(payload.dmxEnrolled());
+					laser.setCustomName(payload.customName());
 				}
 			}
 		});
@@ -218,6 +222,7 @@ public class BeatLamp implements ModInitializer {
 					fog.setRadius(payload.radius());
 					fog.setColor(payload.color());
 					fog.setDmxEnrolled(payload.dmxEnrolled());
+					fog.setCustomName(payload.customName());
 				}
 			}
 		});

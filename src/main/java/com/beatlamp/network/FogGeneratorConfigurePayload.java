@@ -14,7 +14,8 @@ public record FogGeneratorConfigurePayload(
 	int radius,
 	int color,
 	boolean unlink,
-	boolean dmxEnrolled
+	boolean dmxEnrolled,
+	String customName
 ) implements CustomPacketPayload {
 	public static final CustomPacketPayload.Type<FogGeneratorConfigurePayload> ID = new CustomPacketPayload.Type<>(BeatLamp.id("configure_fog"));
 
@@ -29,6 +30,7 @@ public record FogGeneratorConfigurePayload(
 		buf.writeVarInt(payload.color());
 		buf.writeBoolean(payload.unlink());
 		buf.writeBoolean(payload.dmxEnrolled());
+		buf.writeUtf(payload.customName() == null ? "" : payload.customName(), 32);
 	}
 
 	private static FogGeneratorConfigurePayload read(FriendlyByteBuf buf) {
@@ -38,7 +40,8 @@ public record FogGeneratorConfigurePayload(
 			buf.readVarInt(),
 			buf.readVarInt(),
 			buf.readBoolean(),
-			buf.readBoolean()
+			buf.readBoolean(),
+			buf.readUtf(32)
 		);
 	}
 

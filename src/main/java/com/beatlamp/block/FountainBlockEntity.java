@@ -40,7 +40,8 @@ public class FountainBlockEntity extends BlockEntity {
 	private float impactThreshold = 0.75F;
 	private boolean smokeEnabled = true;
 	private FountainParticles particleType = FountainParticles.FLAME;
-	private boolean dmxEnrolled = true;
+	private boolean dmxEnrolled = false;
+	private String customName = "";
 	private BlockPos sourcePos;
 
 	public boolean isDmxEnrolled() {
@@ -49,6 +50,15 @@ public class FountainBlockEntity extends BlockEntity {
 
 	public void setDmxEnrolled(boolean dmxEnrolled) {
 		this.dmxEnrolled = dmxEnrolled;
+		this.markUpdated();
+	}
+
+	public String getCustomName() {
+		return this.customName;
+	}
+
+	public void setCustomName(String customName) {
+		this.customName = customName == null ? "" : customName.trim();
 		this.markUpdated();
 	}
 	private final List<BlockPos> manualGroup = new java.util.ArrayList<>();
@@ -188,6 +198,9 @@ public class FountainBlockEntity extends BlockEntity {
 		compoundTag.putFloat("impactThreshold", this.impactThreshold);
 		compoundTag.putBoolean("smokeEnabled", this.smokeEnabled);
 		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
+		if (!this.customName.isEmpty()) {
+			compoundTag.putString("customName", this.customName);
+		}
 		compoundTag.putString("particleType", this.particleType.name());
 
 		if (this.sourcePos != null) {
@@ -211,7 +224,8 @@ public class FountainBlockEntity extends BlockEntity {
 		this.sprayThreshold = compoundTag.contains("sprayThreshold") ? compoundTag.getFloat("sprayThreshold") : 0.12F;
 		this.impactThreshold = compoundTag.contains("impactThreshold") ? compoundTag.getFloat("impactThreshold") : 0.75F;
 		this.smokeEnabled = !compoundTag.contains("smokeEnabled") || compoundTag.getBoolean("smokeEnabled");
-		this.dmxEnrolled = !compoundTag.contains("dmxEnrolled") || compoundTag.getBoolean("dmxEnrolled");
+		this.dmxEnrolled = compoundTag.contains("dmxEnrolled") && compoundTag.getBoolean("dmxEnrolled");
+		this.customName = compoundTag.contains("customName") ? compoundTag.getString("customName") : "";
 		this.particleType = compoundTag.contains("particleType") ? FountainParticles.byName(compoundTag.getString("particleType")) : FountainParticles.FLAME;
 		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;
 

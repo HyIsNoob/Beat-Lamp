@@ -40,7 +40,8 @@ public class StageLightBlockEntity extends BlockEntity {
 	private int color = BeatLampBlockEntity.COLOR_OLED;
 	private float sensitivity = 1.0F;
 	private float speed = 1.0F;
-	private boolean dmxEnrolled = true;
+	private boolean dmxEnrolled = false;
+	private String customName = "";
 	private BlockPos sourcePos;
 
 	public boolean isDmxEnrolled() {
@@ -49,6 +50,15 @@ public class StageLightBlockEntity extends BlockEntity {
 
 	public void setDmxEnrolled(boolean dmxEnrolled) {
 		this.dmxEnrolled = dmxEnrolled;
+		this.markUpdated();
+	}
+
+	public String getCustomName() {
+		return this.customName;
+	}
+
+	public void setCustomName(String customName) {
+		this.customName = customName == null ? "" : customName.trim();
 		this.markUpdated();
 	}
 	private final List<BlockPos> manualGroup = new java.util.ArrayList<>();
@@ -162,6 +172,9 @@ public class StageLightBlockEntity extends BlockEntity {
 		compoundTag.putFloat("sensitivity", this.sensitivity);
 		compoundTag.putFloat("speed", this.speed);
 		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
+		if (!this.customName.isEmpty()) {
+			compoundTag.putString("customName", this.customName);
+		}
 
 		if (this.sourcePos != null) {
 			compoundTag.putLong("source", this.sourcePos.asLong());
@@ -183,7 +196,8 @@ public class StageLightBlockEntity extends BlockEntity {
 		this.color = compoundTag.contains("color") ? compoundTag.getInt("color") : BeatLampBlockEntity.COLOR_OLED;
 		this.sensitivity = compoundTag.contains("sensitivity") ? compoundTag.getFloat("sensitivity") : 1.0F;
 		this.speed = compoundTag.contains("speed") ? compoundTag.getFloat("speed") : 1.0F;
-		this.dmxEnrolled = !compoundTag.contains("dmxEnrolled") || compoundTag.getBoolean("dmxEnrolled");
+		this.dmxEnrolled = compoundTag.contains("dmxEnrolled") && compoundTag.getBoolean("dmxEnrolled");
+		this.customName = compoundTag.contains("customName") ? compoundTag.getString("customName") : "";
 		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;
 
 		this.manualGroup.clear();
