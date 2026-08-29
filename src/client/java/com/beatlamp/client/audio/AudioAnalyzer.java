@@ -65,6 +65,8 @@ public final class AudioAnalyzer {
 	private float fluxRunningSumSq;
 	private float previousFlux;
 	private float impactLevel;
+	private long lastImpactSample = -1_000_000L;
+	private float preDropEnergyAvg = 0.001F;
 
 	public AudioAnalyzer(int sampleRate, boolean highQuality) {
 		this.sampleRate = Math.max(8000, sampleRate);
@@ -312,10 +314,22 @@ public final class AudioAnalyzer {
 		boolean hasSnare = midFlux > adaptiveThreshold * 0.65F && midFlux > 0.007F;
 		boolean hasHihat = highFlux > adaptiveThreshold * 0.45F && highFlux > 0.006F;
 
-		// Drop / Heavy Impact Detection: Triggers on strong rising bass transient or drop surge
-		if (rising && (bassFlux > adaptiveThreshold * 1.12F || (this.envelope > 0.50F && this.previousEnvelope <= 0.36F))) {
-			this.impactReady = true;
+		// Drop / Heavy Structural Impact Detection (Distinct from regular kick beats)
+		// Triggers only on major structural drops (following buildup/breakdown) or overwhelming bass explosions
+		long minDropGap = (long) (this.sampleRate * 2.8); // Minimum 2.8s refractory period between drops
+		if (rising && (this.totalSamples - this.lastImpactSample > minDropGap)) {
+			boolean dropSurge = this.envelope > 0.65F && this.envelope > this.preDropEnergyAvg * 2.2F && bassEnergy > 0.018F;
+			boolean dropExplosion = bassFlux > adaptiveThreshold * 2.5F && bassEnergy > 0.025F;
+
+			if (dropSurge || dropExplosion) {
+				float surgeScore = clamp01((this.envelope - 0.40F) / 0.50F);
+				float fluxScore = clamp01((bassFlux - adaptiveThreshold * 1.5F) / (adaptiveThreshold * 1.5F + 0.001F));
+				this.impactLevel = Math.max(0.65F, Math.max(surgeScore, fluxScore));
+				this.impactReady = true;
+				this.lastImpactSample = this.totalSamples;
+			}
 		}
+		this.preDropEnergyAvg = this.preDropEnergyAvg * 0.992F + bassEnergy * 0.008F;
 
 		// 6. Beat-Grid Metronome Phase Progression
 		float beatPeriodSamples = ((float) this.sampleRate * 60.0F) / Math.max(60.0F, this.estimatedBpm);

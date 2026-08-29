@@ -115,7 +115,7 @@ public class FountainBlockEntity extends BlockEntity {
 	}
 
 	public void setImpactThreshold(float threshold) {
-		this.impactThreshold = Math.clamp(threshold, 0.50F, 0.95F);
+		this.impactThreshold = Math.clamp(threshold, 0.20F, 0.95F);
 		this.markUpdated();
 	}
 

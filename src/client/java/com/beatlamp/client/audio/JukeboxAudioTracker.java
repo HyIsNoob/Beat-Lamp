@@ -278,9 +278,9 @@ public final class JukeboxAudioTracker {
 			}
 
 			if (song.analyzer.consumeImpact()) {
-				song.impactPulse = 1.0F;
+				song.impactPulse = song.analyzer.getImpactLevel();
 			} else {
-				song.impactPulse *= 0.80F;
+				song.impactPulse *= 0.70F;
 			}
 
 			if (song.beatPulse > maxBeat) {
