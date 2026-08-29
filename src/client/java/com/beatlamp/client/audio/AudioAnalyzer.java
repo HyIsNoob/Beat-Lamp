@@ -64,6 +64,7 @@ public final class AudioAnalyzer {
 	private float fluxRunningSum;
 	private float fluxRunningSumSq;
 	private float previousFlux;
+	private float impactLevel;
 
 	public AudioAnalyzer(int sampleRate, boolean highQuality) {
 		this.sampleRate = Math.max(8000, sampleRate);
@@ -182,6 +183,10 @@ public final class AudioAnalyzer {
 		return impact;
 	}
 
+	public float getImpactLevel() {
+		return this.impactLevel;
+	}
+
 	private void update(int stepSamples) {
 		if (this.ringFilled < this.fftSize) {
 			return;
@@ -275,11 +280,15 @@ public final class AudioAnalyzer {
 
 		float target = clamp01(bassEnergy / (previousAverage * 2.3F + 0.0001F));
 		float diff = target - this.envelope;
-		this.envelope += diff * (diff > 0.0F ? 0.65F : 0.12F);
+		// Drop / Heavy Impact Detection (Proportional Surge Level)
+		float surge = Math.max(0.0F, this.envelope - this.previousEnvelope);
+		float fluxRatio = Math.max(0.0F, (bassFlux - localAvg) / (localAvg * 1.8F + 0.002F));
+		float instantImpact = clamp01(fluxRatio * 0.7F + surge * 2.2F);
 
-		// Drop / Heavy Impact Detection
-		if (this.envelope > 0.52F && this.previousEnvelope <= 0.38F) {
-			this.impactReady = true;
+		if (instantImpact > this.impactLevel) {
+			this.impactLevel = instantImpact;
+		} else {
+			this.impactLevel *= 0.88F;
 		}
 		this.previousEnvelope = this.envelope;
 

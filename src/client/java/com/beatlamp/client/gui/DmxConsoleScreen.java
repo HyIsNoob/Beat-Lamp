@@ -56,20 +56,16 @@ public class DmxConsoleScreen extends Screen {
 	};
 
 	public enum GroupType {
-		LAMP("Beat Lamp", "💡", 0x33CCFF),
-		STAGE_LIGHT("Moving Head", "🔦", 0xFFCC00),
-		LASER("Laser Projector", "⚡", 0xFF0055),
-		FOUNTAIN("Pyro Fountain", "🎆", 0xFF8800),
-		FOG("Fog Generator", "💨", 0xCCCCCC);
+		LAMP("Beat Lamp"),
+		STAGE_LIGHT("Moving Head"),
+		LASER("Laser"),
+		FOUNTAIN("Fountain"),
+		FOG("Fog Generator");
 
 		public final String displayName;
-		public final String icon;
-		public final int color;
 
-		GroupType(String displayName, String icon, int color) {
+		GroupType(String displayName) {
 			this.displayName = displayName;
-			this.icon = icon;
-			this.color = color;
 		}
 	}
 
@@ -81,7 +77,6 @@ public class DmxConsoleScreen extends Screen {
 		public String name;
 		public boolean muted = false;
 
-		// Config state
 		public int modeIndex = 0;
 		public int colorIndex = 0;
 		public float sensitivity = 1.0F;
@@ -94,7 +89,7 @@ public class DmxConsoleScreen extends Screen {
 			this.leadEntity = leadEntity;
 
 			if (members.size() > 1) {
-				this.name = type.displayName + " Group (" + members.size() + "x)";
+				this.name = type.displayName + " (" + members.size() + "x)";
 			} else {
 				this.name = type.displayName + " #" + index;
 			}
@@ -148,6 +143,8 @@ public class DmxConsoleScreen extends Screen {
 	private int activeTab = 0; // 0 = Master, 1 = Stage Groups
 	private final List<StageGroupInfo> stageGroups = new ArrayList<>();
 	private int selectedGroupIndex = 0;
+	private int groupListPage = 0;
+	private static final int GROUPS_PER_PAGE = 5;
 
 	// Master Widgets
 	private Button blackoutButton;
@@ -178,19 +175,19 @@ public class DmxConsoleScreen extends Screen {
 		this.scanStageGroups();
 		int centerX = this.width / 2;
 
-		// Tab Buttons
+		// Clean Tab Navigation Buttons
 		this.addRenderableWidget(
-			Button.builder(Component.literal("🎛️ Master Control"), button -> {
+			Button.builder(Component.literal("Master Control"), button -> {
 				this.activeTab = 0;
 				this.rebuildWidgets();
-			}).bounds(centerX - 135, 18, 130, 20).build()
+			}).bounds(centerX - 135, 16, 130, 20).build()
 		);
 
 		this.addRenderableWidget(
-			Button.builder(Component.literal("📋 Stage Groups (" + this.stageGroups.size() + ")"), button -> {
+			Button.builder(Component.literal("Stage Groups (" + this.stageGroups.size() + ")"), button -> {
 				this.activeTab = 1;
 				this.rebuildWidgets();
-			}).bounds(centerX + 5, 18, 130, 20).build()
+			}).bounds(centerX + 5, 16, 130, 20).build()
 		);
 
 		if (this.activeTab == 0) {
@@ -208,14 +205,14 @@ public class DmxConsoleScreen extends Screen {
 	}
 
 	private void initMasterTab(int centerX) {
-		int y = this.height / 2 - 60;
+		int y = this.height / 2 - 56;
 
 		this.blackoutButton = this.addRenderableWidget(
 			Button.builder(this.blackoutLabel(), button -> {
 				this.blackout = !this.blackout;
 				button.setMessage(this.blackoutLabel());
 				this.sendConfig();
-			}).bounds(centerX - 100, y, 200, 24).build()
+			}).bounds(centerX - 100, y, 200, 22).build()
 		);
 
 		this.strobeButton = this.addRenderableWidget(
@@ -223,11 +220,11 @@ public class DmxConsoleScreen extends Screen {
 				this.strobeAll = !this.strobeAll;
 				button.setMessage(this.strobeLabel());
 				this.sendConfig();
-			}).bounds(centerX - 100, y + 28, 200, 24).build()
+			}).bounds(centerX - 100, y + 26, 200, 22).build()
 		);
 
 		this.dimmerSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 56, Component.translatable("screen.beatlamp.dmx.dimmer"), this.masterDimmer, 0.0, 1.0, "%d%%") {
+			new ValueSlider(centerX - 100, y + 52, Component.translatable("screen.beatlamp.dmx.dimmer"), this.masterDimmer, 0.0, 1.0, "%d%%") {
 				@Override
 				protected void applyValue() {
 					DmxConsoleScreen.this.masterDimmer = (float) this.value;
@@ -237,7 +234,7 @@ public class DmxConsoleScreen extends Screen {
 		);
 
 		this.speedSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 80, Component.translatable("screen.beatlamp.speed"), this.masterSpeed, 0.2, 3.0, "%.1fx") {
+			new ValueSlider(centerX - 100, y + 76, Component.translatable("screen.beatlamp.speed"), this.masterSpeed, 0.2, 3.0, "%.1fx") {
 				@Override
 				protected void applyValue() {
 					DmxConsoleScreen.this.masterSpeed = (float) Mth.lerp(this.value, 0.2, 3.0);
@@ -250,26 +247,54 @@ public class DmxConsoleScreen extends Screen {
 			Button.builder(this.qualityLabel(), button -> {
 				BeatLampClientConfig.setQualityProfile(BeatLampClientConfig.getQualityProfile().next());
 				button.setMessage(this.qualityLabel());
-			}).bounds(centerX - 100, y + 104, 200, 20).build()
+			}).bounds(centerX - 100, y + 100, 200, 20).build()
 		);
 	}
 
 	private void initGroupsTab(int centerX) {
-		int startY = 48;
-
-		// Left list buttons (up to 6 groups displayed on screen)
+		int startY = 46;
 		int listX = centerX - 180;
 		int listWidth = 140;
 
-		for (int i = 0; i < Math.min(6, this.stageGroups.size()); i++) {
+		int totalPages = Math.max(1, (this.stageGroups.size() + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE);
+		if (this.groupListPage >= totalPages) this.groupListPage = totalPages - 1;
+		if (this.groupListPage < 0) this.groupListPage = 0;
+
+		int startIdx = this.groupListPage * GROUPS_PER_PAGE;
+		int endIdx = Math.min(this.stageGroups.size(), startIdx + GROUPS_PER_PAGE);
+
+		for (int i = startIdx; i < endIdx; i++) {
 			final int index = i;
 			StageGroupInfo g = this.stageGroups.get(i);
-			Component label = Component.literal((i == this.selectedGroupIndex ? "▶ " : "") + g.type.icon + " " + g.name);
+			boolean isSelected = (i == this.selectedGroupIndex);
+			Component label = Component.literal((isSelected ? "> " : "") + g.name);
+
 			this.addRenderableWidget(
 				Button.builder(label, button -> {
 					this.selectedGroupIndex = index;
 					this.rebuildWidgets();
-				}).bounds(listX, startY + i * 22, listWidth, 20).build()
+				}).bounds(listX, startY + (i - startIdx) * 22, listWidth, 20).build()
+			);
+		}
+
+		// Pagination controls if more than 5 groups
+		if (totalPages > 1) {
+			this.addRenderableWidget(
+				Button.builder(Component.literal("<"), button -> {
+					if (this.groupListPage > 0) {
+						this.groupListPage--;
+						this.rebuildWidgets();
+					}
+				}).bounds(listX, startY + 114, 40, 18).build()
+			);
+
+			this.addRenderableWidget(
+				Button.builder(Component.literal(">"), button -> {
+					if (this.groupListPage < totalPages - 1) {
+						this.groupListPage++;
+						this.rebuildWidgets();
+					}
+				}).bounds(listX + listWidth - 40, startY + 114, 40, 18).build()
 			);
 		}
 
@@ -282,7 +307,7 @@ public class DmxConsoleScreen extends Screen {
 
 		int rightX = centerX - 30;
 		int rightWidth = 190;
-		int rightY = startY + 16;
+		int rightY = startY;
 
 		// Mute button
 		this.groupMuteButton = this.addRenderableWidget(
@@ -343,9 +368,9 @@ public class DmxConsoleScreen extends Screen {
 
 	private Component groupMuteLabel(StageGroupInfo g) {
 		if (g.muted) {
-			return Component.literal("🔇 STATUS: MUTED (OFF)").withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
+			return Component.literal("Status: Muted").withStyle(ChatFormatting.RED);
 		} else {
-			return Component.literal("🔊 STATUS: ACTIVE").withStyle(ChatFormatting.GREEN);
+			return Component.literal("Status: Enabled").withStyle(ChatFormatting.GREEN);
 		}
 	}
 
@@ -358,7 +383,7 @@ public class DmxConsoleScreen extends Screen {
 			case FOUNTAIN -> modeName = g.modeIndex == 1 ? "FIREWORK" : "FOUNTAIN";
 			case FOG -> modeName = FogDensity.values()[g.modeIndex % FogDensity.values().length].name();
 		}
-		return Component.literal("Mode: " + modeName).withStyle(ChatFormatting.AQUA);
+		return Component.literal("Mode: " + modeName);
 	}
 
 	private void cycleGroupMode(StageGroupInfo g) {
@@ -373,7 +398,7 @@ public class DmxConsoleScreen extends Screen {
 
 	private Component groupColorLabel(StageGroupInfo g) {
 		String name = PALETTE_NAMES[g.colorIndex % PALETTE_NAMES.length];
-		return Component.literal("Color: " + name).withStyle(ChatFormatting.GOLD);
+		return Component.literal("Color: " + name);
 	}
 
 	private void dispatchGroupConfig(StageGroupInfo g) {
@@ -500,25 +525,24 @@ public class DmxConsoleScreen extends Screen {
 
 	private Component blackoutLabel() {
 		if (this.blackout) {
-			return Component.literal("⯈ BLACKOUT: ACTIVE ⯇").withStyle(ChatFormatting.RED, ChatFormatting.BOLD);
+			return Component.literal("Blackout: ON").withStyle(ChatFormatting.RED);
 		} else {
-			return Component.literal("BLACKOUT: OFF").withStyle(ChatFormatting.GRAY);
+			return Component.literal("Blackout: OFF");
 		}
 	}
 
 	private Component strobeLabel() {
 		if (this.strobeAll) {
-			return Component.literal("⚡ STROBE ALL: ACTIVE ⚡").withStyle(ChatFormatting.YELLOW, ChatFormatting.BOLD);
+			return Component.literal("Strobe All: ON").withStyle(ChatFormatting.YELLOW);
 		} else {
-			return Component.literal("STROBE ALL: OFF").withStyle(ChatFormatting.GRAY);
+			return Component.literal("Strobe All: OFF");
 		}
 	}
 
 	private Component qualityLabel() {
 		BeatLampClientConfig.AudioQualityProfile p = BeatLampClientConfig.getQualityProfile();
 		String key = p == BeatLampClientConfig.AudioQualityProfile.LITE ? "screen.beatlamp.quality.lite" : "screen.beatlamp.quality.studio";
-		ChatFormatting color = p == BeatLampClientConfig.AudioQualityProfile.LITE ? ChatFormatting.GREEN : ChatFormatting.LIGHT_PURPLE;
-		return Component.translatable("screen.beatlamp.dmx.quality", Component.translatable(key).withStyle(color, ChatFormatting.BOLD));
+		return Component.translatable("screen.beatlamp.dmx.quality", Component.translatable(key));
 	}
 
 	private void sendConfig() {
@@ -543,27 +567,25 @@ public class DmxConsoleScreen extends Screen {
 		int centerX = this.width / 2;
 
 		if (this.activeTab == 0) {
-			int y = this.height / 2 - 60;
-			graphics.drawCenteredString(this.font, Component.literal("Master Stage Lighting Controls").withStyle(ChatFormatting.GRAY), centerX, y - 14, 0xFF888888);
-
+			int y = this.height / 2 - 56;
 			if (this.blackout) {
-				graphics.fill(centerX - 104, y - 4, centerX - 101, y + 28, 0xFFFF2020);
-				graphics.fill(centerX + 101, y - 4, centerX + 104, y + 28, 0xFFFF2020);
+				graphics.fill(centerX - 104, y - 2, centerX - 102, y + 24, 0xFFFF2020);
+				graphics.fill(centerX + 102, y - 2, centerX + 104, y + 24, 0xFFFF2020);
 			}
 
 			if (this.strobeAll) {
-				graphics.fill(centerX - 104, y + 24, centerX - 101, y + 56, 0xFFFFE020);
-				graphics.fill(centerX + 101, y + 24, centerX + 104, y + 56, 0xFFFFE020);
+				graphics.fill(centerX - 104, y + 24, centerX - 102, y + 50, 0xFFFFE020);
+				graphics.fill(centerX + 102, y + 24, centerX + 104, y + 50, 0xFFFFE020);
 			}
 		} else {
-			// Groups Tab Header & Realtime status
-			int rightX = centerX - 30;
-			StageGroupInfo g = this.getSelectedGroup();
-			if (g != null) {
-				graphics.drawString(this.font, Component.literal("⚙ " + g.name).withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), rightX, 48, 0xFFFFFFFF);
-				graphics.drawString(this.font, Component.literal("● REALTIME SYNC (Changes apply instantly)").withStyle(ChatFormatting.GREEN), rightX, 172, 0xFF88FF88);
-			} else if (this.stageGroups.isEmpty()) {
-				graphics.drawCenteredString(this.font, Component.literal("No stage devices found within 64 blocks").withStyle(ChatFormatting.RED), centerX, 100, 0xFFFF6666);
+			int totalPages = Math.max(1, (this.stageGroups.size() + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE);
+			if (totalPages > 1) {
+				String pageStr = (this.groupListPage + 1) + " / " + totalPages;
+				graphics.drawCenteredString(this.font, pageStr, centerX - 110, 46 + 119, 0xFF888888);
+			}
+
+			if (this.stageGroups.isEmpty()) {
+				graphics.drawCenteredString(this.font, Component.literal("No stage devices found within 64 blocks").withStyle(ChatFormatting.GRAY), centerX, 100, 0xFF888888);
 			}
 		}
 	}
