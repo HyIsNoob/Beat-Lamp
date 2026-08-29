@@ -1,6 +1,7 @@
 package com.beatlamp.client.gui;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -76,6 +77,7 @@ public class DmxConsoleScreen extends Screen {
 		public final BlockEntity leadEntity;
 		public String name;
 		public boolean muted = false;
+		public boolean pinned = false;
 
 		public int modeIndex = 0;
 		public int colorIndex = 0;
@@ -141,7 +143,10 @@ public class DmxConsoleScreen extends Screen {
 	private float masterSpeed;
 
 	private int activeTab = 0; // 0 = Master, 1 = Stage Groups
-	private final List<StageGroupInfo> stageGroups = new ArrayList<>();
+	private final List<StageGroupInfo> rawGroups = new ArrayList<>();
+	private final List<StageGroupInfo> visibleGroups = new ArrayList<>();
+	private static final Set<BlockPos> PINNED_POSITIONS = new HashSet<>();
+	private boolean filterLinkedOnly = true;
 	private int selectedGroupIndex = 0;
 	private int groupListPage = 0;
 	private static final int GROUPS_PER_PAGE = 5;
@@ -154,6 +159,7 @@ public class DmxConsoleScreen extends Screen {
 	private Button qualityButton;
 
 	// Group Widgets
+	private Button groupPinButton;
 	private Button groupMuteButton;
 	private Button groupModeButton;
 	private Button groupColorButton;
@@ -175,7 +181,7 @@ public class DmxConsoleScreen extends Screen {
 		this.scanStageGroups();
 		int centerX = this.width / 2;
 
-		// Clean Tab Navigation Buttons
+		// Tab Navigation Buttons
 		this.addRenderableWidget(
 			Button.builder(Component.literal("Master Control"), button -> {
 				this.activeTab = 0;
@@ -184,7 +190,7 @@ public class DmxConsoleScreen extends Screen {
 		);
 
 		this.addRenderableWidget(
-			Button.builder(Component.literal("Stage Groups (" + this.stageGroups.size() + ")"), button -> {
+			Button.builder(Component.literal("Stage Groups (" + this.visibleGroups.size() + ")"), button -> {
 				this.activeTab = 1;
 				this.rebuildWidgets();
 			}).bounds(centerX + 5, 16, 130, 20).build()
@@ -199,20 +205,21 @@ public class DmxConsoleScreen extends Screen {
 		// Done / Close Button
 		this.addRenderableWidget(
 			Button.builder(Component.translatable("gui.done"), button -> this.onClose())
-				.bounds(centerX - 100, this.height - 28, 200, 20)
+				.bounds(centerX - 100, this.height - 26, 200, 20)
 				.build()
 		);
 	}
 
 	private void initMasterTab(int centerX) {
 		int y = this.height / 2 - 56;
+		int width = 200;
 
 		this.blackoutButton = this.addRenderableWidget(
 			Button.builder(this.blackoutLabel(), button -> {
 				this.blackout = !this.blackout;
 				button.setMessage(this.blackoutLabel());
 				this.sendConfig();
-			}).bounds(centerX - 100, y, 200, 22).build()
+			}).bounds(centerX - 100, y, width, 22).build()
 		);
 
 		this.strobeButton = this.addRenderableWidget(
@@ -220,11 +227,11 @@ public class DmxConsoleScreen extends Screen {
 				this.strobeAll = !this.strobeAll;
 				button.setMessage(this.strobeLabel());
 				this.sendConfig();
-			}).bounds(centerX - 100, y + 26, 200, 22).build()
+			}).bounds(centerX - 100, y + 26, width, 22).build()
 		);
 
 		this.dimmerSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 52, Component.translatable("screen.beatlamp.dmx.dimmer"), this.masterDimmer, 0.0, 1.0, "%d%%") {
+			new ValueSlider(centerX - 100, y + 52, width, 20, Component.translatable("screen.beatlamp.dmx.dimmer"), this.masterDimmer, 0.0, 1.0, "%d%%") {
 				@Override
 				protected void applyValue() {
 					DmxConsoleScreen.this.masterDimmer = (float) this.value;
@@ -234,7 +241,7 @@ public class DmxConsoleScreen extends Screen {
 		);
 
 		this.speedSlider = this.addRenderableWidget(
-			new ValueSlider(centerX - 100, y + 76, Component.translatable("screen.beatlamp.speed"), this.masterSpeed, 0.2, 3.0, "%.1fx") {
+			new ValueSlider(centerX - 100, y + 76, width, 20, Component.translatable("screen.beatlamp.speed"), this.masterSpeed, 0.2, 3.0, "%.1fx") {
 				@Override
 				protected void applyValue() {
 					DmxConsoleScreen.this.masterSpeed = (float) Mth.lerp(this.value, 0.2, 3.0);
@@ -247,37 +254,50 @@ public class DmxConsoleScreen extends Screen {
 			Button.builder(this.qualityLabel(), button -> {
 				BeatLampClientConfig.setQualityProfile(BeatLampClientConfig.getQualityProfile().next());
 				button.setMessage(this.qualityLabel());
-			}).bounds(centerX - 100, y + 100, 200, 20).build()
+			}).bounds(centerX - 100, y + 100, width, 20).build()
 		);
 	}
 
 	private void initGroupsTab(int centerX) {
-		int startY = 46;
+		int startY = 44;
 		int listX = centerX - 180;
 		int listWidth = 140;
 
-		int totalPages = Math.max(1, (this.stageGroups.size() + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE);
+		// Filter toggle button above list
+		this.addRenderableWidget(
+			Button.builder(Component.literal(this.filterLinkedOnly ? "Show: Linked" : "Show: All"), button -> {
+				this.filterLinkedOnly = !this.filterLinkedOnly;
+				this.rebuildVisibleGroups();
+				this.selectedGroupIndex = 0;
+				this.groupListPage = 0;
+				this.rebuildWidgets();
+			}).bounds(listX, startY, listWidth, 18).build()
+		);
+
+		int listStartY = startY + 22;
+		int totalPages = Math.max(1, (this.visibleGroups.size() + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE);
 		if (this.groupListPage >= totalPages) this.groupListPage = totalPages - 1;
 		if (this.groupListPage < 0) this.groupListPage = 0;
 
 		int startIdx = this.groupListPage * GROUPS_PER_PAGE;
-		int endIdx = Math.min(this.stageGroups.size(), startIdx + GROUPS_PER_PAGE);
+		int endIdx = Math.min(this.visibleGroups.size(), startIdx + GROUPS_PER_PAGE);
 
 		for (int i = startIdx; i < endIdx; i++) {
 			final int index = i;
-			StageGroupInfo g = this.stageGroups.get(i);
+			StageGroupInfo g = this.visibleGroups.get(i);
 			boolean isSelected = (i == this.selectedGroupIndex);
-			Component label = Component.literal((isSelected ? "> " : "") + g.name);
+			String prefix = (g.pinned ? "* " : "") + (isSelected ? "> " : "");
+			Component label = Component.literal(prefix + g.name);
 
 			this.addRenderableWidget(
 				Button.builder(label, button -> {
 					this.selectedGroupIndex = index;
 					this.rebuildWidgets();
-				}).bounds(listX, startY + (i - startIdx) * 22, listWidth, 20).build()
+				}).bounds(listX, listStartY + (i - startIdx) * 22, listWidth, 20).build()
 			);
 		}
 
-		// Pagination controls if more than 5 groups
+		// Pagination controls
 		if (totalPages > 1) {
 			this.addRenderableWidget(
 				Button.builder(Component.literal("<"), button -> {
@@ -285,7 +305,7 @@ public class DmxConsoleScreen extends Screen {
 						this.groupListPage--;
 						this.rebuildWidgets();
 					}
-				}).bounds(listX, startY + 114, 40, 18).build()
+				}).bounds(listX, listStartY + 114, 38, 18).build()
 			);
 
 			this.addRenderableWidget(
@@ -294,20 +314,34 @@ public class DmxConsoleScreen extends Screen {
 						this.groupListPage++;
 						this.rebuildWidgets();
 					}
-				}).bounds(listX + listWidth - 40, startY + 114, 40, 18).build()
+				}).bounds(listX + listWidth - 38, listStartY + 114, 38, 18).build()
 			);
 		}
 
-		if (this.stageGroups.isEmpty()) {
+		if (this.visibleGroups.isEmpty()) {
 			return;
 		}
 
 		StageGroupInfo g = this.getSelectedGroup();
 		if (g == null) return;
 
-		int rightX = centerX - 30;
+		int rightX = centerX - 25;
 		int rightWidth = 190;
 		int rightY = startY;
+
+		// Pin / Unpin button
+		this.groupPinButton = this.addRenderableWidget(
+			Button.builder(Component.literal(g.pinned ? "Pinned to Top: Yes" : "Pinned to Top: No"), button -> {
+				g.pinned = !g.pinned;
+				if (g.pinned) {
+					PINNED_POSITIONS.add(g.leadPos);
+				} else {
+					PINNED_POSITIONS.remove(g.leadPos);
+				}
+				this.rebuildVisibleGroups();
+				this.rebuildWidgets();
+			}).bounds(rightX, rightY, rightWidth, 20).build()
+		);
 
 		// Mute button
 		this.groupMuteButton = this.addRenderableWidget(
@@ -315,7 +349,7 @@ public class DmxConsoleScreen extends Screen {
 				g.muted = !g.muted;
 				button.setMessage(this.groupMuteLabel(g));
 				this.dispatchGroupConfig(g);
-			}).bounds(rightX, rightY, rightWidth, 20).build()
+			}).bounds(rightX, rightY + 24, rightWidth, 20).build()
 		);
 
 		// Mode button
@@ -324,7 +358,7 @@ public class DmxConsoleScreen extends Screen {
 				this.cycleGroupMode(g);
 				button.setMessage(this.groupModeLabel(g));
 				this.dispatchGroupConfig(g);
-			}).bounds(rightX, rightY + 24, rightWidth, 20).build()
+			}).bounds(rightX, rightY + 48, rightWidth, 20).build()
 		);
 
 		// Color button
@@ -333,12 +367,12 @@ public class DmxConsoleScreen extends Screen {
 				g.colorIndex = (g.colorIndex + 1) % PALETTE.length;
 				button.setMessage(this.groupColorLabel(g));
 				this.dispatchGroupConfig(g);
-			}).bounds(rightX, rightY + 48, rightWidth, 20).build()
+			}).bounds(rightX, rightY + 72, rightWidth, 20).build()
 		);
 
 		// Sensitivity slider
 		this.groupSensSlider = this.addRenderableWidget(
-			new ValueSlider(rightX, rightY + 72, Component.translatable("screen.beatlamp.sensitivity"), g.sensitivity, 0.2, 3.0, "%.1fx") {
+			new ValueSlider(rightX, rightY + 96, rightWidth, 20, Component.translatable("screen.beatlamp.sensitivity"), g.sensitivity, 0.2, 3.0, "%.1fx") {
 				@Override
 				protected void applyValue() {
 					g.sensitivity = (float) Mth.lerp(this.value, 0.2, 3.0);
@@ -349,7 +383,7 @@ public class DmxConsoleScreen extends Screen {
 
 		// Speed slider
 		this.groupSpeedSlider = this.addRenderableWidget(
-			new ValueSlider(rightX, rightY + 96, Component.translatable("screen.beatlamp.speed"), g.speed, 0.2, 3.0, "%.1fx") {
+			new ValueSlider(rightX, rightY + 120, rightWidth, 20, Component.translatable("screen.beatlamp.speed"), g.speed, 0.2, 3.0, "%.1fx") {
 				@Override
 				protected void applyValue() {
 					g.speed = (float) Mth.lerp(this.value, 0.2, 3.0);
@@ -360,8 +394,8 @@ public class DmxConsoleScreen extends Screen {
 	}
 
 	private StageGroupInfo getSelectedGroup() {
-		if (this.selectedGroupIndex >= 0 && this.selectedGroupIndex < this.stageGroups.size()) {
-			return this.stageGroups.get(this.selectedGroupIndex);
+		if (this.selectedGroupIndex >= 0 && this.selectedGroupIndex < this.visibleGroups.size()) {
+			return this.visibleGroups.get(this.selectedGroupIndex);
 		}
 		return null;
 	}
@@ -471,7 +505,7 @@ public class DmxConsoleScreen extends Screen {
 	}
 
 	private void scanStageGroups() {
-		this.stageGroups.clear();
+		this.rawGroups.clear();
 		Level level = Minecraft.getInstance().level;
 		if (level == null) return;
 
@@ -496,30 +530,58 @@ public class DmxConsoleScreen extends Screen {
 						List<BlockPos> members = lamp.getManualGroup().size() >= 2 ? lamp.getManualGroup() : BeatLamp.floodFill(level, bePos);
 						processed.addAll(members);
 						lampCount++;
-						this.stageGroups.add(new StageGroupInfo(GroupType.LAMP, bePos, members, lamp, lampCount));
+						StageGroupInfo group = new StageGroupInfo(GroupType.LAMP, bePos, members, lamp, lampCount);
+						group.pinned = PINNED_POSITIONS.contains(bePos);
+						this.rawGroups.add(group);
 					} else if (be instanceof StageLightBlockEntity light) {
 						List<BlockPos> members = light.getManualGroup().size() >= 2 ? light.getManualGroup() : List.of(bePos);
 						processed.addAll(members);
 						lightCount++;
-						this.stageGroups.add(new StageGroupInfo(GroupType.STAGE_LIGHT, bePos, members, light, lightCount));
+						StageGroupInfo group = new StageGroupInfo(GroupType.STAGE_LIGHT, bePos, members, light, lightCount);
+						group.pinned = PINNED_POSITIONS.contains(bePos);
+						this.rawGroups.add(group);
 					} else if (be instanceof LaserProjectorBlockEntity laser) {
 						List<BlockPos> members = laser.getManualGroup().size() >= 2 ? laser.getManualGroup() : List.of(bePos);
 						processed.addAll(members);
 						laserCount++;
-						this.stageGroups.add(new StageGroupInfo(GroupType.LASER, bePos, members, laser, laserCount));
+						StageGroupInfo group = new StageGroupInfo(GroupType.LASER, bePos, members, laser, laserCount);
+						group.pinned = PINNED_POSITIONS.contains(bePos);
+						this.rawGroups.add(group);
 					} else if (be instanceof FountainBlockEntity fountain) {
 						List<BlockPos> members = fountain.getManualGroup().size() >= 2 ? fountain.getManualGroup() : List.of(bePos);
 						processed.addAll(members);
 						fountainCount++;
-						this.stageGroups.add(new StageGroupInfo(GroupType.FOUNTAIN, bePos, members, fountain, fountainCount));
+						StageGroupInfo group = new StageGroupInfo(GroupType.FOUNTAIN, bePos, members, fountain, fountainCount);
+						group.pinned = PINNED_POSITIONS.contains(bePos);
+						this.rawGroups.add(group);
 					} else if (be instanceof FogGeneratorBlockEntity fog) {
 						List<BlockPos> members = fog.getManualGroup().size() >= 2 ? fog.getManualGroup() : List.of(bePos);
 						processed.addAll(members);
 						fogCount++;
-						this.stageGroups.add(new StageGroupInfo(GroupType.FOG, bePos, members, fog, fogCount));
+						StageGroupInfo group = new StageGroupInfo(GroupType.FOG, bePos, members, fog, fogCount);
+						group.pinned = PINNED_POSITIONS.contains(bePos);
+						this.rawGroups.add(group);
 					}
 				}
 			}
+		}
+
+		// Sort closest to DMX Console first, with pinned groups prioritized
+		this.rawGroups.sort(Comparator
+			.comparing((StageGroupInfo g) -> !g.pinned)
+			.thenComparingDouble(g -> g.leadPos.distSqr(this.pos))
+		);
+
+		this.rebuildVisibleGroups();
+	}
+
+	private void rebuildVisibleGroups() {
+		this.visibleGroups.clear();
+		for (StageGroupInfo g : this.rawGroups) {
+			if (this.filterLinkedOnly && g.members.size() <= 1 && !g.pinned) {
+				continue;
+			}
+			this.visibleGroups.add(g);
 		}
 	}
 
@@ -578,14 +640,14 @@ public class DmxConsoleScreen extends Screen {
 				graphics.fill(centerX + 102, y + 24, centerX + 104, y + 50, 0xFFFFE020);
 			}
 		} else {
-			int totalPages = Math.max(1, (this.stageGroups.size() + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE);
+			int totalPages = Math.max(1, (this.visibleGroups.size() + GROUPS_PER_PAGE - 1) / GROUPS_PER_PAGE);
 			if (totalPages > 1) {
 				String pageStr = (this.groupListPage + 1) + " / " + totalPages;
-				graphics.drawCenteredString(this.font, pageStr, centerX - 110, 46 + 119, 0xFF888888);
+				graphics.drawCenteredString(this.font, pageStr, centerX - 110, 44 + 22 + 119, 0xFF888888);
 			}
 
-			if (this.stageGroups.isEmpty()) {
-				graphics.drawCenteredString(this.font, Component.literal("No stage devices found within 64 blocks").withStyle(ChatFormatting.GRAY), centerX, 100, 0xFF888888);
+			if (this.visibleGroups.isEmpty()) {
+				graphics.drawCenteredString(this.font, Component.literal("No linked stage groups found").withStyle(ChatFormatting.GRAY), centerX - 110, 100, 0xFF888888);
 			}
 		}
 	}
@@ -601,8 +663,8 @@ public class DmxConsoleScreen extends Screen {
 		private final double max;
 		private final String format;
 
-		ValueSlider(int x, int y, Component prefix, float initial, double min, double max, String format) {
-			super(x, y, 190, 20, Component.empty(), (initial - min) / (max - min));
+		ValueSlider(int x, int y, int width, int height, Component prefix, float initial, double min, double max, String format) {
+			super(x, y, width, height, Component.empty(), (initial - min) / (max - min));
 			this.prefix = prefix;
 			this.min = min;
 			this.max = max;

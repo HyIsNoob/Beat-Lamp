@@ -280,15 +280,11 @@ public final class AudioAnalyzer {
 
 		float target = clamp01(bassEnergy / (previousAverage * 2.3F + 0.0001F));
 		float diff = target - this.envelope;
-		// Drop / Heavy Impact Detection (Proportional Surge Level)
-		float surge = Math.max(0.0F, this.envelope - this.previousEnvelope);
-		float fluxRatio = Math.max(0.0F, (bassFlux - localAvg) / (localAvg * 1.8F + 0.002F));
-		float instantImpact = clamp01(fluxRatio * 0.7F + surge * 2.2F);
+		this.envelope += diff * (diff > 0.0F ? 0.65F : 0.12F);
 
-		if (instantImpact > this.impactLevel) {
-			this.impactLevel = instantImpact;
-		} else {
-			this.impactLevel *= 0.88F;
+		// Drop / Heavy Impact Detection: Triggers only on true explosive energy surge/drop
+		if (bassFlux > localAvg * 2.6F && bassEnergy > 0.035F && this.envelope > 0.65F) {
+			this.impactReady = true;
 		}
 		this.previousEnvelope = this.envelope;
 
@@ -309,18 +305,16 @@ public final class AudioAnalyzer {
 			this.bands[b] += bandDiff * (bandDiff > 0.0F ? 0.55F : 0.14F);
 		}
 
-		// 5. Exponential Refractory Decay (Anti Double-Trigger)
+		// 5. Exponential Refractory Decay (Solid, Punchy V3 Rhythm)
 		float elapsedSec = (float) (this.totalSamples - this.lastBeatSample) / this.sampleRate;
-		float refractoryDecay = this.lastBeatIntensity * 0.80F * (float) Math.exp(-elapsedSec / 0.075F);
+		float refractoryDecay = this.lastBeatIntensity * 0.85F * (float) Math.exp(-elapsedSec / 0.085F);
 
-		float adaptiveThreshold = localAvg * 1.20F + (float) Math.sqrt(localVariance) * 0.35F + refractoryDecay + 0.0008F;
+		float adaptiveThreshold = localAvg * 1.22F + (float) Math.sqrt(localVariance) * 0.36F + refractoryDecay + 0.0008F;
+		long minBeatGap = (long) (this.sampleRate * 0.115); // Solid ~115ms gap
 
-		boolean hasKick = bassFlux > adaptiveThreshold * 0.92F && bassEnergy > 0.004F;
-		boolean hasSnare = midFlux > adaptiveThreshold * 0.60F && midFlux > 0.006F;
-		boolean hasHihat = highFlux > adaptiveThreshold * 0.40F && highFlux > 0.005F;
-
-		// Dynamic refractory: 82ms for high-speed snare build-up rolls, 108ms for deep bass kicks
-		long minBeatGap = (hasSnare && !hasKick) ? (long) (this.sampleRate * 0.082) : (long) (this.sampleRate * 0.108);
+		boolean hasKick = bassFlux > adaptiveThreshold * 0.95F && bassEnergy > 0.005F;
+		boolean hasSnare = midFlux > adaptiveThreshold * 0.65F && midFlux > 0.007F;
+		boolean hasHihat = highFlux > adaptiveThreshold * 0.45F && highFlux > 0.006F;
 
 		// 6. Beat-Grid Metronome Phase Progression
 		float beatPeriodSamples = ((float) this.sampleRate * 60.0F) / Math.max(60.0F, this.estimatedBpm);
