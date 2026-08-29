@@ -302,14 +302,16 @@ public final class AudioAnalyzer {
 
 		// 5. Exponential Refractory Decay (Anti Double-Trigger)
 		float elapsedSec = (float) (this.totalSamples - this.lastBeatSample) / this.sampleRate;
-		float refractoryDecay = this.lastBeatIntensity * 0.85F * (float) Math.exp(-elapsedSec / 0.085F);
+		float refractoryDecay = this.lastBeatIntensity * 0.80F * (float) Math.exp(-elapsedSec / 0.075F);
 
-		float adaptiveThreshold = localAvg * 1.22F + (float) Math.sqrt(localVariance) * 0.36F + refractoryDecay + 0.0008F;
-		long minBeatGap = (long) (this.sampleRate * 0.115); // ~115ms min gap
+		float adaptiveThreshold = localAvg * 1.20F + (float) Math.sqrt(localVariance) * 0.35F + refractoryDecay + 0.0008F;
 
-		boolean hasKick = bassFlux > adaptiveThreshold * 0.95F && bassEnergy > 0.005F;
-		boolean hasSnare = midFlux > adaptiveThreshold * 0.65F && midFlux > 0.007F;
-		boolean hasHihat = highFlux > adaptiveThreshold * 0.45F && highFlux > 0.006F;
+		boolean hasKick = bassFlux > adaptiveThreshold * 0.92F && bassEnergy > 0.004F;
+		boolean hasSnare = midFlux > adaptiveThreshold * 0.60F && midFlux > 0.006F;
+		boolean hasHihat = highFlux > adaptiveThreshold * 0.40F && highFlux > 0.005F;
+
+		// Dynamic refractory: 82ms for high-speed snare build-up rolls, 108ms for deep bass kicks
+		long minBeatGap = (hasSnare && !hasKick) ? (long) (this.sampleRate * 0.082) : (long) (this.sampleRate * 0.108);
 
 		// 6. Beat-Grid Metronome Phase Progression
 		float beatPeriodSamples = ((float) this.sampleRate * 60.0F) / Math.max(60.0F, this.estimatedBpm);
