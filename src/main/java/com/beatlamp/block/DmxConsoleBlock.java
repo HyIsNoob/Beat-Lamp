@@ -52,6 +52,17 @@ public class DmxConsoleBlock extends BaseEntityBlock {
 	}
 
 	@Override
+	protected net.minecraft.world.InteractionResult useWithoutItem(BlockState blockState, Level level, BlockPos blockPos, Player player, BlockHitResult blockHitResult) {
+		if (level.isClientSide) {
+			BlockEntity be = level.getBlockEntity(blockPos);
+			if (be instanceof DmxConsoleBlockEntity dmx && DmxConsoleBlockEntity.controllerUser != null) {
+				DmxConsoleBlockEntity.controllerUser.accept(dmx);
+			}
+		}
+		return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide);
+	}
+
+	@Override
 	public BlockEntity newBlockEntity(BlockPos blockPos, BlockState blockState) {
 		return new DmxConsoleBlockEntity(blockPos, blockState);
 	}

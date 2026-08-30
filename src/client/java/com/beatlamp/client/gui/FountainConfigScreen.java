@@ -103,10 +103,10 @@ public class FountainConfigScreen extends Screen {
 		);
 
 		this.impactSlider = this.addRenderableWidget(
-			new ValueSlider(centerX + 2, y + 44, 98, 20, Component.translatable("screen.beatlamp.fountain.threshold"), this.impactThreshold, 0.20, 0.95) {
+			new ValueSlider(centerX + 2, y + 44, 98, 20, Component.translatable("screen.beatlamp.fountain.threshold"), this.impactThreshold, 0.10, 1.00) {
 				@Override
 				protected void applyValue() {
-					FountainConfigScreen.this.impactThreshold = (float) Mth.lerp(this.value, 0.20, 0.95);
+					FountainConfigScreen.this.impactThreshold = (float) Mth.lerp(this.value, 0.10, 1.00);
 				}
 			}
 		);

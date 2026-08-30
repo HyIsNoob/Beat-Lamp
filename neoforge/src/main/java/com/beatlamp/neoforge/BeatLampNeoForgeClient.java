@@ -4,6 +4,7 @@ import com.beatlamp.BeatLamp;
 import com.beatlamp.BeatLampBlockEntities;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.DmxConsoleBlockEntity;
 import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LaserProjectorBlockEntity;
@@ -11,6 +12,7 @@ import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.client.BeatLampClient;
 import com.beatlamp.client.PlatformNetwork;
 import com.beatlamp.client.audio.JukeboxAudioTracker;
+import com.beatlamp.client.gui.DmxConsoleScreen;
 import com.beatlamp.client.gui.EmitterConfigScreen;
 import com.beatlamp.client.gui.FogGeneratorConfigScreen;
 import com.beatlamp.client.gui.FountainConfigScreen;
@@ -29,9 +31,11 @@ import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.event.sound.PlaySoundEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 @EventBusSubscriber(modid = BeatLamp.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
@@ -109,6 +113,15 @@ public class BeatLampNeoForgeClient {
 				}
 			});
 		};
+
+		DmxConsoleBlockEntity.controllerUser = dmx -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new DmxConsoleScreen(dmx));
+				}
+			});
+		};
 	}
 
 	@EventBusSubscriber(modid = BeatLamp.MOD_ID, value = Dist.CLIENT)
@@ -116,6 +129,18 @@ public class BeatLampNeoForgeClient {
 		@SubscribeEvent
 		public static void onClientTick(ClientTickEvent.Post event) {
 			JukeboxAudioTracker.clientTick();
+		}
+
+		@SubscribeEvent
+		public static void onPlaySound(PlaySoundEvent event) {
+			if (event.getSound() != null) {
+				JukeboxAudioTracker.onSoundPlayed(event.getSound());
+			}
+		}
+
+		@SubscribeEvent
+		public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
+			JukeboxAudioTracker.clear();
 		}
 
 		@SubscribeEvent

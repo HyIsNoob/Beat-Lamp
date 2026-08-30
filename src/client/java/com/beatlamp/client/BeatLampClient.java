@@ -427,7 +427,7 @@ public class BeatLampClient {
 
 		// 3. Drop / Impact grand eruption
 		float dropThreshold = fountain.getImpactThreshold();
-		if (impact >= dropThreshold && densityMul > 0.01F) {
+		if (dropThreshold < 0.98F && impact >= dropThreshold && densityMul > 0.01F) {
 			int burstCount = Math.max(4, Math.round(48 * densityMul));
 			for (int i = 0; i < burstCount; i++) {
 				double angle = random.nextDouble() * Math.PI * 2.0;

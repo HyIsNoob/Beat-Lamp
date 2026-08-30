@@ -316,15 +316,15 @@ public final class AudioAnalyzer {
 
 		// Drop / Heavy Structural Impact Detection (Distinct from regular kick beats)
 		// Triggers only on major structural drops (following buildup/breakdown) or overwhelming bass explosions
-		long minDropGap = (long) (this.sampleRate * 2.8); // Minimum 2.8s refractory period between drops
+		long minDropGap = (long) (this.sampleRate * 3.5); // Minimum 3.5s refractory period between drops
 		if (rising && (this.totalSamples - this.lastImpactSample > minDropGap)) {
-			boolean dropSurge = this.envelope > 0.65F && this.envelope > this.preDropEnergyAvg * 2.2F && bassEnergy > 0.018F;
-			boolean dropExplosion = bassFlux > adaptiveThreshold * 2.5F && bassEnergy > 0.025F;
+			boolean dropSurge = this.envelope > 0.72F && this.envelope > this.preDropEnergyAvg * 2.8F && bassEnergy > 0.024F;
+			boolean dropExplosion = bassFlux > adaptiveThreshold * 3.2F && bassEnergy > 0.032F;
 
 			if (dropSurge || dropExplosion) {
-				float surgeScore = clamp01((this.envelope - 0.40F) / 0.50F);
-				float fluxScore = clamp01((bassFlux - adaptiveThreshold * 1.5F) / (adaptiveThreshold * 1.5F + 0.001F));
-				this.impactLevel = Math.max(0.65F, Math.max(surgeScore, fluxScore));
+				float surgeScore = clamp01((this.envelope - 0.50F) / 0.50F);
+				float fluxScore = clamp01((bassFlux - adaptiveThreshold * 2.0F) / (adaptiveThreshold * 2.0F + 0.001F));
+				this.impactLevel = Math.max(0.40F, Math.max(surgeScore, fluxScore));
 				this.impactReady = true;
 				this.lastImpactSample = this.totalSamples;
 			}
