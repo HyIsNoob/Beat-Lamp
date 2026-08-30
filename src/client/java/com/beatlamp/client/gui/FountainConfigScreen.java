@@ -5,8 +5,7 @@ import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.FountainParticles;
 import com.beatlamp.network.FountainConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import com.beatlamp.client.PlatformNetwork;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -137,7 +136,7 @@ public class FountainConfigScreen extends Screen {
 		this.sourceButton = this.addRenderableWidget(
 			Button.builder(this.sourceLabel(), button -> {
 				if (this.sourcePos != null) {
-					ClientPlayNetworking.send(new LampSourcePayload(this.pos));
+					PlatformNetwork.sendToServer(new LampSourcePayload(this.pos));
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
@@ -230,7 +229,7 @@ public class FountainConfigScreen extends Screen {
 	@Override
 	public void onClose() {
 		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
-		ClientPlayNetworking.send(new FountainConfigurePayload(
+		PlatformNetwork.sendToServer(new FountainConfigurePayload(
 			this.pos,
 			this.fireworkMode,
 			this.sprayThreshold,

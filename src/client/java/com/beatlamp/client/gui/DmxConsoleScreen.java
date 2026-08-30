@@ -31,8 +31,7 @@ import com.beatlamp.network.FountainConfigurePayload;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LaserProjectorConfigurePayload;
 import com.beatlamp.network.StageLightConfigurePayload;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import com.beatlamp.client.PlatformNetwork;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -485,13 +484,13 @@ public class DmxConsoleScreen extends Screen {
 					tempoPulse = lamp.isTempoPulse();
 				}
 
-				ClientPlayNetworking.send(new LampConfigurePayload(
+				PlatformNetwork.sendToServer(new LampConfigurePayload(
 					g.leadPos, mode, targetSens, g.speed, targetColor, frameless, blackback, idleLight, reverse, particles, orientation, false, tempoPulse, true, customName
 				));
 			}
 			case STAGE_LIGHT -> {
 				StageLightMode mode = StageLightMode.values()[g.modeIndex % StageLightMode.values().length];
-				ClientPlayNetworking.send(new StageLightConfigurePayload(
+				PlatformNetwork.sendToServer(new StageLightConfigurePayload(
 					g.leadPos, mode, targetSens, g.speed, targetColor, false, true, customName
 				));
 			}
@@ -503,7 +502,7 @@ public class DmxConsoleScreen extends Screen {
 					count = laser.getBeamCount();
 					spread = laser.getSpread();
 				}
-				ClientPlayNetworking.send(new LaserProjectorConfigurePayload(
+				PlatformNetwork.sendToServer(new LaserProjectorConfigurePayload(
 					g.leadPos, mode, count, spread, g.speed, targetColor, false, true, customName
 				));
 			}
@@ -515,21 +514,21 @@ public class DmxConsoleScreen extends Screen {
 				if (g.leadEntity instanceof FountainBlockEntity fountain) {
 					pt = fountain.getParticleType();
 				}
-				ClientPlayNetworking.send(new FountainConfigurePayload(
+				PlatformNetwork.sendToServer(new FountainConfigurePayload(
 					g.leadPos, fw, spray, impact, true, pt, targetColor, false, true, customName
 				));
 			}
 			case FOG -> {
 				FogDensity density = FogDensity.values()[g.modeIndex % FogDensity.values().length];
 				int radius = (int) (g.sensitivity * 16.0F);
-				ClientPlayNetworking.send(new FogGeneratorConfigurePayload(
+				PlatformNetwork.sendToServer(new FogGeneratorConfigurePayload(
 					g.leadPos, density, radius, targetColor, false, true, customName
 				));
 			}
 			case EMITTER -> {
 				EmitterMode mode = EmitterMode.values()[g.modeIndex % EmitterMode.values().length];
 				boolean inverted = g.speed > 0.5F;
-				ClientPlayNetworking.send(new EmitterConfigurePayload(
+				PlatformNetwork.sendToServer(new EmitterConfigurePayload(
 					g.leadPos, mode, targetSens, inverted, false, true, customName
 				));
 			}
@@ -658,7 +657,7 @@ public class DmxConsoleScreen extends Screen {
 		this.dmxEntity.setMasterDimmer(this.masterDimmer);
 		this.dmxEntity.setMasterSpeed(this.masterSpeed);
 		DmxMasterTracker.register(this.dmxEntity);
-		ClientPlayNetworking.send(new DmxConsolePayload(this.pos, this.blackout, this.strobeAll, this.masterDimmer, this.masterSpeed));
+		PlatformNetwork.sendToServer(new DmxConsolePayload(this.pos, this.blackout, this.strobeAll, this.masterDimmer, this.masterSpeed));
 	}
 
 	@Override

@@ -6,8 +6,7 @@ import com.beatlamp.block.LampOrientation;
 import com.beatlamp.block.LampParticles;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import com.beatlamp.client.PlatformNetwork;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -188,7 +187,7 @@ public class LampConfigScreen extends Screen {
 		this.sourceButton = this.addRenderableWidget(
 			Button.builder(this.sourceLabel(), button -> {
 				if (this.sourcePos != null) {
-					ClientPlayNetworking.send(new LampSourcePayload(this.pos));
+					PlatformNetwork.sendToServer(new LampSourcePayload(this.pos));
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
@@ -318,7 +317,7 @@ public class LampConfigScreen extends Screen {
 	@Override
 	public void onClose() {
 		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
-		ClientPlayNetworking.send(
+		PlatformNetwork.sendToServer(
 			new LampConfigurePayload(
 				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.frameless, this.blackback, this.idleLight, this.reverse, this.particles, this.orientation, this.unlink, this.tempoPulse, this.dmxEnrolled, finalName
 			)

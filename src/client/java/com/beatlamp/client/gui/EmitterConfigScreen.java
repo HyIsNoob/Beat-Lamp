@@ -4,8 +4,7 @@ import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.EmitterMode;
 import com.beatlamp.network.EmitterConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import com.beatlamp.client.PlatformNetwork;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -88,7 +87,7 @@ public class EmitterConfigScreen extends Screen {
 		this.sourceButton = this.addRenderableWidget(
 			Button.builder(this.sourceLabel(), button -> {
 				if (this.sourcePos != null) {
-					ClientPlayNetworking.send(new LampSourcePayload(this.pos));
+					PlatformNetwork.sendToServer(new LampSourcePayload(this.pos));
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
@@ -146,7 +145,7 @@ public class EmitterConfigScreen extends Screen {
 	@Override
 	public void onClose() {
 		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
-		ClientPlayNetworking.send(new EmitterConfigurePayload(
+		PlatformNetwork.sendToServer(new EmitterConfigurePayload(
 			this.pos,
 			this.mode,
 			this.threshold,

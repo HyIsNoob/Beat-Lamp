@@ -9,11 +9,10 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.fabricmc.loader.api.FabricLoader;
 
 public final class BeatLampClientConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("beatlamp.json");
+	private static final Path CONFIG_PATH = Path.of("config", "beatlamp.json");
 
 	public enum AudioQualityProfile {
 		LITE("lite"),

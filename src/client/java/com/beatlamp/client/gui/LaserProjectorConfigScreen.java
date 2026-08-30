@@ -5,8 +5,7 @@ import com.beatlamp.block.LaserMode;
 import com.beatlamp.block.LaserProjectorBlockEntity;
 import com.beatlamp.network.LampSourcePayload;
 import com.beatlamp.network.LaserProjectorConfigurePayload;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import com.beatlamp.client.PlatformNetwork;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractSliderButton;
@@ -135,7 +134,7 @@ public class LaserProjectorConfigScreen extends Screen {
 		this.sourceButton = this.addRenderableWidget(
 			Button.builder(this.sourceLabel(), button -> {
 				if (this.sourcePos != null) {
-					ClientPlayNetworking.send(new LampSourcePayload(this.pos));
+					PlatformNetwork.sendToServer(new LampSourcePayload(this.pos));
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
@@ -218,7 +217,7 @@ public class LaserProjectorConfigScreen extends Screen {
 	@Override
 	public void onClose() {
 		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
-		ClientPlayNetworking.send(new LaserProjectorConfigurePayload(
+		PlatformNetwork.sendToServer(new LaserProjectorConfigurePayload(
 			this.pos,
 			this.mode,
 			this.beamCount,

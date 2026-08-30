@@ -69,6 +69,7 @@ public class BeatLampClient implements ClientModInitializer {
 
 	@Override
 	public void onInitializeClient() {
+		PlatformNetwork.setSender(ClientPlayNetworking::send);
 		BeatLampClientConfig.load();
 
 		BlockRenderLayerMap.INSTANCE.putBlock(BeatLampBlocks.BEAT_LAMP, RenderType.cutout());
@@ -172,7 +173,7 @@ public class BeatLampClient implements ClientModInitializer {
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> JukeboxAudioTracker.clear());
 	}
 
-	private static void tickLamp(BeatLampBlockEntity beatLamp) {
+	public static void tickLamp(BeatLampBlockEntity beatLamp) {
 		Level level = beatLamp.getLevel();
 		if (level == null) {
 			return;
@@ -368,7 +369,7 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 	}
 
-	private static void tickEmitter(BeatEmitterBlockEntity emitter) {
+	public static void tickEmitter(BeatEmitterBlockEntity emitter) {
 		Level level = emitter.getLevel();
 		if (level == null) {
 			return;
@@ -412,12 +413,12 @@ public class BeatLampClient implements ClientModInitializer {
 		long gameTime = level.getGameTime();
 
 		if (emitter.shouldSendSignal(gameTime, finalSignal)) {
-			ClientPlayNetworking.send(new EmitterSignalPayload(blockPos, finalSignal));
+			PlatformNetwork.sendToServer(new EmitterSignalPayload(blockPos, finalSignal));
 			emitter.markSent(gameTime, finalSignal);
 		}
 	}
 
-	private static void tickStageLight(StageLightBlockEntity light) {
+	public static void tickStageLight(StageLightBlockEntity light) {
 		Level level = light.getLevel();
 		if (level == null) {
 			return;
@@ -464,7 +465,7 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 	}
 
-	private static void tickFountain(FountainBlockEntity fountain) {
+	public static void tickFountain(FountainBlockEntity fountain) {
 		Level level = fountain.getLevel();
 		if (level == null) {
 			return;
@@ -564,7 +565,7 @@ public class BeatLampClient implements ClientModInitializer {
 			&& minecraft.player.distanceToSqr(originX, originY, originZ) < 4096.0
 			&& level.getGameTime() - fountain.lastFireSend >= 20L) {
 			fountain.lastFireSend = level.getGameTime();
-			ClientPlayNetworking.send(new FountainFirePayload(blockPos));
+			PlatformNetwork.sendToServer(new FountainFirePayload(blockPos));
 		}
 	}
 
@@ -909,7 +910,7 @@ public class BeatLampClient implements ClientModInitializer {
 		return new Vec3(gx / size, gy / size, gz / size);
 	}
 
-	private static void tickLaserProjector(LaserProjectorBlockEntity laser) {
+	public static void tickLaserProjector(LaserProjectorBlockEntity laser) {
 		Level level = laser.getLevel();
 		if (level == null) {
 			return;
@@ -947,7 +948,7 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 	}
 
-	private static void tickFogGenerator(FogGeneratorBlockEntity fog) {
+	public static void tickFogGenerator(FogGeneratorBlockEntity fog) {
 		Level level = fog.getLevel();
 		if (level == null) {
 			return;

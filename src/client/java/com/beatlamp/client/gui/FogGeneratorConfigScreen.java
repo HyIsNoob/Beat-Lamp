@@ -5,8 +5,7 @@ import com.beatlamp.block.FogDensity;
 import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.network.FogGeneratorConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import com.beatlamp.client.PlatformNetwork;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -109,7 +108,7 @@ public class FogGeneratorConfigScreen extends Screen {
 		this.sourceButton = this.addRenderableWidget(
 			Button.builder(this.sourceLabel(), button -> {
 				if (this.sourcePos != null) {
-					ClientPlayNetworking.send(new LampSourcePayload(this.pos));
+					PlatformNetwork.sendToServer(new LampSourcePayload(this.pos));
 					this.sourcePos = null;
 					button.setMessage(this.sourceLabel());
 				}
@@ -186,7 +185,7 @@ public class FogGeneratorConfigScreen extends Screen {
 	@Override
 	public void onClose() {
 		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
-		ClientPlayNetworking.send(new FogGeneratorConfigurePayload(
+		PlatformNetwork.sendToServer(new FogGeneratorConfigurePayload(
 			this.pos,
 			this.density,
 			this.radius,

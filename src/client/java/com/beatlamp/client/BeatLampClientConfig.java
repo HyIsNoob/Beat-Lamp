@@ -6,8 +6,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 
-import net.fabricmc.loader.api.FabricLoader;
-
 public final class BeatLampClientConfig {
 	public static boolean highQualityBeat = true;
 	private static final String FILE_NAME = "beatlamp-client.properties";
@@ -47,6 +45,6 @@ public final class BeatLampClientConfig {
 	}
 
 	private static Path configPath() {
-		return FabricLoader.getInstance().getConfigDir().resolve(FILE_NAME);
+		return Path.of("config", FILE_NAME);
 	}
 }

@@ -36,10 +36,17 @@ public final class LampOutlineRenderer {
 	}
 
 	public static void render(WorldRenderContext context) {
+		if (context.world() == null || context.consumers() == null || context.matrixStack() == null) {
+			return;
+		}
+		renderOutlines(context.world(), context.matrixStack(), context.consumers(), context.camera().getPosition());
+	}
+
+	public static void renderOutlines(Level level, PoseStack poseStack, net.minecraft.client.renderer.MultiBufferSource bufferSource, Vec3 camera) {
 		Minecraft minecraft = Minecraft.getInstance();
 		Player player = minecraft.player;
 
-		if (player == null || context.consumers() == null || context.world() == null) {
+		if (player == null || bufferSource == null || level == null) {
 			return;
 		}
 
@@ -52,38 +59,35 @@ public final class LampOutlineRenderer {
 
 		BlockPos anchor = heldItem.get(BeatLampItems.ANCHOR_POS);
 
-		PoseStack poseStack = context.matrixStack();
-		Vec3 camera = context.camera().getPosition();
-
 		poseStack.pushPose();
 		poseStack.translate(-camera.x, -camera.y, -camera.z);
 
 		if (anchor == null) {
-			renderGroupPreview(context, poseStack, player);
+			renderGroupPreview(level, bufferSource, poseStack, player);
 		} else {
-			renderAreaPreview(context, poseStack, player, anchor);
+			renderAreaPreview(level, bufferSource, poseStack, player, anchor);
 		}
 
 		poseStack.popPose();
 	}
 
-	private static void renderGroupPreview(WorldRenderContext context, PoseStack poseStack, Player player) {
-		BlockPos target = findLookedAtDevice(context.world(), player);
+	private static void renderGroupPreview(Level level, net.minecraft.client.renderer.MultiBufferSource bufferSource, PoseStack poseStack, Player player) {
+		BlockPos target = findLookedAtDevice(level, player);
 
 		if (target == null) {
 			cachedTarget = null;
 			return;
 		}
 
-		long now = context.world().getGameTime();
+		long now = level.getGameTime();
 
 		if (!target.equals(cachedTarget) || now - cacheTime >= 5) {
 			cachedTarget = target;
-			cachedMembers = resolveMembers(context.world(), target);
+			cachedMembers = resolveMembers(level, target);
 			cacheTime = now;
 		}
 
-		VertexConsumer consumer = context.consumers().getBuffer(RenderType.lines());
+		VertexConsumer consumer = bufferSource.getBuffer(RenderType.lines());
 
 		for (BlockPos member : cachedMembers) {
 			AABB aabb = new AABB(member).inflate(0.002);
@@ -91,8 +95,8 @@ public final class LampOutlineRenderer {
 		}
 	}
 
-	private static void renderAreaPreview(WorldRenderContext context, PoseStack poseStack, Player player, BlockPos anchor) {
-		VertexConsumer lines = context.consumers().getBuffer(RenderType.lines());
+	private static void renderAreaPreview(Level level, net.minecraft.client.renderer.MultiBufferSource bufferSource, PoseStack poseStack, Player player, BlockPos anchor) {
+		VertexConsumer lines = bufferSource.getBuffer(RenderType.lines());
 
 		LevelRenderer.renderLineBox(poseStack, lines, new AABB(anchor).inflate(0.004), 1.0F, 0.85F, 0.2F, 1.0F);
 
@@ -117,7 +121,7 @@ public final class LampOutlineRenderer {
 
 		AABB area = new AABB(minX - 0.02, minY - 0.02, minZ - 0.02, maxX + 1.02, maxY + 1.02, maxZ + 1.02);
 
-		VertexConsumer fill = context.consumers().getBuffer(RenderType.debugQuads());
+		VertexConsumer fill = bufferSource.getBuffer(RenderType.debugQuads());
 		fillBox(fill, poseStack,
 			(float) area.minX, (float) area.maxX,
 			(float) area.minY, (float) area.maxY,
@@ -125,12 +129,12 @@ public final class LampOutlineRenderer {
 			0.15F, 0.85F, 1.0F, 0.22F
 		);
 
-		VertexConsumer linesAfterFill = context.consumers().getBuffer(RenderType.lines());
+		VertexConsumer linesAfterFill = bufferSource.getBuffer(RenderType.lines());
 		LevelRenderer.renderLineBox(poseStack, linesAfterFill, area, 0.3F, 0.95F, 1.0F, 0.9F);
 
-		var anchorBlock = context.world().getBlockState(anchor).getBlock();
+		var anchorBlock = level.getBlockState(anchor).getBlock();
 		for (BlockPos memberPos : BlockPos.betweenClosed(minX, minY, minZ, maxX, maxY, maxZ)) {
-			if (context.world().getBlockState(memberPos).is(anchorBlock)) {
+			if (level.getBlockState(memberPos).is(anchorBlock)) {
 				LevelRenderer.renderLineBox(poseStack, linesAfterFill, new AABB(memberPos).inflate(0.003), 1.0F, 0.85F, 0.2F, 0.95F);
 			}
 		}

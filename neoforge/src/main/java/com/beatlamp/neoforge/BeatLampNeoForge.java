@@ -42,7 +42,7 @@ import net.neoforged.neoforge.registries.DeferredRegister;
 public class BeatLampNeoForge {
 	public static final DeferredRegister<CreativeModeTab> CREATIVE_TABS = DeferredRegister.create(Registries.CREATIVE_MODE_TAB, BeatLamp.MOD_ID);
 
-	public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = CREATIVE_TABS.register("main", () -> CreativeModeTab.builder()
+	public static final DeferredHolder<CreativeModeTab, CreativeModeTab> TAB = CREATIVE_TABS.register("main", () -> CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0)
 		.title(Component.translatable("itemGroup.beatlamp"))
 		.icon(() -> new ItemStack(BeatLampItems.CONTROLLER))
 		.displayItems((parameters, output) -> {
@@ -85,6 +85,19 @@ public class BeatLampNeoForge {
 		registrar.playToServer(EmitterSignalPayload.ID, EmitterSignalPayload.CODEC, this::handleEmitterSignal);
 		registrar.playToServer(com.beatlamp.network.EmitterConfigurePayload.ID, com.beatlamp.network.EmitterConfigurePayload.CODEC, this::handleEmitterConfig);
 		registrar.playToServer(FountainFirePayload.ID, FountainFirePayload.CODEC, this::handleFountainFire);
+		registrar.playToServer(com.beatlamp.network.DmxConsolePayload.ID, com.beatlamp.network.DmxConsolePayload.CODEC, this::handleDmxConsole);
+	}
+
+	private void handleDmxConsole(com.beatlamp.network.DmxConsolePayload payload, IPayloadContext context) {
+		context.enqueueWork(() -> {
+			Level level = context.player().level();
+			if (level.getBlockEntity(payload.pos()) instanceof com.beatlamp.block.DmxConsoleBlockEntity dmx) {
+				dmx.setBlackout(payload.blackout());
+				dmx.setStrobeAll(payload.strobeAll());
+				dmx.setMasterDimmer(payload.masterDimmer());
+				dmx.setMasterSpeed(payload.masterSpeed());
+			}
+		});
 	}
 
 	private void handleEmitterConfig(com.beatlamp.network.EmitterConfigurePayload payload, IPayloadContext context) {
@@ -127,7 +140,7 @@ public class BeatLampNeoForge {
 				if (level.getBlockEntity(member) instanceof BeatLampBlockEntity beatLamp) {
 					beatLamp.applyConfig(payload.mode(), payload.sensitivity(), payload.speed(), payload.color(),
 						payload.frameless(), payload.blackback(), payload.idleLight(), payload.reverse(),
-						payload.particles(), payload.orientation());
+						payload.particles(), payload.orientation(), payload.tempoPulse(), payload.dmxEnrolled(), payload.customName());
 				}
 			}
 		});

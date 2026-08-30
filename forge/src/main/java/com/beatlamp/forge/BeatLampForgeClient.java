@@ -1,4 +1,4 @@
-package com.beatlamp.neoforge;
+package com.beatlamp.forge;
 
 import com.beatlamp.BeatLamp;
 import com.beatlamp.BeatLampBlockEntities;
@@ -21,21 +21,22 @@ import com.beatlamp.client.render.BeatLampRenderer;
 import com.beatlamp.client.render.LampOutlineRenderer;
 import com.beatlamp.client.render.LaserProjectorRenderer;
 import com.beatlamp.client.render.StageLightRenderer;
+import com.mojang.blaze3d.vertex.PoseStack;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.Level;
 
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.bus.api.SubscribeEvent;
-import net.neoforged.fml.common.EventBusSubscriber;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
-import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityRenderersEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.network.PacketDistributor;
 
-@EventBusSubscriber(modid = BeatLamp.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
-public class BeatLampNeoForgeClient {
+@Mod.EventBusSubscriber(modid = BeatLamp.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
+public class BeatLampForgeClient {
 
 	@SubscribeEvent
 	public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
@@ -46,7 +47,7 @@ public class BeatLampNeoForgeClient {
 
 	@SubscribeEvent
 	public static void onClientSetup(FMLClientSetupEvent event) {
-		PlatformNetwork.setSender(PacketDistributor::sendToServer);
+		PlatformNetwork.setSender(payload -> BeatLampForge.CHANNEL.send(payload, PacketDistributor.SERVER.noArg()));
 
 		BeatLampBlockEntity.clientTicker = BeatLampClient::tickLamp;
 		BeatEmitterBlockEntity.clientTicker = BeatLampClient::tickEmitter;
@@ -110,11 +111,13 @@ public class BeatLampNeoForgeClient {
 		};
 	}
 
-	@EventBusSubscriber(modid = BeatLamp.MOD_ID, value = Dist.CLIENT)
+	@Mod.EventBusSubscriber(modid = BeatLamp.MOD_ID, value = Dist.CLIENT)
 	public static class ClientForgeEvents {
 		@SubscribeEvent
-		public static void onClientTick(ClientTickEvent.Post event) {
-			JukeboxAudioTracker.clientTick();
+		public static void onClientTick(TickEvent.ClientTickEvent event) {
+			if (event.phase == TickEvent.Phase.END) {
+				JukeboxAudioTracker.clientTick();
+			}
 		}
 
 		@SubscribeEvent
@@ -123,7 +126,9 @@ public class BeatLampNeoForgeClient {
 				Minecraft mc = Minecraft.getInstance();
 				Level level = mc.level;
 				if (level != null) {
-					LampOutlineRenderer.renderOutlines(level, event.getPoseStack(), mc.renderBuffers().bufferSource(), event.getCamera().getPosition());
+					PoseStack poseStack = new PoseStack();
+					poseStack.last().pose().set(event.getPoseStack());
+					LampOutlineRenderer.renderOutlines(level, poseStack, mc.renderBuffers().bufferSource(), event.getCamera().getPosition());
 				}
 			}
 		}
