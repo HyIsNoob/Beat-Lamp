@@ -104,6 +104,7 @@ jar {
 	def projectName = project.name
 	inputs.property "projectName", projectName
 	archiveClassifier = 'fabric'
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
 	from("LICENSE") {
 		rename { "${it}_$projectName"}
@@ -121,6 +122,7 @@ remapSourcesJar {
 task neoforgeJar(type: Jar, dependsOn: [classes, clientClasses, neoforgeClasses]) {
 	def projectName = project.name
 	archiveFileName = "beatlamp-neoforge-${project.minecraft_version}-${project.version}.jar"
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 	from sourceSets.main.output
 	from sourceSets.client.output
 	from sourceSets.neoforge.output
@@ -135,6 +137,7 @@ task neoforgeJar(type: Jar, dependsOn: [classes, clientClasses, neoforgeClasses]
 task forgeJar(type: Jar, dependsOn: [classes, clientClasses, forgeClasses]) {
 	def projectName = project.name
 	archiveFileName = "beatlamp-forge-${project.minecraft_version}-${project.version}.jar"
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 	from sourceSets.main.output
 	from sourceSets.client.output
 	from sourceSets.forge.output
