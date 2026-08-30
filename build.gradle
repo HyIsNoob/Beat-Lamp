@@ -67,6 +67,7 @@ dependencies {
 
 	// Forge dependencies for multi-loader compilation
 	forgeImplementation "net.minecraftforge:forge:1.21.1-52.0.57:universal"
+	forgeImplementation "net.minecraftforge:javafmllanguage:1.21.1-52.0.57"
 	forgeImplementation "net.minecraftforge:fmlcore:1.21.1-52.0.57"
 	forgeImplementation "net.minecraftforge:fmlloader:1.21.1-52.0.57"
 	forgeImplementation "net.minecraftforge:forgespi:7.1.5"
@@ -135,7 +136,7 @@ task forgeJar(type: Jar, dependsOn: [classes, clientClasses, forgeClasses]) {
 	exclude 'beatlamp.client.mixins.json'
 }
 
-assemble.dependsOn neoforgeJar
+assemble.dependsOn neoforgeJar, forgeJar
 
 // configure the maven publication
 publishing {
