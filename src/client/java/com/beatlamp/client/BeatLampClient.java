@@ -36,16 +36,7 @@ import com.beatlamp.client.render.StageLightRenderer;
 import com.beatlamp.network.EmitterSignalPayload;
 import com.beatlamp.network.FountainFirePayload;
 
-import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
@@ -54,7 +45,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.Vec3;
 
-public class BeatLampClient implements ClientModInitializer {
+public class BeatLampClient {
 	private static final LampParticles[] MIXED_TYPES = {
 		LampParticles.NOTE, LampParticles.END_ROD, LampParticles.FIREWORK, LampParticles.GLOW
 	};
@@ -66,112 +57,6 @@ public class BeatLampClient implements ClientModInitializer {
 	};
 
 	private static final int TOPOLOGY_REFRESH_TICKS = 10;
-
-	@Override
-	public void onInitializeClient() {
-		PlatformNetwork.setSender(ClientPlayNetworking::send);
-		BeatLampClientConfig.load();
-
-		BlockRenderLayerMap.INSTANCE.putBlock(BeatLampBlocks.BEAT_LAMP, RenderType.cutout());
-		BlockEntityRenderers.register(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);
-		BlockEntityRenderers.register(BeatLampBlockEntities.STAGE_LIGHT, StageLightRenderer::new);
-		BlockEntityRenderers.register(BeatLampBlockEntities.LASER_PROJECTOR, LaserProjectorRenderer::new);
-
-		BeatLampBlockEntity.clientTicker = BeatLampClient::tickLamp;
-		BeatEmitterBlockEntity.clientTicker = BeatLampClient::tickEmitter;
-		StageLightBlockEntity.clientTicker = BeatLampClient::tickStageLight;
-		FountainBlockEntity.clientTicker = BeatLampClient::tickFountain;
-		LaserProjectorBlockEntity.clientTicker = BeatLampClient::tickLaserProjector;
-		FogGeneratorBlockEntity.clientTicker = BeatLampClient::tickFogGenerator;
-
-		BeatLampBlockEntity.controllerUser = beatLamp -> {
-			Minecraft minecraft = Minecraft.getInstance();
-			minecraft.execute(() -> {
-				if (minecraft.screen == null && minecraft.player != null) {
-					minecraft.setScreen(new LampConfigScreen(beatLamp));
-				}
-			});
-		};
-		BeatEmitterBlockEntity.controllerUser = emitter -> {
-			Minecraft minecraft = Minecraft.getInstance();
-			minecraft.execute(() -> {
-				if (minecraft.screen == null && minecraft.player != null) {
-					minecraft.setScreen(new EmitterConfigScreen(emitter));
-				}
-			});
-		};
-		StageLightBlockEntity.controllerUser = light -> {
-			Minecraft minecraft = Minecraft.getInstance();
-			minecraft.execute(() -> {
-				if (minecraft.screen == null && minecraft.player != null) {
-					minecraft.setScreen(new StageLightConfigScreen(light));
-				}
-			});
-		};
-		FountainBlockEntity.controllerUser = fountain -> {
-			Minecraft minecraft = Minecraft.getInstance();
-			minecraft.execute(() -> {
-				if (minecraft.screen == null && minecraft.player != null) {
-					minecraft.setScreen(new FountainConfigScreen(fountain));
-				}
-			});
-		};
-		LaserProjectorBlockEntity.controllerUser = laser -> {
-			Minecraft minecraft = Minecraft.getInstance();
-			minecraft.execute(() -> {
-				if (minecraft.screen == null && minecraft.player != null) {
-					minecraft.setScreen(new LaserProjectorConfigScreen(laser));
-				}
-			});
-		};
-		FogGeneratorBlockEntity.controllerUser = fog -> {
-			Minecraft minecraft = Minecraft.getInstance();
-			minecraft.execute(() -> {
-				if (minecraft.screen == null && minecraft.player != null) {
-					minecraft.setScreen(new FogGeneratorConfigScreen(fog));
-				}
-			});
-		};
-		DmxConsoleBlockEntity.controllerUser = dmx -> {
-			Minecraft minecraft = Minecraft.getInstance();
-			minecraft.execute(() -> {
-				if (minecraft.screen == null && minecraft.player != null) {
-					minecraft.setScreen(new DmxConsoleScreen(dmx));
-				}
-			});
-		};
-
-		WorldRenderEvents.AFTER_TRANSLUCENT.register(LampOutlineRenderer::render);
-
-		net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback.EVENT.register((stack, context, type, lines) -> {
-			String baseKey = null;
-			if (stack.getItem() instanceof com.beatlamp.item.StageBlockItem stageBlockItem) {
-				baseKey = stageBlockItem.getBaseKey();
-			} else if (stack.is(BeatLampItems.LINKER)) {
-				baseKey = "linker";
-			} else if (stack.is(BeatLampItems.CONTROLLER)) {
-				baseKey = "controller";
-			}
-
-			if (baseKey != null) {
-				if (net.minecraft.client.gui.screens.Screen.hasShiftDown()) {
-					lines.add(net.minecraft.network.chat.Component.empty());
-					lines.add(net.minecraft.network.chat.Component.translatable("item.beatlamp.tag.guide_header").withStyle(net.minecraft.ChatFormatting.GOLD, net.minecraft.ChatFormatting.BOLD));
-					String raw = net.minecraft.locale.Language.getInstance().getOrDefault("item.beatlamp." + baseKey + ".tooltip.details");
-					for (String subLine : raw.split("\n")) {
-						if (!subLine.trim().isEmpty()) {
-							lines.add(net.minecraft.network.chat.Component.literal(subLine.trim()).withStyle(net.minecraft.ChatFormatting.AQUA));
-						}
-					}
-				} else {
-					lines.add(net.minecraft.network.chat.Component.translatable("item.beatlamp.tag.hold_shift").withStyle(net.minecraft.ChatFormatting.DARK_GRAY, net.minecraft.ChatFormatting.ITALIC));
-				}
-			}
-		});
-
-		ClientTickEvents.END_CLIENT_TICK.register(client -> JukeboxAudioTracker.clientTick());
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> JukeboxAudioTracker.clear());
-	}
 
 	public static void tickLamp(BeatLampBlockEntity beatLamp) {
 		Level level = beatLamp.getLevel();

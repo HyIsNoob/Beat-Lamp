@@ -16,10 +16,10 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.beatlamp.BeatLamp"
+			"com.beatlamp.fabric.BeatLampFabric"
 		],
 		"client": [
-			"com.beatlamp.client.BeatLampClient"
+			"com.beatlamp.fabric.BeatLampFabricClient"
 		]
 	},
 	"mixins": [

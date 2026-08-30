@@ -129,6 +129,7 @@ task neoforgeJar(type: Jar, dependsOn: [classes, clientClasses, neoforgeClasses]
 	}
 	exclude 'fabric.mod.json'
 	exclude 'beatlamp.client.mixins.json'
+	exclude 'com/beatlamp/fabric/**'
 }
 
 task forgeJar(type: Jar, dependsOn: [classes, clientClasses, forgeClasses]) {
@@ -142,6 +143,7 @@ task forgeJar(type: Jar, dependsOn: [classes, clientClasses, forgeClasses]) {
 	}
 	exclude 'fabric.mod.json'
 	exclude 'beatlamp.client.mixins.json'
+	exclude 'com/beatlamp/fabric/**'
 }
 
 assemble.dependsOn neoforgeJar, forgeJar
