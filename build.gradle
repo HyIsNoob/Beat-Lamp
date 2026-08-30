@@ -110,9 +110,17 @@ jar {
 	}
 }
 
+remapJar {
+	archiveFileName = "beatlamp-fabric-${project.minecraft_version}-${project.version}.jar"
+}
+
+remapSourcesJar {
+	archiveFileName = "beatlamp-sources-${project.minecraft_version}-${project.version}.jar"
+}
+
 task neoforgeJar(type: Jar, dependsOn: [classes, clientClasses, neoforgeClasses]) {
 	def projectName = project.name
-	archiveClassifier = 'neoforge'
+	archiveFileName = "beatlamp-neoforge-${project.minecraft_version}-${project.version}.jar"
 	from sourceSets.main.output
 	from sourceSets.client.output
 	from sourceSets.neoforge.output
@@ -125,7 +133,7 @@ task neoforgeJar(type: Jar, dependsOn: [classes, clientClasses, neoforgeClasses]
 
 task forgeJar(type: Jar, dependsOn: [classes, clientClasses, forgeClasses]) {
 	def projectName = project.name
-	archiveClassifier = 'forge'
+	archiveFileName = "beatlamp-forge-${project.minecraft_version}-${project.version}.jar"
 	from sourceSets.main.output
 	from sourceSets.client.output
 	from sourceSets.forge.output
