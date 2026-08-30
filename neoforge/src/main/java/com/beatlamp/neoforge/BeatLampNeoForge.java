@@ -65,6 +65,7 @@ public class BeatLampNeoForge {
 	public BeatLampNeoForge(IEventBus modEventBus) {
 		BeatLamp.LOGGER.info("Beat Lamp NeoForge initializing (1.21.1)");
 
+		com.beatlamp.config.BeatLampConfig.load();
 		BeatLampBlocks.register();
 		BeatLampBlockEntities.register();
 		BeatLampItems.register();

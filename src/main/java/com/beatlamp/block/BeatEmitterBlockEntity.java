@@ -140,6 +140,9 @@ public class BeatEmitterBlockEntity extends BlockEntity {
 	}
 
 	public void setSignal(int signal, long gameTime) {
+		if (!com.beatlamp.config.BeatLampConfig.enableRedstoneEmitter) {
+			signal = 0;
+		}
 		if (this.signalLevel != signal) {
 			this.signalLevel = signal;
 			this.lastServerUpdate = gameTime;

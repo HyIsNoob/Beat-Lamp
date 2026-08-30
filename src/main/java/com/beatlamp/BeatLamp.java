@@ -13,6 +13,7 @@ import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LaserProjectorBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
+import com.beatlamp.config.BeatLampConfig;
 import com.beatlamp.network.EmitterConfigurePayload;
 import com.beatlamp.network.EmitterSignalPayload;
 import com.beatlamp.network.FogGeneratorConfigurePayload;
@@ -45,7 +46,6 @@ public class BeatLamp implements ModInitializer {
 	public static final String MOD_ID = "beatlamp";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-	public static final int MAX_GROUP_SIZE = 512;
 	public static final int LINK_RANGE = 48;
 
 	public static ResourceLocation id(String path) {
@@ -56,6 +56,7 @@ public class BeatLamp implements ModInitializer {
 	public void onInitialize() {
 		LOGGER.info("Beat Lamp initializing (1.21.1)");
 
+		BeatLampConfig.load();
 		BeatLampBlocks.register();
 		BeatLampBlockEntities.register();
 		BeatLampItems.register();
@@ -343,6 +344,10 @@ public class BeatLamp implements ModInitializer {
 	}
 
 	private static void spawnFirework(ServerLevel level, BlockPos pos, int color) {
+		if (!BeatLampConfig.enablePhysicalFireworks) {
+			return;
+		}
+
 		java.util.List<Integer> colors = new java.util.ArrayList<>();
 
 		if (color == BeatLampBlockEntity.COLOR_OLED) {
@@ -420,8 +425,8 @@ public class BeatLamp implements ModInitializer {
 				if (level.getBlockEntity(memberPos) instanceof BeatLampBlockEntity lamp) {
 					lamps.add(lamp);
 					positions.add(lamp.getBlockPos().immutable());
-					if (lamps.size() >= MAX_GROUP_SIZE) {
-						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+					if (lamps.size() >= BeatLampConfig.maxGroupLinkSize) {
+						message(player, "message.beatlamp.link.full", BeatLampConfig.maxGroupLinkSize);
 						break;
 					}
 				}
@@ -437,8 +442,8 @@ public class BeatLamp implements ModInitializer {
 				if (level.getBlockEntity(memberPos) instanceof StageLightBlockEntity light) {
 					lights.add(light);
 					positions.add(light.getBlockPos().immutable());
-					if (lights.size() >= MAX_GROUP_SIZE) {
-						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+					if (lights.size() >= BeatLampConfig.maxGroupLinkSize) {
+						message(player, "message.beatlamp.link.full", BeatLampConfig.maxGroupLinkSize);
 						break;
 					}
 				}
@@ -454,8 +459,8 @@ public class BeatLamp implements ModInitializer {
 				if (level.getBlockEntity(memberPos) instanceof FountainBlockEntity fountain) {
 					fountains.add(fountain);
 					positions.add(fountain.getBlockPos().immutable());
-					if (fountains.size() >= MAX_GROUP_SIZE) {
-						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+					if (fountains.size() >= BeatLampConfig.maxGroupLinkSize) {
+						message(player, "message.beatlamp.link.full", BeatLampConfig.maxGroupLinkSize);
 						break;
 					}
 				}
@@ -471,8 +476,8 @@ public class BeatLamp implements ModInitializer {
 				if (level.getBlockEntity(memberPos) instanceof LaserProjectorBlockEntity laser) {
 					lasers.add(laser);
 					positions.add(laser.getBlockPos().immutable());
-					if (lasers.size() >= MAX_GROUP_SIZE) {
-						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+					if (lasers.size() >= BeatLampConfig.maxGroupLinkSize) {
+						message(player, "message.beatlamp.link.full", BeatLampConfig.maxGroupLinkSize);
 						break;
 					}
 				}
@@ -488,8 +493,8 @@ public class BeatLamp implements ModInitializer {
 				if (level.getBlockEntity(memberPos) instanceof FogGeneratorBlockEntity fog) {
 					fogs.add(fog);
 					positions.add(fog.getBlockPos().immutable());
-					if (fogs.size() >= MAX_GROUP_SIZE) {
-						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+					if (fogs.size() >= BeatLampConfig.maxGroupLinkSize) {
+						message(player, "message.beatlamp.link.full", BeatLampConfig.maxGroupLinkSize);
 						break;
 					}
 				}
@@ -505,8 +510,8 @@ public class BeatLamp implements ModInitializer {
 				if (level.getBlockEntity(memberPos) instanceof BeatEmitterBlockEntity emitter) {
 					emitters.add(emitter);
 					positions.add(emitter.getBlockPos().immutable());
-					if (emitters.size() >= MAX_GROUP_SIZE) {
-						message(player, "message.beatlamp.link.full", MAX_GROUP_SIZE);
+					if (emitters.size() >= BeatLampConfig.maxGroupLinkSize) {
+						message(player, "message.beatlamp.link.full", BeatLampConfig.maxGroupLinkSize);
 						break;
 					}
 				}
@@ -719,7 +724,7 @@ public class BeatLamp implements ModInitializer {
 		queue.add(start.immutable());
 		visited.add(start.immutable());
 
-		while (!queue.isEmpty() && result.size() < MAX_GROUP_SIZE) {
+		while (!queue.isEmpty() && result.size() < BeatLampConfig.maxGroupLinkSize) {
 			BlockPos current = queue.poll();
 			result.add(current);
 

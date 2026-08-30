@@ -47,7 +47,9 @@ public class LampControllerItem extends Item {
 
 		// 1. Sneak interaction: Jukebox Source Select or Binding
 		if (player.isShiftKeyDown()) {
-			if (level.getBlockState(blockPos).is(Blocks.JUKEBOX) || level.getBlockState(blockPos).is(com.beatlamp.BeatLampBlocks.STAGE_JUKEBOX)) {
+			if (level.getBlockState(blockPos).is(com.beatlamp.BeatLampTags.JUKEBOX_SOURCES)
+				|| level.getBlockState(blockPos).is(Blocks.JUKEBOX)
+				|| level.getBlockState(blockPos).is(com.beatlamp.BeatLampBlocks.STAGE_JUKEBOX)) {
 				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
 					BeatLamp.handleSourceSelect(serverPlayer, blockPos, controller);
 				}

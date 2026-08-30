@@ -46,6 +46,7 @@ public class BeatLampNeoForgeClient {
 
 	@SubscribeEvent
 	public static void onClientSetup(FMLClientSetupEvent event) {
+		com.beatlamp.client.config.BeatLampClientConfig.load();
 		PlatformNetwork.setSender(PacketDistributor::sendToServer);
 
 		BeatLampBlockEntity.clientTicker = BeatLampClient::tickLamp;

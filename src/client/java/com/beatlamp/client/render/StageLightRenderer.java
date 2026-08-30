@@ -29,7 +29,7 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 
 	@Override
 	public int getViewDistance() {
-		return 192;
+		return com.beatlamp.client.config.BeatLampClientConfig.beamRenderDistance;
 	}
 
 	@Override

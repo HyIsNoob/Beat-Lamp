@@ -4,13 +4,12 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.beatlamp.block.DmxConsoleBlockEntity;
+import com.beatlamp.config.BeatLampConfig;
 
 import net.minecraft.core.BlockPos;
 
 public class DmxMasterTracker {
 	private static final Map<BlockPos, DmxConsoleBlockEntity> ACTIVE_CONSOLES = new ConcurrentHashMap<>();
-	public static final double DMX_RANGE = 64.0;
-	public static final double DMX_RANGE_SQR = DMX_RANGE * DMX_RANGE;
 
 	public static void register(DmxConsoleBlockEntity console) {
 		if (console.getBlockPos() != null) {
@@ -26,11 +25,17 @@ public class DmxMasterTracker {
 		ACTIVE_CONSOLES.clear();
 	}
 
+	private static double getRangeSqr() {
+		double r = BeatLampConfig.maxAudioRadius;
+		return r * r;
+	}
+
 	public static boolean isBlackoutNear(BlockPos pos) {
 		if (ACTIVE_CONSOLES.isEmpty()) {
 			return false;
 		}
 
+		double rangeSqr = getRangeSqr();
 		for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
 			if (console.isRemoved() || console.getLevel() == null) {
 				continue;
@@ -41,7 +46,7 @@ public class DmxMasterTracker {
 			long dy = pos.getY() - cPos.getY();
 			long dz = pos.getZ() - cPos.getZ();
 
-			if (dx * dx + dy * dy + dz * dz <= DMX_RANGE_SQR) {
+			if (dx * dx + dy * dy + dz * dz <= rangeSqr) {
 				if (console.isBlackout()) {
 					return true;
 				}
@@ -55,6 +60,7 @@ public class DmxMasterTracker {
 			return false;
 		}
 
+		double rangeSqr = getRangeSqr();
 		for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
 			if (console.isRemoved() || console.getLevel() == null) {
 				continue;
@@ -65,7 +71,7 @@ public class DmxMasterTracker {
 			long dy = pos.getY() - cPos.getY();
 			long dz = pos.getZ() - cPos.getZ();
 
-			if (dx * dx + dy * dy + dz * dz <= DMX_RANGE_SQR) {
+			if (dx * dx + dy * dy + dz * dz <= rangeSqr) {
 				if (console.isStrobeAll()) {
 					return true;
 				}
@@ -80,6 +86,7 @@ public class DmxMasterTracker {
 		}
 
 		float dimmer = 1.0F;
+		double rangeSqr = getRangeSqr();
 		for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
 			if (console.isRemoved() || console.getLevel() == null) {
 				continue;
@@ -90,7 +97,7 @@ public class DmxMasterTracker {
 			long dy = pos.getY() - cPos.getY();
 			long dz = pos.getZ() - cPos.getZ();
 
-			if (dx * dx + dy * dy + dz * dz <= DMX_RANGE_SQR) {
+			if (dx * dx + dy * dy + dz * dz <= rangeSqr) {
 				if (console.isBlackout()) {
 					return 0.0F;
 				}
@@ -105,6 +112,7 @@ public class DmxMasterTracker {
 			return 1.0F;
 		}
 
+		double rangeSqr = getRangeSqr();
 		for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
 			if (console.isRemoved() || console.getLevel() == null) {
 				continue;
@@ -115,7 +123,7 @@ public class DmxMasterTracker {
 			long dy = pos.getY() - cPos.getY();
 			long dz = pos.getZ() - cPos.getZ();
 
-			if (dx * dx + dy * dy + dz * dz <= DMX_RANGE_SQR) {
+			if (dx * dx + dy * dy + dz * dz <= rangeSqr) {
 				return console.getMasterSpeed();
 			}
 		}

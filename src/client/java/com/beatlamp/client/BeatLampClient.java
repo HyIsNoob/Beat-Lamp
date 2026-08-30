@@ -506,9 +506,10 @@ public class BeatLampClient implements ClientModInitializer {
 		float sprayThreshold = fountain.getSprayThreshold();
 
 		// 1. Continuous stage pyro jet (controlled by sprayThreshold)
-		if (energy >= sprayThreshold) {
+		float densityMul = BeatLampClientConfig.particleDensityMultiplier;
+		if (energy >= sprayThreshold && densityMul > 0.01F) {
 			float activeIntensity = (energy - sprayThreshold) / Math.max(0.001F, 1.0F - sprayThreshold);
-			int count = 1 + (int) (activeIntensity * 4.0F);
+			int count = Math.max(1, Math.round((1 + (int) (activeIntensity * 4.0F)) * densityMul));
 			for (int i = 0; i < count; i++) {
 				double px = originX + (random.nextDouble() - 0.5) * 0.22;
 				double pz = originZ + (random.nextDouble() - 0.5) * 0.22;
@@ -525,8 +526,8 @@ public class BeatLampClient implements ClientModInitializer {
 		}
 
 		// 2. Bass beat spurts (thumping bass drum accents)
-		if (beatPulse > 0.5F && energy >= sprayThreshold * 0.8F) {
-			int beatSparks = 2 + (int) (beatPulse * 4.0F);
+		if (beatPulse > 0.5F && energy >= sprayThreshold * 0.8F && densityMul > 0.01F) {
+			int beatSparks = Math.max(1, Math.round((2 + (int) (beatPulse * 4.0F)) * densityMul));
 			for (int i = 0; i < beatSparks; i++) {
 				double px = originX + (random.nextDouble() - 0.5) * 0.18;
 				double pz = originZ + (random.nextDouble() - 0.5) * 0.18;
@@ -541,8 +542,9 @@ public class BeatLampClient implements ClientModInitializer {
 
 		// 3. Drop / Impact grand eruption
 		float dropThreshold = fountain.getImpactThreshold();
-		if (impact >= dropThreshold) {
-			for (int i = 0; i < 48; i++) {
+		if (impact >= dropThreshold && densityMul > 0.01F) {
+			int burstCount = Math.max(4, Math.round(48 * densityMul));
+			for (int i = 0; i < burstCount; i++) {
 				double angle = random.nextDouble() * Math.PI * 2.0;
 				double spread = 0.08 + random.nextDouble() * 0.28;
 				double vx = Math.cos(angle) * spread;
@@ -969,16 +971,20 @@ public class BeatLampClient implements ClientModInitializer {
 		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
 
+		if (!BeatLampClientConfig.enableFogParticles || BeatLampClientConfig.particleDensityMultiplier <= 0.01F) {
+			return;
+		}
+
 		Direction facing = Direction.UP;
 		if (fog.getBlockState().hasProperty(com.beatlamp.block.FogGeneratorBlock.FACING)) {
 			facing = fog.getBlockState().getValue(com.beatlamp.block.FogGeneratorBlock.FACING);
 		}
 
 		RandomSource random = level.getRandom();
-		int baseCount = fog.getDensity().getParticleCount();
+		int baseCount = Math.max(1, Math.round(fog.getDensity().getParticleCount() * BeatLampClientConfig.particleDensityMultiplier));
 		int count = baseCount;
 		if (beatPulse > 0.55F) {
-			count += 2 + (int) (beatPulse * 3); // Dynamic CO2 burst on beat
+			count += Math.max(1, Math.round((2 + (int) (beatPulse * 3)) * BeatLampClientConfig.particleDensityMultiplier)); // Dynamic CO2 burst on beat
 		}
 
 		double originX = blockPos.getX() + 0.5 + facing.getStepX() * 0.45;

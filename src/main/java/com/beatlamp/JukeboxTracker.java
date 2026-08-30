@@ -4,6 +4,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.beatlamp.config.BeatLampConfig;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -11,7 +13,6 @@ import net.minecraft.world.phys.Vec3;
 
 public final class JukeboxTracker {
 	private static final Map<ResourceKey<Level>, Set<BlockPos>> PLAYING = new ConcurrentHashMap<>();
-	private static final double RANGE_SQR = 64.0 * 64.0;
 
 	private JukeboxTracker() {
 	}
@@ -38,9 +39,10 @@ public final class JukeboxTracker {
 		}
 
 		Vec3 centerVec = Vec3.atCenterOf(center);
+		double rangeSqr = (double) BeatLampConfig.maxAudioRadius * (double) BeatLampConfig.maxAudioRadius;
 
 		for (BlockPos pos : positions) {
-			if (centerVec.distanceToSqr(Vec3.atCenterOf(pos)) <= RANGE_SQR) {
+			if (centerVec.distanceToSqr(Vec3.atCenterOf(pos)) <= rangeSqr) {
 				return true;
 			}
 		}
@@ -56,7 +58,8 @@ public final class JukeboxTracker {
 				return false;
 			}
 
-			return Vec3.atCenterOf(center).distanceToSqr(Vec3.atCenterOf(source)) <= RANGE_SQR;
+			double rangeSqr = (double) BeatLampConfig.maxAudioRadius * (double) BeatLampConfig.maxAudioRadius;
+			return Vec3.atCenterOf(center).distanceToSqr(Vec3.atCenterOf(source)) <= rangeSqr;
 		}
 
 		return isPlayingNear(level, center);

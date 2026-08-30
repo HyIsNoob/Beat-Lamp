@@ -12,7 +12,7 @@ import com.google.gson.JsonParser;
 
 public final class BeatLampClientConfig {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final Path CONFIG_PATH = Path.of("config", "beatlamp.json");
+	private static final Path CONFIG_PATH = Path.of("config", "beatlamp-client.json");
 
 	public enum AudioQualityProfile {
 		LITE("lite"),
@@ -42,7 +42,12 @@ public final class BeatLampClientConfig {
 		}
 	}
 
-	private static AudioQualityProfile qualityProfile = AudioQualityProfile.LITE;
+	private static AudioQualityProfile qualityProfile = AudioQualityProfile.STUDIO;
+	public static int beamRenderDistance = 64;
+	public static float laserRenderIntensity = 1.0F;
+	public static boolean enableFogParticles = true;
+	public static float particleDensityMultiplier = 1.0F;
+	public static boolean enableLaserBeams = true;
 
 	public static AudioQualityProfile getQualityProfile() {
 		return qualityProfile;
@@ -70,8 +75,23 @@ public final class BeatLampClientConfig {
 			if (json.has("audioQuality")) {
 				qualityProfile = AudioQualityProfile.byId(json.get("audioQuality").getAsString());
 			}
+			if (json.has("beamRenderDistance")) {
+				beamRenderDistance = Math.clamp(json.get("beamRenderDistance").getAsInt(), 16, 256);
+			}
+			if (json.has("laserRenderIntensity")) {
+				laserRenderIntensity = Math.clamp(json.get("laserRenderIntensity").getAsFloat(), 0.0F, 2.0F);
+			}
+			if (json.has("enableFogParticles")) {
+				enableFogParticles = json.get("enableFogParticles").getAsBoolean();
+			}
+			if (json.has("particleDensityMultiplier")) {
+				particleDensityMultiplier = Math.clamp(json.get("particleDensityMultiplier").getAsFloat(), 0.0F, 2.0F);
+			}
+			if (json.has("enableLaserBeams")) {
+				enableLaserBeams = json.get("enableLaserBeams").getAsBoolean();
+			}
 		} catch (Exception exception) {
-			qualityProfile = AudioQualityProfile.LITE;
+			qualityProfile = AudioQualityProfile.STUDIO;
 		}
 	}
 
@@ -80,6 +100,11 @@ public final class BeatLampClientConfig {
 			Files.createDirectories(CONFIG_PATH.getParent());
 			JsonObject json = new JsonObject();
 			json.addProperty("audioQuality", qualityProfile.getId());
+			json.addProperty("beamRenderDistance", beamRenderDistance);
+			json.addProperty("laserRenderIntensity", laserRenderIntensity);
+			json.addProperty("enableFogParticles", enableFogParticles);
+			json.addProperty("particleDensityMultiplier", particleDensityMultiplier);
+			json.addProperty("enableLaserBeams", enableLaserBeams);
 
 			try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
 				GSON.toJson(json, writer);
