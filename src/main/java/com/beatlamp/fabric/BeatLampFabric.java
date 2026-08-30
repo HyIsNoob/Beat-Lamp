@@ -3,6 +3,9 @@ package com.beatlamp.fabric;
 import java.util.List;
 
 import com.beatlamp.BeatLamp;
+import com.beatlamp.BeatLampBlockEntities;
+import com.beatlamp.BeatLampBlocks;
+import com.beatlamp.BeatLampItems;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.FogGeneratorBlockEntity;
@@ -21,18 +24,87 @@ import com.beatlamp.network.LaserProjectorConfigurePayload;
 import com.beatlamp.network.StageLightConfigurePayload;
 
 import net.fabricmc.api.ModInitializer;
+import net.fabricmc.fabric.api.itemgroup.v1.FabricItemGroup;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 
 public class BeatLampFabric implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		BeatLamp.initCommon();
+
+		// 1. Register Blocks
+		BeatLampBlocks.BEAT_LAMP = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("beat_lamp"), BeatLampBlocks.createBeatLamp());
+		BeatLampBlocks.BEAT_EMITTER = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("beat_emitter"), BeatLampBlocks.createBeatEmitter());
+		BeatLampBlocks.STAGE_LIGHT = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("stage_light"), BeatLampBlocks.createStageLight());
+		BeatLampBlocks.FOUNTAIN = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("fountain"), BeatLampBlocks.createFountain());
+		BeatLampBlocks.LASER_PROJECTOR = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("laser_projector"), BeatLampBlocks.createLaserProjector());
+		BeatLampBlocks.FOG_GENERATOR = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("fog_generator"), BeatLampBlocks.createFogGenerator());
+		BeatLampBlocks.STAGE_JUKEBOX = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("stage_jukebox"), BeatLampBlocks.createStageJukebox());
+		BeatLampBlocks.DMX_CONSOLE = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("dmx_console"), BeatLampBlocks.createDmxConsole());
+		BeatLampBlocks.DJ_DECK = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("dj_deck"), BeatLampBlocks.createDjDeck());
+		BeatLampBlocks.STAGE_SPEAKER = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("stage_speaker"), BeatLampBlocks.createStageSpeaker());
+
+		// 2. Register BlockEntities
+		BeatLampBlockEntities.BEAT_LAMP = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("beat_lamp"), BeatLampBlockEntities.createBeatLamp());
+		BeatLampBlockEntities.BEAT_EMITTER = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("beat_emitter"), BeatLampBlockEntities.createBeatEmitter());
+		BeatLampBlockEntities.STAGE_LIGHT = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("stage_light"), BeatLampBlockEntities.createStageLight());
+		BeatLampBlockEntities.FOUNTAIN = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("fountain"), BeatLampBlockEntities.createFountain());
+		BeatLampBlockEntities.LASER_PROJECTOR = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("laser_projector"), BeatLampBlockEntities.createLaserProjector());
+		BeatLampBlockEntities.FOG_GENERATOR = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("fog_generator"), BeatLampBlockEntities.createFogGenerator());
+		BeatLampBlockEntities.STAGE_JUKEBOX = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("stage_jukebox"), BeatLampBlockEntities.createStageJukebox());
+		BeatLampBlockEntities.DMX_CONSOLE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("dmx_console"), BeatLampBlockEntities.createDmxConsole());
+
+		// 3. Register Data Components
+		BeatLampItems.ANCHOR_POS = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, BeatLamp.id("anchor_pos"), BeatLampItems.createAnchorPosComponent());
+		BeatLampItems.SOURCE_POS = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, BeatLamp.id("source_pos"), BeatLampItems.createSourcePosComponent());
+
+		// 4. Register Items
+		BeatLampItems.BEAT_LAMP = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("beat_lamp"), BeatLampItems.createBeatLampItem());
+		BeatLampItems.BEAT_EMITTER = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("beat_emitter"), BeatLampItems.createBeatEmitterItem());
+		BeatLampItems.STAGE_LIGHT = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("stage_light"), BeatLampItems.createStageLightItem());
+		BeatLampItems.FOUNTAIN = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("fountain"), BeatLampItems.createFountainItem());
+		BeatLampItems.LASER_PROJECTOR = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("laser_projector"), BeatLampItems.createLaserProjectorItem());
+		BeatLampItems.FOG_GENERATOR = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("fog_generator"), BeatLampItems.createFogGeneratorItem());
+		BeatLampItems.STAGE_JUKEBOX = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("stage_jukebox"), BeatLampItems.createStageJukeboxItem());
+		BeatLampItems.DMX_CONSOLE = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("dmx_console"), BeatLampItems.createDmxConsoleItem());
+		BeatLampItems.DJ_DECK = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("dj_deck"), BeatLampItems.createDjDeckItem());
+		BeatLampItems.STAGE_SPEAKER = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("stage_speaker"), BeatLampItems.createStageSpeakerItem());
+		BeatLampItems.LINKER = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("linker"), BeatLampItems.createLinkerItem());
+		BeatLampItems.CONTROLLER = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("controller"), BeatLampItems.createControllerItem());
+
+		// 5. Register Creative Tab
+		BeatLampItems.TAB = Registry.register(
+			BuiltInRegistries.CREATIVE_MODE_TAB,
+			BeatLamp.id("main"),
+			FabricItemGroup.builder()
+				.title(Component.translatable("itemGroup.beatlamp"))
+				.icon(() -> new ItemStack(BeatLampItems.CONTROLLER))
+				.displayItems((parameters, output) -> {
+					output.accept(BeatLampItems.BEAT_LAMP);
+					output.accept(BeatLampItems.STAGE_LIGHT);
+					output.accept(BeatLampItems.LASER_PROJECTOR);
+					output.accept(BeatLampItems.FOUNTAIN);
+					output.accept(BeatLampItems.FOG_GENERATOR);
+					output.accept(BeatLampItems.STAGE_JUKEBOX);
+					output.accept(BeatLampItems.DMX_CONSOLE);
+					output.accept(BeatLampItems.DJ_DECK);
+					output.accept(BeatLampItems.STAGE_SPEAKER);
+					output.accept(BeatLampItems.BEAT_EMITTER);
+					output.accept(BeatLampItems.LINKER);
+					output.accept(BeatLampItems.CONTROLLER);
+				})
+				.build()
+		);
 
 		// Register Packets on Fabric
 		PayloadTypeRegistry.playC2S().register(LampConfigurePayload.ID, LampConfigurePayload.CODEC);

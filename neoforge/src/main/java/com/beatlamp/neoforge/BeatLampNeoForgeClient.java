@@ -39,9 +39,9 @@ public class BeatLampNeoForgeClient {
 
 	@SubscribeEvent
 	public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
-		event.registerBlockEntityRenderer(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);
-		event.registerBlockEntityRenderer(BeatLampBlockEntities.STAGE_LIGHT, StageLightRenderer::new);
-		event.registerBlockEntityRenderer(BeatLampBlockEntities.LASER_PROJECTOR, LaserProjectorRenderer::new);
+		event.registerBlockEntityRenderer(BeatLampNeoForge.BEAT_LAMP_BE.get(), BeatLampRenderer::new);
+		event.registerBlockEntityRenderer(BeatLampNeoForge.STAGE_LIGHT_BE.get(), StageLightRenderer::new);
+		event.registerBlockEntityRenderer(BeatLampNeoForge.LASER_PROJECTOR_BE.get(), LaserProjectorRenderer::new);
 	}
 
 	@SubscribeEvent

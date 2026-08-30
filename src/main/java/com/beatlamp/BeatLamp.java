@@ -41,11 +41,7 @@ public class BeatLamp {
 
 	public static void initCommon() {
 		LOGGER.info("Beat Lamp common initializing (1.21.1)");
-
 		BeatLampConfig.load();
-		BeatLampBlocks.register();
-		BeatLampBlockEntities.register();
-		BeatLampItems.register();
 	}
 
 	public static void spawnFirework(ServerLevel level, BlockPos pos, int color) {
