@@ -1,0 +1,383 @@
+package com.beatlamp.client.audio;
+
+public final class AudioAnalyzer {
+	public static final int BAND_COUNT = 16;
+	private static final float BAND_MIN_HZ = 40.0F;
+	private static final float BAND_MAX_HZ = 12000.0F;
+
+	private final int sampleRate;
+	private final int fftSize;
+	private final int fftMask;
+	private final int lowBassBin;
+	private final int highBassBin;
+	private final int lowMidBin;
+	private final int highMidBin;
+	private final int lowHighBin;
+	private final int highHighBin;
+
+	private final float[] ring;
+	private int ringIndex;
+	private int ringFilled;
+	private final float[] window;
+	private final float[] fftReal;
+	private final float[] fftImag;
+	private final float[] aWeights;
+
+	private final float[] bands = new float[BAND_COUNT];
+	private final float[] bandAverages = new float[BAND_COUNT];
+	private final int[] bandLowBin = new int[BAND_COUNT];
+	private final int[] bandHighBin = new int[BAND_COUNT];
+
+	private long totalSamples;
+	private float bassAverage = 0.001F;
+	private float envelope;
+	private volatile boolean beatReady;
+	private volatile boolean kickReady;
+	private volatile boolean snareReady;
+	private volatile boolean hihatReady;
+	private volatile boolean impactReady;
+
+	private float previousEnvelope;
+	private long lastBeatSample = -1_000_000L;
+	private float lastBeatIntensity;
+
+	private final float[] prevMag;
+
+	private static final int MEDIAN_WINDOW = 7;
+	private final float[] medianRing = new float[MEDIAN_WINDOW];
+	private final float[] medianScratch = new float[MEDIAN_WINDOW];
+	private int medianIndex;
+	private int medianFilled;
+
+	private float estimatedBpm = 124.0F;
+	private float gridPhase = 0.0F;
+	private float gridPulse = 0.0F;
+	private long prevBeatSample = -1_000_000L;
+
+	private static final int FLUX_HISTORY_SIZE = 64;
+	private final float[] fluxValues = new float[FLUX_HISTORY_SIZE];
+	private int fluxCursor;
+	private int fluxFilled;
+	private float fluxRunningSum;
+	private float fluxRunningSumSq;
+	private float previousFlux;
+	private float impactLevel;
+	private long lastImpactSample = -1_000_000L;
+	private float preDropEnergyAvg = 0.001F;
+
+	public AudioAnalyzer(int sampleRate, boolean highQuality) {
+		this.sampleRate = Math.max(8000, sampleRate);
+		this.fftSize = highQuality ? 2048 : 1024;
+		this.fftMask = this.fftSize - 1;
+		this.ring = new float[this.fftSize];
+		this.window = new float[this.fftSize];
+		this.fftReal = new float[this.fftSize];
+		this.fftImag = new float[this.fftSize];
+		this.aWeights = new float[this.fftSize / 2 + 1];
+
+		float binHz = (float) this.sampleRate / this.fftSize;
+
+		for (int i = 0; i < this.fftSize; i++) {
+			this.window[i] = (float) (0.5 - 0.5 * Math.cos(2.0 * Math.PI * i / (this.fftSize - 1)));
+		}
+
+		for (int i = 1; i <= this.fftSize / 2; i++) {
+			double f = i * binHz;
+			double f2 = f * f;
+			double num = 12194.0 * 12194.0 * f2 * f2;
+			double den = (f2 + 20.6 * 20.6) * Math.sqrt((f2 + 107.7 * 107.7) * (f2 + 737.9 * 737.9)) * (f2 + 12194.0 * 12194.0);
+			double ra = den > 0 ? num / den : 0.0;
+			double db = 2.0 + 20.0 * Math.log10(Math.max(1e-6, ra));
+			this.aWeights[i] = (float) Math.max(0.25, Math.min(2.0, Math.pow(10.0, db / 20.0) * 1.15));
+		}
+		this.aWeights[0] = this.aWeights[1];
+
+		for (int b = 0; b < BAND_COUNT; b++) {
+			float lowHz = BAND_MIN_HZ * (float) Math.pow(BAND_MAX_HZ / BAND_MIN_HZ, (double) b / BAND_COUNT);
+			float highHz = BAND_MIN_HZ * (float) Math.pow(BAND_MAX_HZ / BAND_MIN_HZ, (double) (b + 1) / BAND_COUNT);
+			this.bandLowBin[b] = Math.max(1, (int) (lowHz / binHz));
+			this.bandHighBin[b] = Math.max(this.bandLowBin[b], Math.min(this.fftSize / 2 - 1, (int) (highHz / binHz)));
+			this.bandAverages[b] = 0.001F;
+		}
+
+		this.lowBassBin = Math.max(1, (int) (30.0F / binHz));
+		this.highBassBin = Math.min(this.fftSize / 2 - 1, (int) (150.0F / binHz));
+
+		this.lowMidBin = Math.max(1, (int) (1100.0F / binHz));
+		this.highMidBin = Math.min(this.fftSize / 2 - 1, (int) (4500.0F / binHz));
+
+		this.lowHighBin = Math.max(1, (int) (6000.0F / binHz));
+		this.highHighBin = Math.min(this.fftSize / 2 - 1, (int) (12000.0F / binHz));
+
+		int maxTrackedBin = Math.max(this.highBassBin, Math.max(this.highMidBin, this.highHighBin)) + 1;
+		this.prevMag = new float[maxTrackedBin];
+	}
+
+	public void push(float[] samples, int count) {
+		this.push(samples, 0, count);
+	}
+
+	public void push(float[] samples, int offset, int count) {
+		for (int i = 0; i < count; i++) {
+			this.ring[this.ringIndex] = samples[offset + i];
+			this.ringIndex = (this.ringIndex + 1) & this.fftMask;
+			if (this.ringFilled < this.fftSize) {
+				this.ringFilled++;
+			}
+		}
+
+		this.totalSamples += count;
+		this.update(count);
+	}
+
+	public long getTotalSamples() {
+		return this.totalSamples;
+	}
+
+	public int getSampleRate() {
+		return this.sampleRate;
+	}
+
+	public float getLevel() {
+		return this.envelope;
+	}
+
+	public float[] getBands() {
+		return this.bands;
+	}
+
+	public boolean consumeBeat() {
+		boolean beat = this.beatReady;
+		this.beatReady = false;
+		return beat;
+	}
+
+	public boolean consumeKick() {
+		boolean kick = this.kickReady;
+		this.kickReady = false;
+		return kick;
+	}
+
+	public boolean consumeSnare() {
+		boolean snare = this.snareReady;
+		this.snareReady = false;
+		return snare;
+	}
+
+	public boolean consumeHihat() {
+		boolean hihat = this.hihatReady;
+		this.hihatReady = false;
+		return hihat;
+	}
+
+	public boolean consumeImpact() {
+		boolean impact = this.impactReady;
+		this.impactReady = false;
+		return impact;
+	}
+
+	public float getImpactLevel() {
+		return this.impactLevel;
+	}
+
+	private void update(int stepSamples) {
+		if (this.ringFilled < this.fftSize) {
+			return;
+		}
+
+		for (int i = 0; i < this.fftSize; i++) {
+			int index = (this.ringIndex + i) & this.fftMask;
+			this.fftReal[i] = this.ring[index] * this.window[i];
+			this.fftImag[i] = 0.0F;
+		}
+
+		Fft.fft(this.fftReal, this.fftImag);
+
+		float bassEnergy = 0.0F;
+		float bassFlux = 0.0F;
+
+		for (int bin = this.lowBassBin; bin <= this.highBassBin; bin++) {
+			float mag = magnitude(bin) * this.aWeights[bin];
+			float pMag = this.prevMag[bin];
+			if (mag > pMag) {
+				bassFlux += (mag - pMag);
+			} else {
+				bassFlux += (mag - pMag) * 0.10F;
+			}
+			this.prevMag[bin] = mag;
+			bassEnergy += mag;
+		}
+
+		int bassBins = this.highBassBin - this.lowBassBin + 1;
+		bassEnergy /= bassBins * this.fftSize * 0.5F;
+		bassFlux /= bassBins * this.fftSize * 0.5F;
+
+		float midFlux = 0.0F;
+		for (int bin = this.lowMidBin; bin <= this.highMidBin; bin++) {
+			float mag = magnitude(bin) * this.aWeights[bin];
+			float pMag = this.prevMag[bin];
+			if (mag > pMag) {
+				midFlux += (mag - pMag);
+			}
+			this.prevMag[bin] = mag;
+		}
+
+		int midBins = this.highMidBin - this.lowMidBin + 1;
+		midFlux /= midBins * this.fftSize * 0.5F;
+
+		float highFlux = 0.0F;
+		for (int bin = this.lowHighBin; bin <= this.highHighBin; bin++) {
+			float mag = magnitude(bin) * this.aWeights[bin];
+			float pMag = this.prevMag[bin];
+			if (mag > pMag) {
+				highFlux += (mag - pMag);
+			}
+			this.prevMag[bin] = mag;
+		}
+		int highBins = this.highHighBin - this.lowHighBin + 1;
+		highFlux /= highBins * this.fftSize * 0.5F;
+
+		float rawFlux = bassFlux * 1.0F + midFlux * 0.40F;
+
+		this.medianRing[this.medianIndex] = rawFlux;
+		this.medianIndex = (this.medianIndex + 1) % MEDIAN_WINDOW;
+		if (this.medianFilled < MEDIAN_WINDOW) this.medianFilled++;
+
+		float filteredFlux = this.getMedianFlux(rawFlux);
+
+		if (this.fluxFilled >= FLUX_HISTORY_SIZE) {
+			float oldVal = this.fluxValues[this.fluxCursor];
+			this.fluxRunningSum -= oldVal;
+			this.fluxRunningSumSq -= oldVal * oldVal;
+		} else {
+			this.fluxFilled++;
+		}
+
+		this.fluxValues[this.fluxCursor] = filteredFlux;
+		this.fluxRunningSum += filteredFlux;
+		this.fluxRunningSumSq += filteredFlux * filteredFlux;
+		this.fluxCursor = (this.fluxCursor + 1) % FLUX_HISTORY_SIZE;
+
+		float localAvg = this.fluxRunningSum / this.fluxFilled;
+		float localVariance = Math.max(0.0F, (this.fluxRunningSumSq / this.fluxFilled) - (localAvg * localAvg));
+		boolean rising = filteredFlux > this.previousFlux;
+		this.previousFlux = filteredFlux;
+
+		float previousAverage = this.bassAverage;
+		this.bassAverage = this.bassAverage * 0.995F + bassEnergy * 0.005F;
+
+		float target = clamp01(bassEnergy / (previousAverage * 2.3F + 0.0001F));
+		float diff = target - this.envelope;
+		this.envelope += diff * (diff > 0.0F ? 0.65F : 0.12F);
+
+		this.previousEnvelope = this.envelope;
+
+		for (int b = 0; b < BAND_COUNT; b++) {
+			float sum = 0.0F;
+			int count = 0;
+
+			for (int bin = this.bandLowBin[b]; bin <= this.bandHighBin[b]; bin++) {
+				sum += magnitude(bin) * this.aWeights[bin];
+				count++;
+			}
+
+			float value = count > 0 ? sum / (count * this.fftSize * 0.5F) : 0.0F;
+			this.bandAverages[b] = this.bandAverages[b] * 0.99F + value * 0.01F;
+			float bandTarget = clamp01(value / (this.bandAverages[b] * 2.2F + 0.0001F));
+			float bandDiff = bandTarget - this.bands[b];
+			this.bands[b] += bandDiff * (bandDiff > 0.0F ? 0.55F : 0.14F);
+		}
+
+		float elapsedSec = (float) (this.totalSamples - this.lastBeatSample) / this.sampleRate;
+		float refractoryDecay = this.lastBeatIntensity * 0.85F * (float) Math.exp(-elapsedSec / 0.085F);
+
+		float adaptiveThreshold = localAvg * 1.22F + (float) Math.sqrt(localVariance) * 0.36F + refractoryDecay + 0.0008F;
+		long minBeatGap = (long) (this.sampleRate * 0.115);
+
+		boolean hasKick = bassFlux > adaptiveThreshold * 0.95F && bassEnergy > 0.005F;
+		boolean hasSnare = midFlux > adaptiveThreshold * 0.65F && midFlux > 0.007F;
+		boolean hasHihat = highFlux > adaptiveThreshold * 0.45F && highFlux > 0.006F;
+
+		long minDropGap = (long) (this.sampleRate * 3.5);
+		if (rising && (this.totalSamples - this.lastImpactSample > minDropGap)) {
+			boolean dropSurge = this.envelope > 0.72F && this.envelope > this.preDropEnergyAvg * 2.8F && bassEnergy > 0.024F;
+			boolean dropExplosion = bassFlux > adaptiveThreshold * 3.2F && bassEnergy > 0.032F;
+
+			if (dropSurge || dropExplosion) {
+				float surgeScore = clamp01((this.envelope - 0.50F) / 0.50F);
+				float fluxScore = clamp01((bassFlux - adaptiveThreshold * 2.0F) / (adaptiveThreshold * 2.0F + 0.001F));
+				this.impactLevel = Math.max(0.40F, Math.max(surgeScore, fluxScore));
+				this.impactReady = true;
+				this.lastImpactSample = this.totalSamples;
+			}
+		}
+		this.preDropEnergyAvg = this.preDropEnergyAvg * 0.992F + bassEnergy * 0.008F;
+
+		float beatPeriodSamples = ((float) this.sampleRate * 60.0F) / Math.max(60.0F, this.estimatedBpm);
+		this.gridPhase = (this.gridPhase + (float) stepSamples / beatPeriodSamples) % 1.0F;
+		float phaseDist = Math.min(this.gridPhase, 1.0F - this.gridPhase);
+		this.gridPulse = (float) Math.exp(-(phaseDist * phaseDist) / 0.016F);
+
+		if (rising && (hasKick || hasSnare) && (this.totalSamples - this.lastBeatSample > minBeatGap)) {
+			long ioiSamples = this.totalSamples - this.prevBeatSample;
+			if (ioiSamples > (long) (this.sampleRate * 0.28) && ioiSamples < (long) (this.sampleRate * 1.5)) {
+				float instantBpm = 60.0F * (float) this.sampleRate / (float) ioiSamples;
+				while (instantBpm < 85.0F) instantBpm *= 2.0F;
+				while (instantBpm > 185.0F) instantBpm *= 0.5F;
+
+				this.estimatedBpm = this.estimatedBpm * 0.88F + instantBpm * 0.12F;
+			}
+			this.prevBeatSample = this.totalSamples;
+			this.gridPhase *= 0.25F;
+
+			this.lastBeatSample = this.totalSamples;
+			this.lastBeatIntensity = filteredFlux;
+			this.beatReady = true;
+			if (hasKick) this.kickReady = true;
+			if (hasSnare) this.snareReady = true;
+		}
+
+		if (hasHihat) {
+			this.hihatReady = true;
+		}
+	}
+
+	public float getGridPulse() {
+		return this.gridPulse;
+	}
+
+	public float getEstimatedBpm() {
+		return this.estimatedBpm;
+	}
+
+	private float getMedianFlux(float fallback) {
+		int n = this.medianFilled;
+		if (n <= 0) return fallback;
+		if (n <= 2) return this.medianRing[0];
+
+		for (int i = 0; i < n; i++) {
+			this.medianScratch[i] = this.medianRing[i];
+		}
+
+		for (int i = 1; i < n; i++) {
+			float key = this.medianScratch[i];
+			int j = i - 1;
+			while (j >= 0 && this.medianScratch[j] > key) {
+				this.medianScratch[j + 1] = this.medianScratch[j];
+				j--;
+			}
+			this.medianScratch[j + 1] = key;
+		}
+		return this.medianScratch[n / 2];
+	}
+
+	private float magnitude(int bin) {
+		float r = this.fftReal[bin];
+		float i = this.fftImag[bin];
+		return (float) Math.sqrt(r * r + i * i);
+	}
+
+	private static float clamp01(float value) {
+		return value < 0.0F ? 0.0F : Math.min(value, 1.0F);
+	}
+}

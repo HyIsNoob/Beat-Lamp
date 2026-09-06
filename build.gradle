@@ -47,6 +47,26 @@ sourceSets {
 		compileClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.main.compileClasspath + sourceSets.client.compileClasspath
 		runtimeClasspath += sourceSets.main.output + sourceSets.client.output + sourceSets.main.runtimeClasspath + sourceSets.client.runtimeClasspath
 	}
+	forge1201 {
+		java {
+			srcDirs = ['forge-1.20.1/src/main/java']
+		}
+		resources {
+			srcDirs = ['forge-1.20.1/src/main/resources']
+		}
+		compileClasspath += sourceSets.main.compileClasspath + sourceSets.client.compileClasspath
+		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.client.runtimeClasspath
+	}
+	fabric1201 {
+		java {
+			srcDirs = ['fabric-1.20.1/src/main/java']
+		}
+		resources {
+			srcDirs = ['fabric-1.20.1/src/main/resources']
+		}
+		compileClasspath += sourceSets.main.compileClasspath + sourceSets.client.compileClasspath
+		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.client.runtimeClasspath
+	}
 }
 
 dependencies {
@@ -74,6 +94,17 @@ dependencies {
 	forgeImplementation "net.minecraftforge:eventbus:6.2.27"
 	forgeImplementation sourceSets.main.output
 	forgeImplementation sourceSets.client.output
+
+	// Forge 1.20.1 dependencies for backport compilation
+	forge1201Implementation "net.minecraftforge:forge:1.20.1-47.3.0:universal"
+	forge1201Implementation "net.minecraftforge:javafmllanguage:1.20.1-47.3.0"
+	forge1201Implementation "net.minecraftforge:fmlcore:1.20.1-47.3.0"
+	forge1201Implementation "net.minecraftforge:fmlloader:1.20.1-47.3.0"
+	forge1201Implementation "net.minecraftforge:forgespi:6.0.0"
+	forge1201Implementation "net.minecraftforge:eventbus:6.0.5"
+
+	// Fabric 1.20.1 dependencies for backport compilation
+	fabric1201Implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 }
 
 processResources {
@@ -149,7 +180,93 @@ task forgeJar(type: Jar, dependsOn: [classes, clientClasses, forgeClasses]) {
 	exclude 'com/beatlamp/fabric/**'
 }
 
-assemble.dependsOn neoforgeJar, forgeJar
+tasks.named('compileForge1201Java', JavaCompile) {
+	options.release = 17
+	options.compilerArgs << "-Xlint:deprecation"
+	def userHome = System.getProperty("user.home")
+	def loomMcDir = file("${userHome}/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft")
+	def mc1201Jars = fileTree(dir: loomMcDir, include: '**/*1.20.1*.jar')
+	def cp = classpath.filter { file ->
+		!file.name.contains("1.21.1")
+	}
+	classpath = cp + mc1201Jars
+}
+
+task rawForge1201Jar(type: Jar, dependsOn: [forge1201Classes]) {
+	def projectName = project.name
+	archiveFileName = "beatlamp-forge-1.20.1-${project.version}-raw.jar"
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from sourceSets.forge1201.output
+	from ("src/main/resources") {
+		exclude 'fabric.mod.json'
+		exclude 'beatlamp.mixins.json'
+		exclude 'beatlamp.client.mixins.json'
+		exclude 'pack.mcmeta'
+	}
+	from ("src/client/resources") {
+		exclude 'beatlamp.client.mixins.json'
+	}
+	from ("forge-1.20.1/src/main/resources")
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}
+
+task forge1201Jar(dependsOn: [rawForge1201Jar]) {
+	doLast {
+		def userHome = System.getProperty("user.home")
+		def tsrgFile = file("${userHome}/.gradle/caches/forge_gradle/minecraft_user_repo/de/oceanlabs/mcp/mcp_config/1.20.1-20230612.114412/srg_to_official_1.20.1.tsrg")
+		def inJar = file("${buildDir}/libs/beatlamp-forge-1.20.1-${project.version}-raw.jar")
+		def outJar = file("${buildDir}/libs/beatlamp-forge-1.20.1-${project.version}.jar")
+		def asmFiles = fileTree(dir: "${userHome}/.gradle/caches", include: '**/asm*.jar').files
+		def asmCp = asmFiles.collect { it.absolutePath }.unique().join(File.pathSeparator)
+		def remapperClassDir = file("${buildDir}/remapperClasses")
+		remapperClassDir.mkdirs()
+
+		def pb1 = new ProcessBuilder("javac", "-cp", asmCp, "-d", remapperClassDir.absolutePath, "gradle/tools/SrgRemapper.java")
+		pb1.inheritIO().start().waitFor()
+
+		def mojangJars = fileTree(dir: "${userHome}/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft", include: '**/*1.20.1*.jar').files.findAll { !it.name.contains("sources") && !it.name.contains("intermediary") }
+		def args = ["java", "-cp", "${remapperClassDir.absolutePath}${File.pathSeparator}${asmCp}", "SrgRemapper", tsrgFile.absolutePath, inJar.absolutePath, outJar.absolutePath]
+		mojangJars.each { args.add(it.absolutePath) }
+		def pb2 = new ProcessBuilder(args as String[])
+		pb2.inheritIO().start().waitFor()
+	}
+}
+
+tasks.named('compileFabric1201Java', JavaCompile) {
+	options.release = 17
+	options.compilerArgs << "-Xlint:deprecation"
+	def userHome = System.getProperty("user.home")
+	def loomMcDir = file("${userHome}/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft")
+	def mc1201Jars = fileTree(dir: loomMcDir, include: '**/*1.20.1*.jar')
+	def cp = classpath.filter { file ->
+		!file.name.contains("1.21.1")
+	}
+	classpath = cp + mc1201Jars
+}
+
+task fabric1201Jar(type: Jar, dependsOn: [fabric1201Classes]) {
+	def projectName = project.name
+	archiveFileName = "beatlamp-fabric-1.20.1-${project.version}.jar"
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from sourceSets.fabric1201.output
+	from ("src/main/resources") {
+		exclude 'fabric.mod.json'
+		exclude 'beatlamp.mixins.json'
+		exclude 'beatlamp.client.mixins.json'
+		exclude 'pack.mcmeta'
+	}
+	from ("src/client/resources") {
+		exclude 'beatlamp.client.mixins.json'
+	}
+	from ("fabric-1.20.1/src/main/resources")
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+}
+
+assemble.dependsOn neoforgeJar, forgeJar, forge1201Jar, fabric1201Jar
 
 // configure the maven publication
 publishing {

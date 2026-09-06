@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "com.beatlamp.fabric.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"client": [
+		"SoundEngineMixin",
+		"LevelRendererMixin",
+		"MinecraftMixin",
+		"ItemStackMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}
