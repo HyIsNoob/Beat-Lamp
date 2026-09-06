@@ -74,6 +74,18 @@ public class BeatLampClient {
 
 		Vec3 center = getGroupCenter(blockPos, beatLamp.getManualGroup());
 		BlockPos source = beatLamp.getSource();
+
+		if (!JukeboxAudioTracker.isAnyJukeboxPlayingNear(center, source)) {
+			beatLamp.smoothLevel = 0.0F;
+			beatLamp.pulse = 0.0F;
+			beatLamp.beatPulse = 0.0F;
+			beatLamp.barValue = 0.0F;
+			beatLamp.spectrumLevel = 0.0F;
+			beatLamp.peakLevel = 0.0F;
+			beatLamp.displayColor = 0;
+			return;
+		}
+
 		float sensitivity = beatLamp.getSensitivity();
 		float speed = beatLamp.getSpeed() * DmxMasterTracker.getMasterSpeedNear(blockPos);
 
@@ -150,6 +162,12 @@ public class BeatLampClient {
 
 		Vec3 center = getGroupCenter(blockPos, light.getManualGroup());
 		BlockPos source = light.getSource();
+
+		if (!JukeboxAudioTracker.isAnyJukeboxPlayingNear(center, source)) {
+			light.beamIntensity = 0.0F;
+			return;
+		}
+
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
 		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
 		light.beamIntensity = Mth.clamp(Math.max(audioLevel, beatPulse * 0.85F), 0.0F, 1.0F);
@@ -195,6 +213,12 @@ public class BeatLampClient {
 
 		Vec3 center = getGroupCenter(blockPos, laser.getManualGroup());
 		BlockPos source = laser.getSource();
+
+		if (!JukeboxAudioTracker.isAnyJukeboxPlayingNear(center, source)) {
+			laser.beamIntensity = 0.0F;
+			return;
+		}
+
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
 		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
 		laser.beamIntensity = Mth.clamp(Math.max(audioLevel, beatPulse * 0.9F), 0.0F, 1.0F);
@@ -215,6 +239,13 @@ public class BeatLampClient {
 
 		Vec3 center = getGroupCenter(blockPos, fountain.getManualGroup());
 		BlockPos source = fountain.getSource();
+
+		if (!JukeboxAudioTracker.isAnyJukeboxPlayingNear(center, source)) {
+			fountain.fountainEnergy = 0.0F;
+			fountain.fountainImpact = 0.0F;
+			return;
+		}
+
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
 		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
 		float energy = Mth.clamp(Math.max(audioLevel, beatPulse * 0.85F), 0.0F, 1.0F);
@@ -385,6 +416,12 @@ public class BeatLampClient {
 		BlockPos blockPos = emitter.getBlockPos();
 		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = emitter.getSource();
+
+		if (!JukeboxAudioTracker.isAnyJukeboxPlayingNear(center, source)) {
+			int finalSignal = emitter.isInverted() ? 15 : 0;
+			emitter.setSignal(finalSignal, level.getGameTime());
+			return;
+		}
 
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
 		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);

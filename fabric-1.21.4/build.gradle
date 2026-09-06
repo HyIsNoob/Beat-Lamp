@@ -60,12 +60,12 @@ task neoforgeJar(type: Jar, dependsOn: [classes, neoforgeClasses]) {
 	from sourceSets.neoforge.output
 	from ("src/main/resources") {
 		exclude 'fabric.mod.json'
-		exclude 'beatlamp.client.mixins.json'
 	}
 	from("LICENSE") {
 		rename { "${it}_$projectName"}
 	}
 	exclude 'com/beatlamp/fabric/**'
+	exclude 'fabric.mod.json'
 }
 
 assemble.dependsOn neoforgeJar

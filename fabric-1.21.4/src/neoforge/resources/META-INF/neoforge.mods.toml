@@ -30,3 +30,6 @@ side="BOTH"
 [[mixins]]
 config="beatlamp.mixins.json"
 
+[[mixins]]
+config="beatlamp.client.mixins.json"
+

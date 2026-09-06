@@ -20,6 +20,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.phys.Vec3;
 
 import com.mojang.blaze3d.audio.OggAudioStream;
@@ -35,12 +37,15 @@ public final class JukeboxAudioTracker {
 	private static final class ActiveSong {
 		final Vec3 position;
 		final AudioAnalyzer analyzer;
+		final SoundInstance soundInstance;
 		volatile boolean running = true;
 		Thread thread;
+		int ticksAlive;
 
-		ActiveSong(Vec3 position, AudioAnalyzer analyzer, Thread thread) {
+		ActiveSong(Vec3 position, AudioAnalyzer analyzer, SoundInstance soundInstance, Thread thread) {
 			this.position = position;
 			this.analyzer = analyzer;
+			this.soundInstance = soundInstance;
 			this.thread = thread;
 		}
 
@@ -52,7 +57,7 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static void onSoundPlayed(SoundInstance soundInstance) {
-		if (soundInstance.getSource() != SoundSource.RECORDS) {
+		if (soundInstance == null || soundInstance.getSource() != SoundSource.RECORDS) {
 			return;
 		}
 
@@ -76,10 +81,14 @@ public final class JukeboxAudioTracker {
 			sound = next.getSound(RandomSource.create());
 		}
 
-		startSong(BlockPos.containing(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ()), sound.getPath(), minecraft);
+		startSong(BlockPos.containing(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ()), sound.getPath(), minecraft, soundInstance);
 	}
 
-	private static void startSong(BlockPos blockPos, ResourceLocation path, Minecraft minecraft) {
+	private static void startSong(BlockPos blockPos, ResourceLocation path, Minecraft minecraft, SoundInstance soundInstance) {
+		ActiveSong existing = ACTIVE_SONGS.get(blockPos);
+		if (existing != null && existing.soundInstance == soundInstance && existing.running) {
+			return;
+		}
 		stopSong(blockPos);
 
 		try {
@@ -90,7 +99,7 @@ public final class JukeboxAudioTracker {
 			int channels = format.getChannels();
 			BeatLamp.LOGGER.info("Beat Lamp tracking jukebox at {} -> {} ({}Hz, {}ch)", blockPos.toShortString(), path, format.getSampleRate(), channels);
 
-			ActiveSong song = new ActiveSong(Vec3.atCenterOf(blockPos), analyzer, null);
+			ActiveSong song = new ActiveSong(Vec3.atCenterOf(blockPos), analyzer, soundInstance, null);
 			Thread thread = new Thread(() -> {
 				decodeLoop(minecraft, audioStream, analyzer, channels, song);
 				if (song.running) {
@@ -108,11 +117,18 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static void onSoundStopped(SoundInstance soundInstance) {
-		if (soundInstance.getSource() != SoundSource.RECORDS) {
+		if (soundInstance == null || soundInstance.getSource() != SoundSource.RECORDS) {
 			return;
 		}
 
-		stopSong(BlockPos.containing(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ()));
+		BlockPos pos = BlockPos.containing(soundInstance.getX(), soundInstance.getY(), soundInstance.getZ());
+		stopSong(pos);
+
+		for (Map.Entry<BlockPos, ActiveSong> entry : ACTIVE_SONGS.entrySet()) {
+			if (entry.getValue().soundInstance == soundInstance) {
+				stopSong(entry.getKey());
+			}
+		}
 	}
 
 	private static void stopSong(BlockPos blockPos) {
@@ -133,6 +149,27 @@ public final class JukeboxAudioTracker {
 			}
 		}
 		ACTIVE_SONGS.clear();
+	}
+
+	public static boolean isJukeboxPlayingAt(BlockPos pos) {
+		return ACTIVE_SONGS.containsKey(pos);
+	}
+
+	public static boolean isAnyJukeboxPlayingNear(Vec3 position) {
+		for (ActiveSong song : ACTIVE_SONGS.values()) {
+			if (song.position.distanceTo(position) < AUDIBLE_RADIUS) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static boolean isAnyJukeboxPlayingNear(Vec3 position, BlockPos source) {
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			return song != null && song.position.distanceTo(position) < AUDIBLE_RADIUS;
+		}
+		return isAnyJukeboxPlayingNear(position);
 	}
 
 	private static void decodeLoop(Minecraft minecraft, OggAudioStream audioStream, AudioAnalyzer analyzer, int channels, ActiveSong song) {
@@ -218,6 +255,28 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static void clientTick() {
+		Minecraft mc = Minecraft.getInstance();
+
+		for (Map.Entry<BlockPos, ActiveSong> entry : ACTIVE_SONGS.entrySet()) {
+			BlockPos pos = entry.getKey();
+			ActiveSong song = entry.getValue();
+
+			song.ticksAlive++;
+
+			if (song.ticksAlive > 10 && song.soundInstance != null && mc.getSoundManager() != null && !mc.getSoundManager().isActive(song.soundInstance)) {
+				stopSong(pos);
+				continue;
+			}
+
+			if (mc.level != null && mc.level.hasChunkAt(pos)) {
+				BlockState state = mc.level.getBlockState(pos);
+				if (!state.hasProperty(BlockStateProperties.HAS_RECORD) || !state.getValue(BlockStateProperties.HAS_RECORD)) {
+					stopSong(pos);
+					continue;
+				}
+			}
+		}
+
 		float maxBeat = 0.0F;
 
 		for (ActiveSong song : ACTIVE_SONGS.values()) {
