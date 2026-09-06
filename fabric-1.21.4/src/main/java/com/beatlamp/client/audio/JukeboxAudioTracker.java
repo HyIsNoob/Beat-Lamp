@@ -148,6 +148,7 @@ public final class JukeboxAudioTracker {
 			}
 		}
 		ACTIVE_SONGS.clear();
+		DreamDisplaysAudioBridge.clear();
 	}
 
 	public static boolean isJukeboxPlayingAt(BlockPos pos) {
@@ -160,13 +161,22 @@ public final class JukeboxAudioTracker {
 				return true;
 			}
 		}
+		if (DreamDisplaysAudioBridge.isAnyDisplayPlayingNear(position)) {
+			return true;
+		}
 		return false;
 	}
 
 	public static boolean isAnyJukeboxPlayingNear(Vec3 position, BlockPos source) {
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song != null && song.position.distanceTo(position) < AUDIBLE_RADIUS;
+			if (song != null && song.position.distanceTo(position) < AUDIBLE_RADIUS) {
+				return true;
+			}
+			if (DreamDisplaysAudioBridge.isDisplayPlayingNear(position, source)) {
+				return true;
+			}
+			return false;
 		}
 		return isAnyJukeboxPlayingNear(position);
 	}
@@ -326,30 +336,36 @@ public final class JukeboxAudioTracker {
 			}
 		}
 
-		effectTime += 1.0F + 1.5F * maxBeat;
+		if (maxBeat > 0.0F) {
+			effectTime += 1.0F + 1.5F * maxBeat;
+		}
+
+		DreamDisplaysAudioBridge.clientTick();
 	}
 
 	public static float getImpactPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.impactPulse;
-		}
-
-		float best = 0.0F;
-
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			float impact = song.impactPulse * falloff;
-			if (impact > best) {
-				best = impact;
+			if (song != null) {
+				best = song.impactPulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				float impact = song.impactPulse * falloff;
+				if (impact > best) {
+					best = impact;
+				}
 			}
 		}
 
-		return best;
+		float ddImpact = DreamDisplaysAudioBridge.getImpactPulseAt(position, source);
+		return Math.max(best, ddImpact);
 	}
 
 	public static float getEffectTime() {
-		return effectTime;
+		return effectTime + DreamDisplaysAudioBridge.getEffectTime();
 	}
 
 	public static float getLevelAt(Vec3 position) {
@@ -357,70 +373,78 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static float getRawLevelAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.analyzer.getLevel();
+			if (song != null) {
+				best = song.analyzer.getLevel();
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float level = song.analyzer.getLevel() * falloff;
+				if (level > best) {
+					best = level;
+				}
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float level = song.analyzer.getLevel() * falloff;
-			if (level > best) {
-				best = level;
-			}
-		}
-
-		return best;
+		float ddRaw = DreamDisplaysAudioBridge.getRawLevelAt(position, source);
+		return Math.max(best, ddRaw);
 	}
 
 	public static float getGridPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.analyzer.getGridPulse();
+			if (song != null) {
+				best = song.analyzer.getGridPulse();
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float grid = song.analyzer.getGridPulse() * falloff;
+				if (grid > best) {
+					best = grid;
+				}
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float grid = song.analyzer.getGridPulse() * falloff;
-			if (grid > best) {
-				best = grid;
-			}
-		}
-
-		return best;
+		float ddGrid = DreamDisplaysAudioBridge.getGridPulseAt(position, source);
+		return Math.max(best, ddGrid);
 	}
 
 	public static float getLevelAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			if (song == null) return 0.0F;
-			return Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F);
+			if (song != null) {
+				best = Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F);
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float level = Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F) * falloff;
+				if (level > best) {
+					best = level;
+				}
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float level = Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F) * falloff;
-			if (level > best) {
-				best = level;
-			}
-		}
-
-		return best;
+		float ddLevel = DreamDisplaysAudioBridge.getLevelAt(position, source);
+		return Math.max(best, ddLevel);
 	}
 
 	public static float getBeatPulseAt(Vec3 position) {
@@ -428,119 +452,130 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static float getBeatPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.beatPulse;
+			if (song != null) {
+				best = song.beatPulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float pulse = song.beatPulse * falloff;
+				if (pulse > best) {
+					best = pulse;
+				}
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float pulse = song.beatPulse * falloff;
-			if (pulse > best) {
-				best = pulse;
-			}
-		}
-
-		return best;
+		float ddBeat = DreamDisplaysAudioBridge.getBeatPulseAt(position, source);
+		return Math.max(best, ddBeat);
 	}
 
 	public static float getKickPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.kickPulse;
+			if (song != null) {
+				best = song.kickPulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				float pulse = song.kickPulse * falloff;
+				if (pulse > best) best = pulse;
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			float pulse = song.kickPulse * falloff;
-			if (pulse > best) best = pulse;
-		}
-		return best;
+		float ddKick = DreamDisplaysAudioBridge.getKickPulseAt(position, source);
+		return Math.max(best, ddKick);
 	}
 
 	public static float getSnarePulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.snarePulse;
+			if (song != null) {
+				best = song.snarePulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				float pulse = song.snarePulse * falloff;
+				if (pulse > best) best = pulse;
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			float pulse = song.snarePulse * falloff;
-			if (pulse > best) best = pulse;
-		}
-		return best;
+		float ddSnare = DreamDisplaysAudioBridge.getSnarePulseAt(position, source);
+		return Math.max(best, ddSnare);
 	}
 
 	public static float getHihatPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.hihatPulse;
+			if (song != null) {
+				best = song.hihatPulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				float pulse = song.hihatPulse * falloff;
+				if (pulse > best) best = pulse;
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			float pulse = song.hihatPulse * falloff;
-			if (pulse > best) best = pulse;
-		}
-		return best;
+		float ddHihat = DreamDisplaysAudioBridge.getHihatPulseAt(position, source);
+		return Math.max(best, ddHihat);
 	}
 
 	public static float getBandAt(Vec3 position, int band) {
-		float best = -1.0F;
-		ActiveSong bestSong = null;
-		float bestFalloff = 0.0F;
-
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float level = song.analyzer.getLevel() * falloff;
-			if (level > best) {
-				best = level;
-				bestSong = song;
-				bestFalloff = falloff;
-			}
-		}
-
-		if (bestSong == null) {
-			return 0.0F;
-		}
-
-		float[] bands = bestSong.analyzer.getBands();
-		if (band < 0 || band >= bands.length) {
-			return 0.0F;
-		}
-
-		return bands[band] * bestFalloff;
+		return getBandAt(position, band, null);
 	}
 
 	public static float getBandAt(Vec3 position, int band, BlockPos source) {
-		if (source == null) {
-			return getBandAt(position, band);
+		float best = 0.0F;
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			if (song != null) {
+				float[] bands = song.analyzer.getBands();
+				if (band >= 0 && band < bands.length) {
+					best = bands[band];
+				}
+			}
+		} else {
+			ActiveSong bestSong = null;
+			float bestFalloff = 0.0F;
+			float bestLevel = -1.0F;
+
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float level = song.analyzer.getLevel() * falloff;
+				if (level > bestLevel) {
+					bestLevel = level;
+					bestSong = song;
+					bestFalloff = falloff;
+				}
+			}
+
+			if (bestSong != null) {
+				float[] bands = bestSong.analyzer.getBands();
+				if (band >= 0 && band < bands.length) {
+					best = bands[band] * bestFalloff;
+				}
+			}
 		}
 
-		ActiveSong song = ACTIVE_SONGS.get(source);
-		if (song == null) {
-			return 0.0F;
-		}
-
-		float[] bands = song.analyzer.getBands();
-		if (band < 0 || band >= bands.length) {
-			return 0.0F;
-		}
-
-		return bands[band];
+		float ddBand = DreamDisplaysAudioBridge.getBandAt(position, band, source);
+		return Math.max(best, ddBand);
 	}
 
 	private static float falloff(double distance) {

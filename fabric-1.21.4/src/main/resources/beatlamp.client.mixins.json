@@ -2,8 +2,10 @@
 	"required": true,
 	"package": "com.beatlamp.client.mixin",
 	"compatibilityLevel": "JAVA_21",
+	"plugin": "com.beatlamp.client.mixin.BeatLampClientMixinPlugin",
 	"client": [
-		"SoundEngineMixin"
+		"SoundEngineMixin",
+		"dreamdisplays.DreamDisplaysAudioSinkMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
