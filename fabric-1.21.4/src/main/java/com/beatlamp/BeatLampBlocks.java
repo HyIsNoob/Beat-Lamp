@@ -11,6 +11,9 @@ import com.beatlamp.block.StageJukeboxBlock;
 import com.beatlamp.block.StageLightBlock;
 import com.beatlamp.block.StageSpeakerBlock;
 
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 
@@ -26,9 +29,14 @@ public class BeatLampBlocks {
 	public static DjDeckBlock DJ_DECK;
 	public static StageSpeakerBlock STAGE_SPEAKER;
 
+	private static BlockBehaviour.Properties blockProps(String name) {
+		return BlockBehaviour.Properties.of()
+			.setId(ResourceKey.create(Registries.BLOCK, ResourceLocation.fromNamespaceAndPath(BeatLamp.MOD_ID, name)));
+	}
+
 	public static BeatLampBlock createBeatLamp() {
 		return new BeatLampBlock(
-			BlockBehaviour.Properties.of()
+			blockProps("beat_lamp")
 				.strength(0.3F)
 				.sound(SoundType.GLASS)
 				.lightLevel(state -> state.getValue(BeatLampBlock.LIT) ? 15 : 0)
@@ -41,34 +49,34 @@ public class BeatLampBlocks {
 	}
 
 	public static StageLightBlock createStageLight() {
-		return new StageLightBlock(BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.METAL));
+		return new StageLightBlock(blockProps("stage_light").strength(0.5F).sound(SoundType.METAL));
 	}
 
 	public static FountainBlock createFountain() {
-		return new FountainBlock(BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.STONE));
+		return new FountainBlock(blockProps("fountain").strength(0.5F).sound(SoundType.STONE));
 	}
 
 	public static LaserProjectorBlock createLaserProjector() {
-		return new LaserProjectorBlock(BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.METAL));
+		return new LaserProjectorBlock(blockProps("laser_projector").strength(0.5F).sound(SoundType.METAL));
 	}
 
 	public static FogGeneratorBlock createFogGenerator() {
-		return new FogGeneratorBlock(BlockBehaviour.Properties.of().strength(0.5F).sound(SoundType.STONE));
+		return new FogGeneratorBlock(blockProps("fog_generator").strength(0.5F).sound(SoundType.STONE));
 	}
 
 	public static StageJukeboxBlock createStageJukebox() {
-		return new StageJukeboxBlock(BlockBehaviour.Properties.of().strength(2.0F, 6.0F).sound(SoundType.WOOD));
+		return new StageJukeboxBlock(blockProps("stage_jukebox").strength(2.0F, 6.0F).sound(SoundType.WOOD));
 	}
 
 	public static DmxConsoleBlock createDmxConsole() {
-		return new DmxConsoleBlock(BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.METAL));
+		return new DmxConsoleBlock(blockProps("dmx_console").strength(1.5F).sound(SoundType.METAL));
 	}
 
 	public static DjDeckBlock createDjDeck() {
-		return new DjDeckBlock(BlockBehaviour.Properties.of().strength(1.2F).sound(SoundType.METAL));
+		return new DjDeckBlock(blockProps("dj_deck").strength(1.2F).sound(SoundType.METAL));
 	}
 
 	public static StageSpeakerBlock createStageSpeaker() {
-		return new StageSpeakerBlock(BlockBehaviour.Properties.of().strength(1.5F).sound(SoundType.WOOD));
+		return new StageSpeakerBlock(blockProps("stage_speaker").strength(1.5F).sound(SoundType.WOOD));
 	}
 }

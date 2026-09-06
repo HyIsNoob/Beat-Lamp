@@ -75,6 +75,9 @@ public class BeatEmitterBlock extends BaseEntityBlock {
 	}
 
 	public static Properties emitterProperties() {
-		return Properties.of().strength(0.8F).sound(SoundType.WOOD);
+		return Properties.of()
+			.setId(net.minecraft.resources.ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(com.beatlamp.BeatLamp.MOD_ID, "beat_emitter")))
+			.strength(0.8F)
+			.sound(SoundType.WOOD);
 	}
 }
