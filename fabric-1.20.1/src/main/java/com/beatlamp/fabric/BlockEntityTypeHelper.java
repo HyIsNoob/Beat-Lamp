@@ -24,8 +24,17 @@ public final class BlockEntityTypeHelper {
 				supplierClass.getClassLoader(),
 				new Class<?>[] { supplierClass },
 				(proxy, method, args) -> {
-					if ("create".equals(method.getName())) {
+					if (args != null && args.length == 2 && args[0] instanceof BlockPos && args[1] instanceof BlockState) {
 						return factory.create((BlockPos) args[0], (BlockState) args[1]);
+					}
+					if ("toString".equals(method.getName())) {
+						return "BlockEntitySupplierProxy@" + Integer.toHexString(System.identityHashCode(proxy));
+					}
+					if ("equals".equals(method.getName())) {
+						return proxy == (args != null && args.length == 1 ? args[0] : null);
+					}
+					if ("hashCode".equals(method.getName())) {
+						return System.identityHashCode(proxy);
 					}
 					return null;
 				}

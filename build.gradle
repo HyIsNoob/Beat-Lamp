@@ -266,7 +266,14 @@ task fabric1201Jar(type: Jar, dependsOn: [fabric1201Classes]) {
 	}
 }
 
-assemble.dependsOn neoforgeJar, forgeJar, forge1201Jar, fabric1201Jar
+assemble.dependsOn neoforgeJar, forgeJar, forge1201Jar, fabric1201Jar, ':fabric-1.21.4:assemble'
+
+tasks.register('copy1214Jars', Copy) {
+	dependsOn ':fabric-1.21.4:assemble'
+	from project(':fabric-1.21.4').layout.buildDirectory.dir('libs')
+	into layout.buildDirectory.dir('libs')
+}
+assemble.dependsOn copy1214Jars
 
 // configure the maven publication
 publishing {

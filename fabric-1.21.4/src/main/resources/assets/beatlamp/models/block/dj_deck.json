@@ -1,0 +1,12 @@
+{
+  "parent": "minecraft:block/cube",
+  "textures": {
+    "particle": "beatlamp:block/dj_deck_top",
+    "north": "beatlamp:block/dj_deck_front",
+    "south": "beatlamp:block/dj_deck_side",
+    "east": "beatlamp:block/dj_deck_side",
+    "west": "beatlamp:block/dj_deck_side",
+    "up": "beatlamp:block/dj_deck_top",
+    "down": "beatlamp:block/dj_deck_bottom"
+  }
+}

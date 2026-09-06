@@ -1,0 +1,8 @@
+{
+	"parent": "minecraft:block/cube_bottom_top",
+	"textures": {
+		"top": "beatlamp:block/fog_generator_top",
+		"bottom": "beatlamp:block/fog_generator_bottom",
+		"side": "beatlamp:block/fog_generator_side"
+	}
+}

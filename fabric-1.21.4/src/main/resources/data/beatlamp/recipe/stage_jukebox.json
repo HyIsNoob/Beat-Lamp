@@ -1,0 +1,22 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		{
+			"item": "minecraft:jukebox"
+		},
+		{
+			"item": "minecraft:obsidian"
+		},
+		{
+			"item": "minecraft:amethyst_shard"
+		},
+		{
+			"item": "minecraft:redstone"
+		}
+	],
+	"result": {
+		"count": 1,
+		"id": "beatlamp:stage_jukebox"
+	}
+}

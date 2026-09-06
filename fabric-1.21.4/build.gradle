@@ -1,0 +1,72 @@
+plugins {
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
+}
+
+repositories {
+	maven {
+		name = 'Fabric'
+		url = 'https://maven.fabricmc.net/'
+	}
+	maven {
+		name = 'NeoForged'
+		url = 'https://maven.neoforged.net/releases'
+	}
+	mavenCentral()
+}
+
+sourceSets {
+	neoforge {
+		java {
+			srcDirs = ['src/neoforge/java']
+		}
+		resources {
+			srcDirs = ['src/neoforge/resources']
+		}
+		compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+		runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:1.21.4"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:0.16.10"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:0.119.4+1.21.4"
+
+	neoforgeImplementation "net.neoforged:neoforge:21.4.157:universal"
+	neoforgeImplementation "net.neoforged.fancymodloader:loader:6.0.18"
+	neoforgeImplementation "net.neoforged:bus:8.0.5"
+	neoforgeImplementation sourceSets.main.output
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 21
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+remapJar {
+	archiveFileName = "beatlamp-fabric-1.21.4-${project.version}.jar"
+}
+
+task neoforgeJar(type: Jar, dependsOn: [classes, neoforgeClasses]) {
+	def projectName = project.name
+	archiveFileName = "beatlamp-neoforge-1.21.4-${project.version}.jar"
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	from sourceSets.main.output
+	from sourceSets.neoforge.output
+	from ("src/main/resources") {
+		exclude 'fabric.mod.json'
+		exclude 'beatlamp.client.mixins.json'
+	}
+	from("LICENSE") {
+		rename { "${it}_$projectName"}
+	}
+	exclude 'com/beatlamp/fabric/**'
+}
+
+assemble.dependsOn neoforgeJar
+

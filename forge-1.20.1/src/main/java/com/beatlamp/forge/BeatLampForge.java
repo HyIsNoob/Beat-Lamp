@@ -135,6 +135,43 @@ public class BeatLampForge {
 		ITEMS.register(modEventBus);
 		CREATIVE_TABS.register(modEventBus);
 
+		modEventBus.addListener((net.minecraftforge.registries.RegisterEvent event) -> {
+			if (event.getRegistryKey().equals(net.minecraft.core.registries.Registries.BLOCK)) {
+				BeatLampBlocks.BEAT_LAMP = BEAT_LAMP_BLOCK.get();
+				BeatLampBlocks.BEAT_EMITTER = BEAT_EMITTER_BLOCK.get();
+				BeatLampBlocks.STAGE_LIGHT = STAGE_LIGHT_BLOCK.get();
+				BeatLampBlocks.FOUNTAIN = FOUNTAIN_BLOCK.get();
+				BeatLampBlocks.LASER_PROJECTOR = LASER_PROJECTOR_BLOCK.get();
+				BeatLampBlocks.FOG_GENERATOR = FOG_GENERATOR_BLOCK.get();
+				BeatLampBlocks.STAGE_JUKEBOX = STAGE_JUKEBOX_BLOCK.get();
+				BeatLampBlocks.DMX_CONSOLE = DMX_CONSOLE_BLOCK.get();
+				BeatLampBlocks.DJ_DECK = DJ_DECK_BLOCK.get();
+				BeatLampBlocks.STAGE_SPEAKER = STAGE_SPEAKER_BLOCK.get();
+			} else if (event.getRegistryKey().equals(net.minecraft.core.registries.Registries.BLOCK_ENTITY_TYPE)) {
+				BeatLampBlockEntities.BEAT_LAMP = BEAT_LAMP_BE.get();
+				BeatLampBlockEntities.BEAT_EMITTER = BEAT_EMITTER_BE.get();
+				BeatLampBlockEntities.STAGE_LIGHT = STAGE_LIGHT_BE.get();
+				BeatLampBlockEntities.FOUNTAIN = FOUNTAIN_BE.get();
+				BeatLampBlockEntities.LASER_PROJECTOR = LASER_PROJECTOR_BE.get();
+				BeatLampBlockEntities.FOG_GENERATOR = FOG_GENERATOR_BE.get();
+				BeatLampBlockEntities.STAGE_JUKEBOX = STAGE_JUKEBOX_BE.get();
+				BeatLampBlockEntities.DMX_CONSOLE = DMX_CONSOLE_BE.get();
+			} else if (event.getRegistryKey().equals(net.minecraft.core.registries.Registries.ITEM)) {
+				BeatLampItems.BEAT_LAMP = BEAT_LAMP_ITEM.get();
+				BeatLampItems.BEAT_EMITTER = BEAT_EMITTER_ITEM.get();
+				BeatLampItems.STAGE_LIGHT = STAGE_LIGHT_ITEM.get();
+				BeatLampItems.FOUNTAIN = FOUNTAIN_ITEM.get();
+				BeatLampItems.LASER_PROJECTOR = LASER_PROJECTOR_ITEM.get();
+				BeatLampItems.FOG_GENERATOR = FOG_GENERATOR_ITEM.get();
+				BeatLampItems.STAGE_JUKEBOX = STAGE_JUKEBOX_ITEM.get();
+				BeatLampItems.DMX_CONSOLE = DMX_CONSOLE_ITEM.get();
+				BeatLampItems.DJ_DECK = DJ_DECK_ITEM.get();
+				BeatLampItems.STAGE_SPEAKER = STAGE_SPEAKER_ITEM.get();
+				BeatLampItems.LINKER = LINKER_ITEM.get();
+				BeatLampItems.CONTROLLER = CONTROLLER_ITEM.get();
+			}
+		});
+
 		modEventBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) -> {
 			event.enqueueWork(() -> {
 				BeatLampBlocks.BEAT_LAMP = BEAT_LAMP_BLOCK.get();

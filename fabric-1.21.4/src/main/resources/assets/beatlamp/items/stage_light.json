@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "beatlamp:item/stage_light"
+  }
+}

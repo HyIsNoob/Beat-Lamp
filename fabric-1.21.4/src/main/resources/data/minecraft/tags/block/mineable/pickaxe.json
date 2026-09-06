@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    "beatlamp:beat_lamp",
+    "beatlamp:stage_light",
+    "beatlamp:fountain",
+    "beatlamp:laser_projector",
+    "beatlamp:fog_generator",
+    "beatlamp:stage_jukebox",
+    "beatlamp:dmx_console",
+    "beatlamp:dj_deck",
+    "beatlamp:stage_speaker"
+  ]
+}
