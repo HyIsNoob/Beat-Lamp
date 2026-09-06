@@ -22,12 +22,15 @@ public final class DreamDisplaysAudioBridge {
 
 	private static boolean initialized = false;
 	private static boolean available = false;
+	private static Method screensMethod;
+	private static Object registryInstance;
 	private static Field screensField;
 	private static Method getDistanceMethod;
 	private static Method getPosMethod;
 	private static Method isInScreenMethod;
 	private static Method isPausedMethod;
 	private static Method getDimensionMethod;
+	private static volatile boolean firstChunkLogged = false;
 
 	private DreamDisplaysAudioBridge() {
 	}
@@ -59,11 +62,30 @@ public final class DreamDisplaysAudioBridge {
 
 		try {
 			Class<?> registryClass = Class.forName("com.dreamdisplays.platform.client.displays.DisplayRegistry");
-			screensField = registryClass.getField("screens");
+			try {
+				screensMethod = registryClass.getMethod("getScreens");
+				Field instanceField = registryClass.getField("INSTANCE");
+				registryInstance = instanceField.get(null);
+			} catch (Throwable t) {
+				try {
+					screensField = registryClass.getDeclaredField("screens");
+					screensField.setAccessible(true);
+				} catch (Throwable t2) {
+					BeatLamp.LOGGER.warn("Could not reflect DisplayRegistry.screens: {}", t2.getMessage());
+				}
+			}
 
 			Class<?> screenClass = Class.forName("com.dreamdisplays.platform.client.displays.DisplayScreen");
-			getDistanceMethod = screenClass.getMethod("getDistanceToScreen", BlockPos.class);
-			isInScreenMethod = screenClass.getMethod("isInScreen", BlockPos.class);
+			try {
+				getDistanceMethod = screenClass.getMethod("getDistanceToScreen", BlockPos.class);
+			} catch (Throwable t) {
+				BeatLamp.LOGGER.warn("Could not find getDistanceToScreen: {}", t.getMessage());
+			}
+
+			try {
+				isInScreenMethod = screenClass.getMethod("isInScreen", BlockPos.class);
+			} catch (Throwable ignored) {
+			}
 
 			try {
 				getPosMethod = screenClass.getMethod("getPos");
@@ -92,7 +114,7 @@ public final class DreamDisplaysAudioBridge {
 			BeatLamp.LOGGER.info("Beat Lamp successfully hooked DreamDisplays client integration!");
 		} catch (Throwable t) {
 			available = false;
-			BeatLamp.LOGGER.debug("DreamDisplays not detected or reflection hook unavailable: {}", t.getMessage());
+			BeatLamp.LOGGER.warn("DreamDisplays client integration reflection failed: {}", t.getMessage());
 		}
 	}
 
@@ -104,14 +126,22 @@ public final class DreamDisplaysAudioBridge {
 	}
 
 	private static Map<UUID, ?> getScreensMap() {
-		if (!isAvailable() || screensField == null) {
+		if (!isAvailable()) {
 			return null;
 		}
-		try {
-			return (Map<UUID, ?>) screensField.get(null);
-		} catch (Throwable t) {
-			return null;
+		if (screensMethod != null && registryInstance != null) {
+			try {
+				return (Map<UUID, ?>) screensMethod.invoke(registryInstance);
+			} catch (Throwable ignored) {
+			}
 		}
+		if (screensField != null) {
+			try {
+				return (Map<UUID, ?>) screensField.get(null);
+			} catch (Throwable ignored) {
+			}
+		}
+		return null;
 	}
 
 	private static Object getScreen(UUID uuid) {
@@ -210,6 +240,11 @@ public final class DreamDisplaysAudioBridge {
 		display.lastChunkTimeMs = System.currentTimeMillis();
 		display.playing = true;
 		display.analyzer.push(mono, frames);
+
+		if (!firstChunkLogged) {
+			firstChunkLogged = true;
+			BeatLamp.LOGGER.info("Beat Lamp received first DreamDisplays audio chunk! (uuid={}, frames={})", uuid, frames);
+		}
 	}
 
 	public static void onAudioStopped(String debugLabel) {
@@ -274,11 +309,10 @@ public final class DreamDisplaysAudioBridge {
 			ActiveDisplay display = entry.getValue();
 
 			Object screen = getScreen(uuid);
-			boolean screenExists = screen != null;
-			boolean screenPaused = screenExists && isScreenPaused(screen);
+			boolean screenPaused = screen != null && isScreenPaused(screen);
 			boolean timedOut = (now - display.lastChunkTimeMs > 250);
 
-			if (!screenExists || screenPaused || timedOut || !display.playing) {
+			if (screenPaused || timedOut || !display.playing) {
 				display.beatPulse *= 0.70F;
 				display.kickPulse *= 0.70F;
 				display.snarePulse *= 0.70F;
@@ -288,7 +322,7 @@ public final class DreamDisplaysAudioBridge {
 					display.beatPulse = 0.0F;
 				}
 
-				if (!screenExists || now - display.lastChunkTimeMs > 1500) {
+				if (now - display.lastChunkTimeMs > 1500) {
 					it.remove();
 				}
 				continue;
@@ -377,8 +411,12 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (getDistanceToScreen(screen, pos) < AUDIBLE_RADIUS) {
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (getDistanceToScreen(screen, pos) < AUDIBLE_RADIUS) {
+					return true;
+				}
+			} else {
 				return true;
 			}
 		}
@@ -392,10 +430,14 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
-			if (getDistanceToScreen(screen, pos) < AUDIBLE_RADIUS) {
-				return true;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
+				if (getDistanceToScreen(screen, pos) < AUDIBLE_RADIUS) {
+					return true;
+				}
+			} else {
+				if (source == null) return true;
 			}
 		}
 		return false;
@@ -409,12 +451,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float level = Math.max(display.analyzer.getLevel(), display.analyzer.getGridPulse() * 0.28F) * falloff;
 			if (level > best) best = level;
@@ -431,12 +478,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float level = display.analyzer.getLevel() * falloff;
 			if (level > best) best = level;
@@ -453,12 +505,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float grid = display.analyzer.getGridPulse() * falloff;
 			if (grid > best) best = grid;
@@ -475,12 +532,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float pulse = display.beatPulse * falloff;
 			if (pulse > best) best = pulse;
@@ -497,12 +559,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float pulse = display.kickPulse * falloff;
 			if (pulse > best) best = pulse;
@@ -519,12 +586,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float pulse = display.snarePulse * falloff;
 			if (pulse > best) best = pulse;
@@ -541,12 +613,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float pulse = display.hihatPulse * falloff;
 			if (pulse > best) best = pulse;
@@ -563,12 +640,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float pulse = display.impactPulse * falloff;
 			if (pulse > best) best = pulse;
@@ -587,12 +669,17 @@ public final class DreamDisplaysAudioBridge {
 		for (ActiveDisplay display : ACTIVE_DISPLAYS.values()) {
 			if (!display.playing || System.currentTimeMillis() - display.lastChunkTimeMs > 250) continue;
 			Object screen = getScreen(display.uuid);
-			if (screen == null || !checkDimension(screen)) continue;
-			if (source != null && !matchesSource(screen, source)) continue;
+			float falloff = 1.0F;
+			if (screen != null) {
+				if (!checkDimension(screen)) continue;
+				if (source != null && !matchesSource(screen, source)) continue;
 
-			double dist = getDistanceToScreen(screen, pos);
-			float falloff = falloff(dist);
-			if (falloff <= 0.0F) continue;
+				double dist = getDistanceToScreen(screen, pos);
+				falloff = falloff(dist);
+				if (falloff <= 0.0F) continue;
+			} else if (source != null) {
+				continue;
+			}
 
 			float level = display.analyzer.getLevel() * falloff;
 			if (level > best) {

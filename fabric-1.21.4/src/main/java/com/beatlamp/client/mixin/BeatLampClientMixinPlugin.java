@@ -8,24 +8,6 @@ import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 public class BeatLampClientMixinPlugin implements IMixinConfigPlugin {
-	private static final boolean DREAM_DISPLAYS_PRESENT;
-
-	static {
-		boolean present = false;
-		try {
-			Class.forName("com.dreamdisplays.media.player.pipeline.AudioSink", false, Thread.currentThread().getContextClassLoader());
-			present = true;
-		} catch (Throwable t1) {
-			try {
-				Class.forName("com.dreamdisplays.media.player.pipeline.AudioSink", false, BeatLampClientMixinPlugin.class.getClassLoader());
-				present = true;
-			} catch (Throwable t2) {
-				present = false;
-			}
-		}
-		DREAM_DISPLAYS_PRESENT = present;
-	}
-
 	@Override
 	public void onLoad(String mixinPackage) {
 	}
@@ -35,10 +17,54 @@ public class BeatLampClientMixinPlugin implements IMixinConfigPlugin {
 		return null;
 	}
 
+	private static boolean isDreamDisplaysPresent() {
+		// 1. NeoForge LoadingModList check (fmlloader - always available at mixin time)
+		try {
+			Class<?> loadingModListClass = Class.forName("net.neoforged.fml.loading.LoadingModList");
+			Object loadingModList = loadingModListClass.getMethod("get").invoke(null);
+			if (loadingModList != null) {
+				Object modFile = loadingModListClass.getMethod("getModFileById", String.class).invoke(loadingModList, "dreamdisplays");
+				if (modFile != null) {
+					return true;
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+
+		// 2. FabricLoader check
+		try {
+			Class<?> fabricLoaderClass = Class.forName("net.fabricmc.loader.api.FabricLoader");
+			Object fabricLoader = fabricLoaderClass.getMethod("getInstance").invoke(null);
+			if (fabricLoader != null) {
+				Boolean isLoaded = (Boolean) fabricLoaderClass.getMethod("isModLoaded", String.class).invoke(fabricLoader, "dreamdisplays");
+				if (Boolean.TRUE.equals(isLoaded)) {
+					return true;
+				}
+			}
+		} catch (Throwable ignored) {
+		}
+
+		// 3. Fallback: ClassLoader check
+		try {
+			Class.forName("com.dreamdisplays.media.player.pipeline.AudioSink", false, Thread.currentThread().getContextClassLoader());
+			return true;
+		} catch (Throwable ignored) {
+		}
+		try {
+			Class.forName("com.dreamdisplays.media.player.pipeline.AudioSink", false, BeatLampClientMixinPlugin.class.getClassLoader());
+			return true;
+		} catch (Throwable ignored) {
+		}
+
+		return false;
+	}
+
 	@Override
 	public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
 		if (mixinClassName.contains("dreamdisplays")) {
-			return DREAM_DISPLAYS_PRESENT;
+			boolean present = isDreamDisplaysPresent();
+			System.out.println("[BeatLamp] shouldApplyMixin: " + mixinClassName + " (target: " + targetClassName + ") -> " + present);
+			return present;
 		}
 		return true;
 	}
