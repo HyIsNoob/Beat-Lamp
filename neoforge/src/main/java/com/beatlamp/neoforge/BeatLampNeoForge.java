@@ -409,6 +409,7 @@ public class BeatLampNeoForge {
 					light.setSensitivity(payload.sensitivity());
 					light.setSpeed(payload.speed());
 					light.setColor(payload.color());
+					light.setTempoPulse(payload.tempoPulse());
 					light.setDmxEnrolled(payload.dmxEnrolled());
 					light.setCustomName(payload.customName());
 				}

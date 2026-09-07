@@ -93,6 +93,7 @@ public final class FabricNetwork {
 							memberLight.setSensitivity(msg.sensitivity());
 							memberLight.setSpeed(msg.speed());
 							memberLight.setColor(msg.color());
+							memberLight.setTempoPulse(msg.tempoPulse());
 							memberLight.setDmxEnrolled(msg.dmxEnrolled());
 							memberLight.setCustomName(msg.customName());
 						}

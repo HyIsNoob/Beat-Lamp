@@ -168,9 +168,23 @@ public class BeatLampClient {
 			return;
 		}
 
+		float sensitivity = light.getSensitivity();
+		boolean tempoAssist = light.isTempoPulse();
+		float rawLevel = JukeboxAudioTracker.getRawLevelAt(center, source);
 		float audioLevel = JukeboxAudioTracker.getLevelAt(center, source);
-		float beatPulse = JukeboxAudioTracker.getBeatPulseAt(center, source);
-		light.beamIntensity = Mth.clamp(Math.max(audioLevel, beatPulse * 0.85F), 0.0F, 1.0F);
+		float target = Mth.clamp((tempoAssist ? audioLevel : rawLevel) * sensitivity, 0.0F, 1.0F);
+
+		float diff = target - light.beamIntensity;
+		if (tempoAssist) {
+			light.beamIntensity += diff * (diff > 0.0F ? 0.5F : 0.15F);
+		} else {
+			light.beamIntensity += diff * (diff > 0.0F ? 0.55F : 0.25F);
+			if (light.beamIntensity < 0.02F) {
+				light.beamIntensity = 0.0F;
+			}
+		}
+
+		float beatPulse = (tempoAssist ? JukeboxAudioTracker.getBeatPulseAt(center, source) : JukeboxAudioTracker.getKickPulseAt(center, source)) * sensitivity;
 
 		if (!light.getManualGroup().isEmpty()) {
 			light.groupSize = light.getManualGroup().size();

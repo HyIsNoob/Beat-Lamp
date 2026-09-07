@@ -37,6 +37,7 @@ public class StageLightBlockEntity extends BlockEntity {
 	private float sensitivity = 1.0F;
 	private float speed = 1.0F;
 	private int color = BeatLampBlockEntity.COLOR_OLED;
+	private boolean tempoPulse = true;
 	private boolean dmxEnrolled = false;
 	private String customName = "";
 	private BlockPos sourcePos;
@@ -89,6 +90,15 @@ public class StageLightBlockEntity extends BlockEntity {
 
 	public void setColor(int color) {
 		this.color = color;
+		this.markUpdated();
+	}
+
+	public boolean isTempoPulse() {
+		return this.tempoPulse;
+	}
+
+	public void setTempoPulse(boolean tempoPulse) {
+		this.tempoPulse = tempoPulse;
 		this.markUpdated();
 	}
 
@@ -155,6 +165,7 @@ public class StageLightBlockEntity extends BlockEntity {
 		this.sensitivity = tag.contains("Sensitivity") ? tag.getFloat("Sensitivity") : 1.0F;
 		this.speed = tag.contains("Speed") ? tag.getFloat("Speed") : 1.0F;
 		this.color = tag.contains("Color") ? tag.getInt("Color") : BeatLampBlockEntity.COLOR_OLED;
+		this.tempoPulse = !tag.contains("TempoPulse") || tag.getBoolean("TempoPulse");
 		this.dmxEnrolled = tag.getBoolean("DmxEnrolled");
 		this.customName = tag.getString("CustomName");
 
@@ -180,6 +191,7 @@ public class StageLightBlockEntity extends BlockEntity {
 		tag.putFloat("Sensitivity", this.sensitivity);
 		tag.putFloat("Speed", this.speed);
 		tag.putInt("Color", this.color);
+		tag.putBoolean("TempoPulse", this.tempoPulse);
 		tag.putBoolean("DmxEnrolled", this.dmxEnrolled);
 		tag.putString("CustomName", this.customName);
 

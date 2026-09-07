@@ -12,6 +12,7 @@ public record StageLightConfigurePayload(
 	float speed,
 	int color,
 	boolean unlink,
+	boolean tempoPulse,
 	boolean dmxEnrolled,
 	String customName
 ) {
@@ -22,6 +23,7 @@ public record StageLightConfigurePayload(
 		buf.writeFloat(this.speed);
 		buf.writeInt(this.color);
 		buf.writeBoolean(this.unlink);
+		buf.writeBoolean(this.tempoPulse);
 		buf.writeBoolean(this.dmxEnrolled);
 		buf.writeUtf(this.customName != null ? this.customName : "", 64);
 	}
@@ -33,6 +35,7 @@ public record StageLightConfigurePayload(
 			buf.readFloat(),
 			buf.readFloat(),
 			buf.readInt(),
+			buf.readBoolean(),
 			buf.readBoolean(),
 			buf.readBoolean(),
 			buf.readUtf(64)

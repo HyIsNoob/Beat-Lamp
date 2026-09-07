@@ -25,6 +25,7 @@ public class StageLightConfigScreen extends Screen {
 	private float sensitivity;
 	private float speed;
 	private int color;
+	private boolean tempoPulse;
 	private boolean dmxEnrolled;
 	private String customName;
 	private boolean unlink;
@@ -35,6 +36,7 @@ public class StageLightConfigScreen extends Screen {
 	private ValueSlider sensitivitySlider;
 	private ValueSlider speedSlider;
 	private Button colorButton;
+	private Button tempoPulseButton;
 	private Button dmxButton;
 	private Button sourceButton;
 
@@ -45,6 +47,7 @@ public class StageLightConfigScreen extends Screen {
 		this.sensitivity = light.getSensitivity();
 		this.speed = light.getSpeed();
 		this.color = light.getColor();
+		this.tempoPulse = light.isTempoPulse();
 		this.dmxEnrolled = light.isDmxEnrolled();
 		this.customName = light.getCustomName();
 		this.sourcePos = light.getSource() == null ? null : light.getSource().immutable();
@@ -106,11 +109,18 @@ public class StageLightConfigScreen extends Screen {
 			}).bounds(centerX - 100, y + 72, 98, 20).build()
 		);
 
+		this.tempoPulseButton = this.addRenderableWidget(
+			Button.builder(this.tempoPulseLabel(), button -> {
+				this.tempoPulse = !this.tempoPulse;
+				button.setMessage(this.tempoPulseLabel());
+			}).bounds(centerX + 2, y + 72, 98, 20).build()
+		);
+
 		this.dmxButton = this.addRenderableWidget(
 			Button.builder(this.dmxLabel(), button -> {
 				this.dmxEnrolled = !this.dmxEnrolled;
 				button.setMessage(this.dmxLabel());
-			}).bounds(centerX + 2, y + 72, 98, 20).build()
+			}).bounds(centerX - 100, y + 96, 98, 20).build()
 		);
 
 		this.sourceButton = this.addRenderableWidget(
@@ -120,7 +130,7 @@ public class StageLightConfigScreen extends Screen {
 					button.setMessage(this.sourceLabel());
 					PlatformNetwork.sendToServer(new LampSourcePayload(this.pos, null));
 				}
-			}).bounds(centerX - 100, y + 96, 200, 20).build()
+			}).bounds(centerX + 2, y + 96, 98, 20).build()
 		);
 
 		this.addRenderableWidget(
@@ -147,6 +157,10 @@ public class StageLightConfigScreen extends Screen {
 		}
 		DyeColor dye = DyeColor.values()[idx - 1];
 		return Component.translatable("screen.beatlamp.color", Component.translatable("color.minecraft." + dye.getName()));
+	}
+
+	private Component tempoPulseLabel() {
+		return Component.translatable("screen.beatlamp.tempo_pulse", Component.translatable(this.tempoPulse ? "screen.beatlamp.toggle.on" : "screen.beatlamp.toggle.off"));
 	}
 
 	private Component dmxLabel() {
@@ -186,7 +200,7 @@ public class StageLightConfigScreen extends Screen {
 		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
 		PlatformNetwork.sendToServer(
 			new StageLightConfigurePayload(
-				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.unlink, this.dmxEnrolled, finalName
+				this.pos, this.mode, this.sensitivity, this.speed, this.color, this.unlink, this.tempoPulse, this.dmxEnrolled, finalName
 			)
 		);
 		super.onClose();

@@ -40,6 +40,7 @@ public class StageLightBlockEntity extends BlockEntity {
 	private int color = BeatLampBlockEntity.COLOR_OLED;
 	private float sensitivity = 1.0F;
 	private float speed = 1.0F;
+	private boolean tempoPulse = true;
 	private boolean dmxEnrolled = false;
 	private String customName = "";
 	private BlockPos sourcePos;
@@ -121,6 +122,15 @@ public class StageLightBlockEntity extends BlockEntity {
 		this.markUpdated();
 	}
 
+	public boolean isTempoPulse() {
+		return this.tempoPulse;
+	}
+
+	public void setTempoPulse(boolean tempoPulse) {
+		this.tempoPulse = tempoPulse;
+		this.markUpdated();
+	}
+
 	public BlockPos getSource() {
 		return this.sourcePos;
 	}
@@ -171,6 +181,7 @@ public class StageLightBlockEntity extends BlockEntity {
 		compoundTag.putInt("color", this.color);
 		compoundTag.putFloat("sensitivity", this.sensitivity);
 		compoundTag.putFloat("speed", this.speed);
+		compoundTag.putBoolean("tempoPulse", this.tempoPulse);
 		compoundTag.putBoolean("dmxEnrolled", this.dmxEnrolled);
 		if (!this.customName.isEmpty()) {
 			compoundTag.putString("customName", this.customName);
@@ -196,6 +207,7 @@ public class StageLightBlockEntity extends BlockEntity {
 		this.color = compoundTag.contains("color") ? compoundTag.getInt("color") : BeatLampBlockEntity.COLOR_OLED;
 		this.sensitivity = compoundTag.contains("sensitivity") ? compoundTag.getFloat("sensitivity") : 1.0F;
 		this.speed = compoundTag.contains("speed") ? compoundTag.getFloat("speed") : 1.0F;
+		this.tempoPulse = !compoundTag.contains("tempoPulse") || compoundTag.getBoolean("tempoPulse");
 		this.dmxEnrolled = compoundTag.contains("dmxEnrolled") && compoundTag.getBoolean("dmxEnrolled");
 		this.customName = compoundTag.contains("customName") ? compoundTag.getString("customName") : "";
 		this.sourcePos = compoundTag.contains("source") ? BlockPos.of(compoundTag.getLong("source")) : null;

@@ -127,26 +127,51 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		Matrix4f matrix = pose.pose();
 		float a = 0.95F;
 
-		float[][][] faces = {
-			{{-half, -half, half}, {half, -half, half}, {half, half, half}, {-half, half, half}},
-			{{half, -half, -half}, {-half, -half, -half}, {-half, half, -half}, {half, half, -half}},
-			{{half, -half, half}, {half, -half, -half}, {half, half, -half}, {half, half, half}},
-			{{-half, -half, -half}, {-half, -half, half}, {-half, half, half}, {-half, half, -half}},
-			{{-half, half, half}, {half, half, half}, {half, half, -half}, {-half, half, -half}},
-			{{-half, -half, -half}, {half, -half, -half}, {half, -half, half}, {-half, -half, half}}
-		};
+		// South (+Z)
+		coreVertex(consumer, matrix, -half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, half, red, green, blue, a, pose);
 
-		for (float[][] face : faces) {
-			for (float[] vertex : face) {
-				consumer.vertex(matrix, vertex[0], vertex[1], vertex[2])
-					.color(red, green, blue, a)
-					.uv(0.5F, 0.5F)
-					.overlayCoords(OverlayTexture.NO_OVERLAY)
-					.uv2(0xF000F0)
-					.normal(pose.normal(), 0.0F, 1.0F, 0.0F)
-					.endVertex();
-			}
-		}
+		// North (-Z)
+		coreVertex(consumer, matrix, half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, -half, red, green, blue, a, pose);
+
+		// East (+X)
+		coreVertex(consumer, matrix, half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, half, red, green, blue, a, pose);
+
+		// West (-X)
+		coreVertex(consumer, matrix, -half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, -half, red, green, blue, a, pose);
+
+		// Up (+Y)
+		coreVertex(consumer, matrix, -half, half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, -half, red, green, blue, a, pose);
+
+		// Down (-Y)
+		coreVertex(consumer, matrix, -half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, -half, half, red, green, blue, a, pose);
+	}
+
+	private static void coreVertex(VertexConsumer consumer, Matrix4f matrix, float x, float y, float z, float red, float green, float blue, float alpha, PoseStack.Pose pose) {
+		consumer.vertex(matrix, x, y, z)
+			.color(red, green, blue, alpha)
+			.uv(0.5F, 0.5F)
+			.overlayCoords(OverlayTexture.NO_OVERLAY)
+			.uv2(0xF000F0)
+			.normal(pose.normal(), 0.0F, 1.0F, 0.0F)
+			.endVertex();
 	}
 
 	private static void drawBeam(
@@ -161,62 +186,43 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		float green,
 		float blue
 	) {
-		float[][] cornersBase = {
-			{-baseHalf, 0.0F, -baseHalf},
-			{baseHalf, 0.0F, -baseHalf},
-			{baseHalf, 0.0F, baseHalf},
-			{-baseHalf, 0.0F, baseHalf}
-		};
-		float[][] cornersEnd = {
-			{-endHalf, length, -endHalf},
-			{endHalf, length, -endHalf},
-			{endHalf, length, endHalf},
-			{-endHalf, length, endHalf}
-		};
-
-		for (int i = 0; i < 4; i++) {
-			int next = (i + 1) % 4;
-			float[] b0 = cornersBase[i];
-			float[] b1 = cornersBase[next];
-			float[] e1 = cornersEnd[next];
-			float[] e0 = cornersEnd[i];
-
-			quad(consumer, matrix, b0, b1, e1, e0, alphaStart, alphaEnd, red, green, blue);
-			quad(consumer, matrix, b1, b0, e0, e1, alphaStart, alphaEnd, red, green, blue);
-		}
+		drawBeamSide(consumer, matrix, -baseHalf, -baseHalf, baseHalf, -baseHalf, -endHalf, -endHalf, endHalf, -endHalf, length, alphaStart, alphaEnd, red, green, blue);
+		drawBeamSide(consumer, matrix, baseHalf, -baseHalf, baseHalf, baseHalf, endHalf, -endHalf, endHalf, endHalf, length, alphaStart, alphaEnd, red, green, blue);
+		drawBeamSide(consumer, matrix, baseHalf, baseHalf, -baseHalf, baseHalf, endHalf, endHalf, -endHalf, endHalf, length, alphaStart, alphaEnd, red, green, blue);
+		drawBeamSide(consumer, matrix, -baseHalf, baseHalf, -baseHalf, -baseHalf, -endHalf, endHalf, -endHalf, -endHalf, length, alphaStart, alphaEnd, red, green, blue);
 	}
 
-	private static void quad(
+	private static void drawBeamSide(
 		VertexConsumer consumer,
 		Matrix4f matrix,
-		float[] v0,
-		float[] v1,
-		float[] v2,
-		float[] v3,
-		float alphaBottom,
-		float alphaTop,
-		float red,
-		float green,
-		float blue
+		float b0x, float b0z, float b1x, float b1z,
+		float e0x, float e0z, float e1x, float e1z,
+		float length,
+		float alphaBottom, float alphaTop,
+		float red, float green, float blue
 	) {
-		vertex(consumer, matrix, v0, red, green, blue, alphaBottom, 0.0F, 0.0F);
-		vertex(consumer, matrix, v1, red, green, blue, alphaBottom, 1.0F, 0.0F);
-		vertex(consumer, matrix, v2, red, green, blue, alphaTop, 1.0F, 1.0F);
-		vertex(consumer, matrix, v3, red, green, blue, alphaTop, 0.0F, 1.0F);
+		// Front face
+		beamVertex(consumer, matrix, b0x, 0.0F, b0z, red, green, blue, alphaBottom, 0.0F, 0.0F);
+		beamVertex(consumer, matrix, b1x, 0.0F, b1z, red, green, blue, alphaBottom, 1.0F, 0.0F);
+		beamVertex(consumer, matrix, e1x, length, e1z, red, green, blue, alphaTop, 1.0F, 1.0F);
+		beamVertex(consumer, matrix, e0x, length, e0z, red, green, blue, alphaTop, 0.0F, 1.0F);
+
+		// Back face
+		beamVertex(consumer, matrix, b1x, 0.0F, b1z, red, green, blue, alphaBottom, 1.0F, 0.0F);
+		beamVertex(consumer, matrix, b0x, 0.0F, b0z, red, green, blue, alphaBottom, 0.0F, 0.0F);
+		beamVertex(consumer, matrix, e0x, length, e0z, red, green, blue, alphaTop, 0.0F, 1.0F);
+		beamVertex(consumer, matrix, e1x, length, e1z, red, green, blue, alphaTop, 1.0F, 1.0F);
 	}
 
-	private static void vertex(
+	private static void beamVertex(
 		VertexConsumer consumer,
 		Matrix4f matrix,
-		float[] position,
-		float red,
-		float green,
-		float blue,
+		float x, float y, float z,
+		float red, float green, float blue,
 		float alpha,
-		float u,
-		float v
+		float u, float v
 	) {
-		consumer.vertex(matrix, position[0], position[1], position[2])
+		consumer.vertex(matrix, x, y, z)
 			.color(red, green, blue, alpha)
 			.uv(u, v)
 			.overlayCoords(OverlayTexture.NO_OVERLAY)

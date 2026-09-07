@@ -71,10 +71,12 @@ Compatible with **vanilla music discs**, **custom resource packs**, and **modded
 
 ## Performance & Compatibility
 
-* **Zero Memory Leak & Low Footprint**: Efficient FFT ring buffer and cached lookup tables.
-* **Shader & Sodium/Iris Safe**: Standard neutral blend states (`NO_OVERLAY`).
-* **LITE & STUDIO Engine Profiles**: Toggle between lightweight LITE (maximum FPS) and STUDIO (high precision FFT) profiles anytime in DMX settings.
-* **Client & Server Separated**: Server handles network sync while client handles audio decoding, keeping servers 100% lag-free.
+* **Zero-Allocation Rendering**: Render pipelines for Beat Lamp and Stage Light are completely allocation-free at runtime, eliminating Garbage Collection (GC) pauses, reducing micro-stutter, and boosting framerates (often 100+ FPS).
+* **DreamDisplays Support**: Fully compatible with the DreamDisplays plugin/mod, reacting to web video and audio streams in real time across multiplayer servers.
+* **Server Tick Friendly**: Client and server architectures are strictly decoupled. Audio DSP and vertex processing run on the client side, keeping server TPS at a smooth 20.
+* **Shader, Sodium & Iris Safe**: Standard neutral blend states and compatible vertex formats.
+* **LITE & STUDIO Engine Profiles**: Toggle between lightweight LITE and high-precision STUDIO FFT modes in DMX console settings.
+* **Replay Mod Compatibility Notice**: Video rendering within Replay Mod is currently incompatible. Replay Mod mutes and disables the Minecraft audio engine during offline video rendering, resulting in no audio stream for the lamps to react to. Standard in-game replay playback without offline video export remains functional.
 
 ---
 
