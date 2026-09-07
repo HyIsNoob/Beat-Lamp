@@ -31,8 +31,28 @@ public class GroupLinkerItem extends Item {
 		Level level = context.getLevel();
 		Player player = context.getPlayer();
 
+		if (player == null) {
+			return InteractionResult.PASS;
+		}
+
+		ItemStack stack = context.getItemInHand();
+
+		// Sneak + Right Click to cancel active selection
+		if (player.isShiftKeyDown()) {
+			if (stack.hasTag() && stack.getTag().contains("AnchorPos")) {
+				if (!level.isClientSide) {
+					stack.getTag().remove("AnchorPos");
+					player.displayClientMessage(
+						Component.translatable("message.beatlamp.link.cancel").withStyle(ChatFormatting.AQUA), true
+					);
+				}
+				return InteractionResult.sidedSuccess(level.isClientSide);
+			}
+			return InteractionResult.PASS;
+		}
+
 		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-			BeatLamp.handleLink(serverLevel, context.getClickedPos(), serverPlayer, context.getItemInHand());
+			BeatLamp.handleLink(serverLevel, context.getClickedPos(), serverPlayer, stack);
 		}
 
 		return InteractionResult.sidedSuccess(level.isClientSide);

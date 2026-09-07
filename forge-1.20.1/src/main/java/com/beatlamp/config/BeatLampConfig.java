@@ -21,6 +21,7 @@ public final class BeatLampConfig {
 	private static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile(), "beatlamp.json");
 
 	public static int maxGroupFloodFill = 256;
+	public static int maxGroupLinkSize = 256;
 	public static double maxLinkerDistance = 64.0;
 	public static double defaultAudibleRadius = 64.0;
 	public static boolean enableDmxProtocol = true;
@@ -36,6 +37,11 @@ public final class BeatLampConfig {
 
 		try (FileReader reader = new FileReader(CONFIG_FILE)) {
 			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
+			if (json.has("maxGroupLinkSize")) {
+				maxGroupLinkSize = json.get("maxGroupLinkSize").getAsInt();
+			} else if (json.has("maxGroupFloodFill")) {
+				maxGroupLinkSize = json.get("maxGroupFloodFill").getAsInt();
+			}
 			if (json.has("maxGroupFloodFill")) {
 				maxGroupFloodFill = json.get("maxGroupFloodFill").getAsInt();
 			}
@@ -57,6 +63,7 @@ public final class BeatLampConfig {
 	public static void save() {
 		JsonObject json = new JsonObject();
 		json.addProperty("maxGroupFloodFill", maxGroupFloodFill);
+		json.addProperty("maxGroupLinkSize", maxGroupLinkSize);
 		json.addProperty("maxLinkerDistance", maxLinkerDistance);
 		json.addProperty("defaultAudibleRadius", defaultAudibleRadius);
 		json.addProperty("enableDmxProtocol", enableDmxProtocol);

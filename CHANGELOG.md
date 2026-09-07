@@ -17,6 +17,11 @@ All notable changes to the Beat Lamp mod will be documented in this file.
 - **Stage Light GUI & DMX Integration**: Integrated the new `Tempo Pulse` toggle into `StageLightConfigScreen` and remote DMX console configuration with full network synchronization.
 - **DreamDisplays Integration**: Seamless real-time audio reactivity with the DreamDisplays screen plugin/mod for online videos and multiplayer watch parties.
 
+### Area Group Linking Improvements
+- **Flexible Bounding Box Linking**: The first clicked stage device sets the target device type. The second click can now be placed on any block (including vanilla blocks like stone, dirt, or other stage devices) to define the opposite corner of a 3D bounding box. All matching devices within the box are automatically linked into one group (up to the maximum group limit). Perfect for quickly grouping staircase, triangular, or staggered stage layouts.
+- **Localization Fixes**: Fixed missing translation keys for link feedback messages (`message.beatlamp.link.success`, `message.beatlamp.link.single`, `message.beatlamp.link.type_mismatch`, `message.beatlamp.source.cancel`), and fully localized all UI screens and tooltips across both English and Vietnamese.
+- **1.21.4 Version String**: Fixed `fabric-1.21.4` resource expansion to properly bundle version `1.1.0` and cleaned up residual 1.0.0 artifacts.
+
 ### Compatibility
 - **Replay Mod Notice**: Added documentation regarding Replay Mod video rendering. Because Replay Mod mutes and stops OpenAL audio during offline headless video rendering, lamps receive no audio signal during export and remain dark.
 

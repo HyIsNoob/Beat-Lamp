@@ -228,6 +228,7 @@ tasks.register('copyFabric1201Jar', Copy) {
 	dependsOn ':fabric-1.20.1:assemble'
 	from project(':fabric-1.20.1').layout.buildDirectory.dir('libs')
 	into layout.buildDirectory.dir('libs')
+	include "*${project.version}*.jar"
 }
 assemble.dependsOn copyFabric1201Jar
 
@@ -235,6 +236,7 @@ tasks.register('copy1214Jars', Copy) {
 	dependsOn ':fabric-1.21.4:assemble'
 	from project(':fabric-1.21.4').layout.buildDirectory.dir('libs')
 	into layout.buildDirectory.dir('libs')
+	include "*${project.version}*.jar"
 }
 assemble.dependsOn copy1214Jars
 

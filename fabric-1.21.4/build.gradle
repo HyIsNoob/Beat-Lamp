@@ -48,6 +48,15 @@ java {
 	targetCompatibility = JavaVersion.VERSION_21
 }
 
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
 remapJar {
 	archiveFileName = "beatlamp-fabric-1.21.4-${project.version}.jar"
 }
