@@ -12,3 +12,4 @@ pluginManagement {
 // Should match your modid
 rootProject.name = 'beatlamp'
 include 'fabric-1.21.4'
+include 'fabric-1.20.1'

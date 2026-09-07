@@ -37,18 +37,7 @@ public class LaserProjectorBlock extends BaseEntityBlock {
 
 	@Override
 	public InteractionResult use(BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult) {
-		if (interactionHand != InteractionHand.MAIN_HAND) {
-			return InteractionResult.PASS;
-		}
-
-		if (level.isClientSide) {
-			BlockEntity blockEntity = level.getBlockEntity(blockPos);
-			if (blockEntity instanceof LaserProjectorBlockEntity laser && LaserProjectorBlockEntity.controllerUser != null) {
-				LaserProjectorBlockEntity.controllerUser.use(laser);
-			}
-		}
-
-		return InteractionResult.sidedSuccess(level.isClientSide);
+		return InteractionResult.PASS;
 	}
 
 	@Override

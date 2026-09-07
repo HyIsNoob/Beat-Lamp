@@ -24,18 +24,7 @@ public class FountainBlock extends BaseEntityBlock {
 
 	@Override
 	public InteractionResult use(BlockState blockState, Level level, BlockPos blockPos, Player player, InteractionHand interactionHand, BlockHitResult blockHitResult) {
-		if (interactionHand != InteractionHand.MAIN_HAND) {
-			return InteractionResult.PASS;
-		}
-
-		if (level.isClientSide) {
-			BlockEntity blockEntity = level.getBlockEntity(blockPos);
-			if (blockEntity instanceof FountainBlockEntity fountain && FountainBlockEntity.controllerUser != null) {
-				FountainBlockEntity.controllerUser.use(fountain);
-			}
-		}
-
-		return InteractionResult.sidedSuccess(level.isClientSide);
+		return InteractionResult.PASS;
 	}
 
 	@Override

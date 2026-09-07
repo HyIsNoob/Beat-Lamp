@@ -175,6 +175,12 @@ public class BeatLampBlockEntity extends BlockEntity {
 		this.tempoPulse = tempoPulse;
 		this.dmxEnrolled = dmxEnrolled;
 		this.customName = customName == null ? "" : customName.trim();
+		if (this.level != null && !this.level.isClientSide) {
+			BlockState current = this.level.getBlockState(this.worldPosition);
+			if (current.is(BeatLampBlocks.BEAT_LAMP) && current.hasProperty(BeatLampBlock.FRAMELESS) && current.getValue(BeatLampBlock.FRAMELESS) != frameless) {
+				this.level.setBlock(this.worldPosition, current.setValue(BeatLampBlock.FRAMELESS, frameless), Block.UPDATE_ALL);
+			}
+		}
 		this.markUpdated();
 	}
 

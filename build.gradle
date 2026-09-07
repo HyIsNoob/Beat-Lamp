@@ -57,16 +57,6 @@ sourceSets {
 		compileClasspath += sourceSets.main.compileClasspath + sourceSets.client.compileClasspath
 		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.client.runtimeClasspath
 	}
-	fabric1201 {
-		java {
-			srcDirs = ['fabric-1.20.1/src/main/java']
-		}
-		resources {
-			srcDirs = ['fabric-1.20.1/src/main/resources']
-		}
-		compileClasspath += sourceSets.main.compileClasspath + sourceSets.client.compileClasspath
-		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.client.runtimeClasspath
-	}
 }
 
 dependencies {
@@ -103,8 +93,6 @@ dependencies {
 	forge1201Implementation "net.minecraftforge:forgespi:6.0.0"
 	forge1201Implementation "net.minecraftforge:eventbus:6.0.5"
 
-	// Fabric 1.20.1 dependencies for backport compilation
-	fabric1201Implementation "net.fabricmc:fabric-loader:${project.loader_version}"
 }
 
 processResources {
@@ -234,39 +222,14 @@ task forge1201Jar(dependsOn: [rawForge1201Jar]) {
 	}
 }
 
-tasks.named('compileFabric1201Java', JavaCompile) {
-	options.release = 17
-	options.compilerArgs << "-Xlint:deprecation"
-	def userHome = System.getProperty("user.home")
-	def loomMcDir = file("${userHome}/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft")
-	def mc1201Jars = fileTree(dir: loomMcDir, include: '**/*1.20.1*.jar')
-	def cp = classpath.filter { file ->
-		!file.name.contains("1.21.1")
-	}
-	classpath = cp + mc1201Jars
-}
+assemble.dependsOn neoforgeJar, forgeJar, forge1201Jar, ':fabric-1.20.1:assemble', ':fabric-1.21.4:assemble'
 
-task fabric1201Jar(type: Jar, dependsOn: [fabric1201Classes]) {
-	def projectName = project.name
-	archiveFileName = "beatlamp-fabric-1.20.1-${project.version}.jar"
-	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
-	from sourceSets.fabric1201.output
-	from ("src/main/resources") {
-		exclude 'fabric.mod.json'
-		exclude 'beatlamp.mixins.json'
-		exclude 'beatlamp.client.mixins.json'
-		exclude 'pack.mcmeta'
-	}
-	from ("src/client/resources") {
-		exclude 'beatlamp.client.mixins.json'
-	}
-	from ("fabric-1.20.1/src/main/resources")
-	from("LICENSE") {
-		rename { "${it}_$projectName"}
-	}
+tasks.register('copyFabric1201Jar', Copy) {
+	dependsOn ':fabric-1.20.1:assemble'
+	from project(':fabric-1.20.1').layout.buildDirectory.dir('libs')
+	into layout.buildDirectory.dir('libs')
 }
-
-assemble.dependsOn neoforgeJar, forgeJar, forge1201Jar, fabric1201Jar, ':fabric-1.21.4:assemble'
+assemble.dependsOn copyFabric1201Jar
 
 tasks.register('copy1214Jars', Copy) {
 	dependsOn ':fabric-1.21.4:assemble'
