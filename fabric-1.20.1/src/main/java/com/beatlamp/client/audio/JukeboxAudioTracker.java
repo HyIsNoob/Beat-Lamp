@@ -176,10 +176,14 @@ public final class JukeboxAudioTracker {
 		float[] interleaved = new float[2048 * channels];
 		float[] mono = new float[2048];
 		long startNanos = -1L;
+		long pauseStartNanos = -1L;
 
 		try {
 			while (song.running) {
 				if (minecraft.isPaused()) {
+					if (pauseStartNanos < 0L) {
+						pauseStartNanos = System.nanoTime();
+					}
 					try {
 						Thread.sleep(20L);
 					} catch (InterruptedException interruptedException) {
@@ -187,6 +191,11 @@ public final class JukeboxAudioTracker {
 						break;
 					}
 					continue;
+				} else if (pauseStartNanos > 0L) {
+					if (startNanos > 0L) {
+						startNanos += (System.nanoTime() - pauseStartNanos);
+					}
+					pauseStartNanos = -1L;
 				}
 
 				ByteBuffer byteBuffer;
@@ -222,6 +231,8 @@ public final class JukeboxAudioTracker {
 						Thread.currentThread().interrupt();
 						break;
 					}
+				} else if (lead < -0.200) {
+					startNanos = System.nanoTime() - (long) (expectedSeconds * 1_000_000_000.0);
 				}
 			}
 		} finally {

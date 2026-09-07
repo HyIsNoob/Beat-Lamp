@@ -112,44 +112,49 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float alpha,
 		int light
 	) {
-		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{-halfX, -halfY, halfZ}, new float[]{halfX, -halfY, halfZ}, new float[]{halfX, halfY, halfZ}, new float[]{-halfX, halfY, halfZ});
-		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{halfX, -halfY, -halfZ}, new float[]{-halfX, -halfY, -halfZ}, new float[]{-halfX, halfY, -halfZ}, new float[]{halfX, halfY, -halfZ});
-		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{halfX, -halfY, halfZ}, new float[]{halfX, -halfY, -halfZ}, new float[]{halfX, halfY, -halfZ}, new float[]{halfX, halfY, halfZ});
-		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{-halfX, -halfY, -halfZ}, new float[]{-halfX, -halfY, halfZ}, new float[]{-halfX, halfY, halfZ}, new float[]{-halfX, halfY, -halfZ});
-		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{-halfX, halfY, halfZ}, new float[]{halfX, halfY, halfZ}, new float[]{halfX, halfY, -halfZ}, new float[]{-halfX, halfY, -halfZ});
-		drawFace(consumer, pose, matrix, red, green, blue, alpha, light,
-			new float[]{-halfX, -halfY, -halfZ}, new float[]{halfX, -halfY, -halfZ}, new float[]{halfX, -halfY, halfZ}, new float[]{-halfX, -halfY, halfZ});
-	}
+		// South (+Z)
+		vertex(consumer, matrix, -halfX, -halfY, halfZ, red, green, blue, alpha, 0.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, halfX, -halfY, halfZ, red, green, blue, alpha, 1.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, halfX, halfY, halfZ, red, green, blue, alpha, 1.0F, 1.0F, light, pose);
+		vertex(consumer, matrix, -halfX, halfY, halfZ, red, green, blue, alpha, 0.0F, 1.0F, light, pose);
 
-	private static void drawFace(
-		VertexConsumer consumer,
-		PoseStack.Pose pose,
-		Matrix4f matrix,
-		float red,
-		float green,
-		float blue,
-		float alpha,
-		int light,
-		float[] v0,
-		float[] v1,
-		float[] v2,
-		float[] v3
-	) {
-		vertex(consumer, matrix, v0, red, green, blue, alpha, 0.0F, 0.0F, light, pose);
-		vertex(consumer, matrix, v1, red, green, blue, alpha, 1.0F, 0.0F, light, pose);
-		vertex(consumer, matrix, v2, red, green, blue, alpha, 1.0F, 1.0F, light, pose);
-		vertex(consumer, matrix, v3, red, green, blue, alpha, 0.0F, 1.0F, light, pose);
+		// North (-Z)
+		vertex(consumer, matrix, halfX, -halfY, -halfZ, red, green, blue, alpha, 0.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, -halfX, -halfY, -halfZ, red, green, blue, alpha, 1.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, -halfX, halfY, -halfZ, red, green, blue, alpha, 1.0F, 1.0F, light, pose);
+		vertex(consumer, matrix, halfX, halfY, -halfZ, red, green, blue, alpha, 0.0F, 1.0F, light, pose);
+
+		// East (+X)
+		vertex(consumer, matrix, halfX, -halfY, halfZ, red, green, blue, alpha, 0.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, halfX, -halfY, -halfZ, red, green, blue, alpha, 1.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, halfX, halfY, -halfZ, red, green, blue, alpha, 1.0F, 1.0F, light, pose);
+		vertex(consumer, matrix, halfX, halfY, halfZ, red, green, blue, alpha, 0.0F, 1.0F, light, pose);
+
+		// West (-X)
+		vertex(consumer, matrix, -halfX, -halfY, -halfZ, red, green, blue, alpha, 0.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, -halfX, -halfY, halfZ, red, green, blue, alpha, 1.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, -halfX, halfY, halfZ, red, green, blue, alpha, 1.0F, 1.0F, light, pose);
+		vertex(consumer, matrix, -halfX, halfY, -halfZ, red, green, blue, alpha, 0.0F, 1.0F, light, pose);
+
+		// Up (+Y)
+		vertex(consumer, matrix, -halfX, halfY, halfZ, red, green, blue, alpha, 0.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, halfX, halfY, halfZ, red, green, blue, alpha, 1.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, halfX, halfY, -halfZ, red, green, blue, alpha, 1.0F, 1.0F, light, pose);
+		vertex(consumer, matrix, -halfX, halfY, -halfZ, red, green, blue, alpha, 0.0F, 1.0F, light, pose);
+
+		// Down (-Y)
+		vertex(consumer, matrix, -halfX, -halfY, -halfZ, red, green, blue, alpha, 0.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, halfX, -halfY, -halfZ, red, green, blue, alpha, 1.0F, 0.0F, light, pose);
+		vertex(consumer, matrix, halfX, -halfY, halfZ, red, green, blue, alpha, 1.0F, 1.0F, light, pose);
+		vertex(consumer, matrix, -halfX, -halfY, halfZ, red, green, blue, alpha, 0.0F, 1.0F, light, pose);
 	}
 
 	private static void vertex(
 		VertexConsumer consumer,
 		Matrix4f matrix,
-		float[] position,
+		float x,
+		float y,
+		float z,
 		float red,
 		float green,
 		float blue,
@@ -159,7 +164,7 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		int light,
 		PoseStack.Pose pose
 	) {
-		consumer.addVertex(matrix, position[0], position[1], position[2])
+		consumer.addVertex(matrix, x, y, z)
 			.setColor(red, green, blue, alpha)
 			.setUv(u, v)
 			.setOverlay(OverlayTexture.NO_OVERLAY)
