@@ -15,6 +15,7 @@ public record StageLightConfigurePayload(
 	float speed,
 	int color,
 	boolean unlink,
+	boolean tempoPulse,
 	boolean dmxEnrolled,
 	String customName
 ) implements CustomPacketPayload {
@@ -31,6 +32,7 @@ public record StageLightConfigurePayload(
 		buf.writeFloat(payload.speed());
 		buf.writeVarInt(payload.color());
 		buf.writeBoolean(payload.unlink());
+		buf.writeBoolean(payload.tempoPulse());
 		buf.writeBoolean(payload.dmxEnrolled());
 		buf.writeUtf(payload.customName() == null ? "" : payload.customName(), 32);
 	}
@@ -42,6 +44,7 @@ public record StageLightConfigurePayload(
 			buf.readFloat(),
 			buf.readFloat(),
 			buf.readVarInt(),
+			buf.readBoolean(),
 			buf.readBoolean(),
 			buf.readBoolean(),
 			buf.readUtf(32)

@@ -490,8 +490,12 @@ public class DmxConsoleScreen extends Screen {
 			}
 			case STAGE_LIGHT -> {
 				StageLightMode mode = StageLightMode.values()[g.modeIndex % StageLightMode.values().length];
+				boolean tempoPulse = true;
+				if (g.leadEntity instanceof StageLightBlockEntity light) {
+					tempoPulse = light.isTempoPulse();
+				}
 				PlatformNetwork.sendToServer(new StageLightConfigurePayload(
-					g.leadPos, mode, targetSens, g.speed, targetColor, false, true, customName
+					g.leadPos, mode, targetSens, g.speed, targetColor, false, tempoPulse, true, customName
 				));
 			}
 			case LASER -> {
