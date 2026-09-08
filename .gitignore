@@ -39,4 +39,6 @@ replay_*.log
 *.hprof
 *.jfr
 
+web/
+
 AGENTS.md

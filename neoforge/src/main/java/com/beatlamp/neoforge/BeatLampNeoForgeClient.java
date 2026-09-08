@@ -37,9 +37,25 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.event.sound.PlaySoundEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraft.client.KeyMapping;
+import com.mojang.blaze3d.platform.InputConstants;
+import org.lwjgl.glfw.GLFW;
+import com.beatlamp.client.gui.BeatLampClientSettingsScreen;
 
 @EventBusSubscriber(modid = BeatLamp.MOD_ID, bus = EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class BeatLampNeoForgeClient {
+	public static final KeyMapping OPEN_SETTINGS_KEY = new KeyMapping(
+		"key.beatlamp.open_settings",
+		InputConstants.Type.KEYSYM,
+		GLFW.GLFW_KEY_O,
+		"key.categories.beatlamp"
+	);
+
+	@SubscribeEvent
+	public static void registerKeys(RegisterKeyMappingsEvent event) {
+		event.register(OPEN_SETTINGS_KEY);
+	}
 
 	@SubscribeEvent
 	public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
@@ -129,6 +145,12 @@ public class BeatLampNeoForgeClient {
 		@SubscribeEvent
 		public static void onClientTick(ClientTickEvent.Post event) {
 			JukeboxAudioTracker.clientTick();
+			while (OPEN_SETTINGS_KEY.consumeClick()) {
+				Minecraft mc = Minecraft.getInstance();
+				if (mc.screen == null) {
+					mc.setScreen(new BeatLampClientSettingsScreen());
+				}
+			}
 		}
 
 		@SubscribeEvent

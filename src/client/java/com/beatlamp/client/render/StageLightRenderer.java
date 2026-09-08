@@ -41,6 +41,13 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		int packedLight,
 		int packedOverlay
 	) {
+		if (!com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects) {
+			return;
+		}
+		if (com.beatlamp.client.config.BeatLampClientConfig.beamQuality == com.beatlamp.client.config.BeatLampClientConfig.BeamQuality.OFF) {
+			return;
+		}
+
 		float energy = Mth.clamp(light.beamEnergy * light.getSensitivity(), 0.0F, 1.0F);
 		float beat = Mth.clamp(light.beamBeat, 0.0F, 1.0F);
 
@@ -52,9 +59,14 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 
 		// Strobe mode check
 		if (mode == StageLightMode.STROBE) {
-			float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
-			if ((int) (strobeTime * 0.8F) % 2 == 1 && beat < 0.7F) {
-				return;
+			if (com.beatlamp.client.config.BeatLampClientConfig.antiStrobe) {
+				float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
+				energy *= (0.4F + 0.3F * Mth.sin(strobeTime * 0.4F));
+			} else {
+				float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
+				if ((int) (strobeTime * 0.8F) % 2 == 1 && beat < 0.7F) {
+					return;
+				}
 			}
 		}
 
@@ -103,10 +115,12 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		VertexConsumer consumer = multiBufferSource.getBuffer(RenderType.beaconBeam(BEAM_TEXTURE, true));
 		Matrix4f matrix = poseStack.last().pose();
 
-		// Outer wide atmospheric glow cone
-		float outerLength = 14.0F + beat * 18.0F;
-		float outerAlpha = 0.22F + energy * 0.35F;
-		drawBeam(consumer, matrix, outerLength, outerAlpha, 0.0F, 0.18F, 1.25F, coreRed, coreGreen, coreBlue);
+		// Outer wide atmospheric glow cone (rendered only on HIGH quality)
+		if (com.beatlamp.client.config.BeatLampClientConfig.beamQuality == com.beatlamp.client.config.BeatLampClientConfig.BeamQuality.HIGH) {
+			float outerLength = 14.0F + beat * 18.0F;
+			float outerAlpha = 0.22F + energy * 0.35F;
+			drawBeam(consumer, matrix, outerLength, outerAlpha, 0.0F, 0.18F, 1.25F, coreRed, coreGreen, coreBlue);
+		}
 
 		// Inner intense core beam
 		float innerLength = 12.0F + beat * 16.0F;

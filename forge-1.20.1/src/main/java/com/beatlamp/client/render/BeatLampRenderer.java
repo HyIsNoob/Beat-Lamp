@@ -38,10 +38,17 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 	) {
 		LampMode mode = beatLamp.getMode();
 		boolean blackback = beatLamp.isBlackback();
+
+		if (!com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects) {
+			if (!blackback) {
+				return;
+			}
+		}
+
 		float pulse = Mth.clamp(beatLamp.pulse + beatLamp.beatPulse * 0.65F, 0.0F, 1.0F);
 		float bar = Mth.clamp(beatLamp.barValue, 0.0F, 1.0F);
 		float beat = Mth.clamp(beatLamp.beatPulse, 0.0F, 1.0F);
-		float intensity = Math.max(Math.max(pulse, bar), beat);
+		float intensity = com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects ? Math.max(Math.max(pulse, bar), beat) : 0.0F;
 
 		if (intensity <= 0.02F || beatLamp.displayColor == 0) {
 			if (!blackback) {

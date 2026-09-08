@@ -29,7 +29,7 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 
 	@Override
 	public int getViewDistance() {
-		return 192;
+		return com.beatlamp.client.config.BeatLampClientConfig.beamRenderDistance;
 	}
 
 	@Override
@@ -41,6 +41,13 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		int packedLight,
 		int packedOverlay
 	) {
+		if (!com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects) {
+			return;
+		}
+		if (com.beatlamp.client.config.BeatLampClientConfig.beamQuality == com.beatlamp.client.config.BeatLampClientConfig.BeamQuality.OFF) {
+			return;
+		}
+
 		float energy = Mth.clamp(light.beamIntensity * light.getSensitivity(), 0.0F, 1.0F);
 		if (energy <= 0.02F) {
 			return;
@@ -49,9 +56,14 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		StageLightMode mode = light.getMode();
 
 		if (mode == StageLightMode.STROBE) {
-			float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
-			if ((int) (strobeTime * 0.8F) % 2 == 1 && energy < 0.7F) {
-				return;
+			if (com.beatlamp.client.config.BeatLampClientConfig.antiStrobe) {
+				float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
+				energy *= (0.4F + 0.3F * Mth.sin(strobeTime * 0.4F));
+			} else {
+				float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
+				if ((int) (strobeTime * 0.8F) % 2 == 1 && energy < 0.7F) {
+					return;
+				}
 			}
 		}
 
@@ -97,9 +109,12 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 		VertexConsumer consumer = multiBufferSource.getBuffer(RenderType.beaconBeam(BEAM_TEXTURE, true));
 		Matrix4f matrix = poseStack.last().pose();
 
-		float outerLength = 14.0F + energy * 18.0F;
-		float outerAlpha = 0.22F + energy * 0.35F;
-		drawBeam(consumer, matrix, outerLength, outerAlpha, 0.0F, 0.18F, 1.25F, coreRed, coreGreen, coreBlue);
+		// Outer wide atmospheric glow cone (rendered only on HIGH quality)
+		if (com.beatlamp.client.config.BeatLampClientConfig.beamQuality == com.beatlamp.client.config.BeatLampClientConfig.BeamQuality.HIGH) {
+			float outerLength = 14.0F + energy * 18.0F;
+			float outerAlpha = 0.22F + energy * 0.35F;
+			drawBeam(consumer, matrix, outerLength, outerAlpha, 0.0F, 0.18F, 1.25F, coreRed, coreGreen, coreBlue);
+		}
 
 		float innerLength = 12.0F + energy * 16.0F;
 		float innerAlpha = 0.55F + energy * 0.4F;

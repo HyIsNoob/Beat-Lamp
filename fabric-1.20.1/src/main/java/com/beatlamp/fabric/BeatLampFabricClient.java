@@ -27,10 +27,24 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 
+import com.mojang.blaze3d.platform.InputConstants;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.KeyMapping;
+import org.lwjgl.glfw.GLFW;
+
 public class BeatLampFabricClient implements ClientModInitializer {
+	public static KeyMapping OPEN_SETTINGS_KEY;
+
 	@Override
 	public void onInitializeClient() {
 		BeatLampClientConfig.load();
+
+		OPEN_SETTINGS_KEY = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+			"key.beatlamp.open_settings",
+			InputConstants.Type.KEYSYM,
+			GLFW.GLFW_KEY_O,
+			"key.categories.beatlamp"
+		));
 
 		BlockRenderLayerHelper.setRenderLayer(BeatLampBlocks.BEAT_LAMP, RenderType.cutout());
 		BlockEntityRendererHelper.register(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);

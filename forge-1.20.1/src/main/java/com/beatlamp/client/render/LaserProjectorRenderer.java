@@ -29,7 +29,7 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 
 	@Override
 	public int getViewDistance() {
-		return 192;
+		return com.beatlamp.client.config.BeatLampClientConfig.beamRenderDistance;
 	}
 
 	@Override
@@ -41,6 +41,10 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 		int packedLight,
 		int packedOverlay
 	) {
+		if (!com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects || !com.beatlamp.client.config.BeatLampClientConfig.enableLaserBeams) {
+			return;
+		}
+
 		float intensity = laser.beamIntensity;
 		if (intensity <= 0.02F) {
 			return;

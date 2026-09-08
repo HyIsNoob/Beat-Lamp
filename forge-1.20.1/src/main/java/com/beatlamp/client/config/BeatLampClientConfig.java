@@ -1,74 +1,174 @@
 package com.beatlamp.client.config;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraft.util.Mth;
 
 public final class BeatLampClientConfig {
-	private static final Logger LOGGER = LoggerFactory.getLogger("beatlamp");
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	private static final File CONFIG_FILE = new File(FMLPaths.CONFIGDIR.get().toFile(), "beatlamp-client.json");
+	private static final Path CONFIG_PATH = Path.of("config", "beatlamp-client.json");
 
-	public static int maxVisualizerLights = 64;
+	public enum AudioQualityProfile {
+		LITE("lite"),
+		STUDIO("studio"),
+		OFF("off");
+
+		private final String id;
+
+		AudioQualityProfile(String id) {
+			this.id = id;
+		}
+
+		public String getId() {
+			return this.id;
+		}
+
+		public AudioQualityProfile next() {
+			return switch (this) {
+				case STUDIO -> LITE;
+				case LITE -> OFF;
+				case OFF -> STUDIO;
+			};
+		}
+
+		public static AudioQualityProfile byId(String id) {
+			for (AudioQualityProfile profile : values()) {
+				if (profile.id.equalsIgnoreCase(id)) {
+					return profile;
+				}
+			}
+			return LITE;
+		}
+	}
+
+	public enum BeamQuality {
+		HIGH("high"),
+		MEDIUM("medium"),
+		OFF("off");
+
+		private final String id;
+
+		BeamQuality(String id) {
+			this.id = id;
+		}
+
+		public String getId() {
+			return this.id;
+		}
+
+		public BeamQuality next() {
+			return switch (this) {
+				case HIGH -> MEDIUM;
+				case MEDIUM -> OFF;
+				case OFF -> HIGH;
+			};
+		}
+
+		public static BeamQuality byId(String id) {
+			for (BeamQuality quality : values()) {
+				if (quality.id.equalsIgnoreCase(id)) {
+					return quality;
+				}
+			}
+			return HIGH;
+		}
+	}
+
+	private static AudioQualityProfile qualityProfile = AudioQualityProfile.STUDIO;
+	public static boolean enableStageEffects = true;
+	public static boolean antiStrobe = false;
+	public static BeamQuality beamQuality = BeamQuality.HIGH;
+	public static int beamRenderDistance = 64;
+	public static float laserRenderIntensity = 1.0F;
+	public static boolean enableFogParticles = true;
 	public static float particleDensityMultiplier = 1.0F;
-	public static boolean enableBloomGlow = true;
-	public static boolean studioQuality = true;
+	public static boolean enableLaserBeams = true;
 
-	private BeatLampClientConfig() {
+	public static AudioQualityProfile getQualityProfile() {
+		return qualityProfile;
+	}
+
+	public static void setQualityProfile(AudioQualityProfile newProfile) {
+		if (newProfile != null && qualityProfile != newProfile) {
+			qualityProfile = newProfile;
+			save();
+		}
 	}
 
 	public static boolean isStudioQuality() {
-		return studioQuality;
+		return qualityProfile == AudioQualityProfile.STUDIO;
+	}
+
+	public static boolean isAudioDisabled() {
+		return qualityProfile == AudioQualityProfile.OFF;
 	}
 
 	public static void load() {
-		if (!CONFIG_FILE.exists()) {
+		if (!Files.exists(CONFIG_PATH)) {
 			save();
 			return;
 		}
 
-		try (FileReader reader = new FileReader(CONFIG_FILE)) {
+		try (Reader reader = Files.newBufferedReader(CONFIG_PATH)) {
 			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
-			if (json.has("maxVisualizerLights")) {
-				maxVisualizerLights = json.get("maxVisualizerLights").getAsInt();
+			if (json.has("audioQuality")) {
+				qualityProfile = AudioQualityProfile.byId(json.get("audioQuality").getAsString());
+			}
+			if (json.has("enableStageEffects")) {
+				enableStageEffects = json.get("enableStageEffects").getAsBoolean();
+			}
+			if (json.has("antiStrobe")) {
+				antiStrobe = json.get("antiStrobe").getAsBoolean();
+			}
+			if (json.has("beamQuality")) {
+				beamQuality = BeamQuality.byId(json.get("beamQuality").getAsString());
+			}
+			if (json.has("beamRenderDistance")) {
+				beamRenderDistance = Mth.clamp(json.get("beamRenderDistance").getAsInt(), 16, 256);
+			}
+			if (json.has("laserRenderIntensity")) {
+				laserRenderIntensity = Mth.clamp(json.get("laserRenderIntensity").getAsFloat(), 0.0F, 2.0F);
+			}
+			if (json.has("enableFogParticles")) {
+				enableFogParticles = json.get("enableFogParticles").getAsBoolean();
 			}
 			if (json.has("particleDensityMultiplier")) {
-				particleDensityMultiplier = json.get("particleDensityMultiplier").getAsFloat();
+				particleDensityMultiplier = Mth.clamp(json.get("particleDensityMultiplier").getAsFloat(), 0.0F, 2.0F);
 			}
-			if (json.has("enableBloomGlow")) {
-				enableBloomGlow = json.get("enableBloomGlow").getAsBoolean();
+			if (json.has("enableLaserBeams")) {
+				enableLaserBeams = json.get("enableLaserBeams").getAsBoolean();
 			}
-			if (json.has("studioQuality")) {
-				studioQuality = json.get("studioQuality").getAsBoolean();
-			}
-			LOGGER.info("Loaded client config from {}", CONFIG_FILE.getName());
-		} catch (Exception e) {
-			LOGGER.error("Failed to load client config", e);
+		} catch (Exception exception) {
+			qualityProfile = AudioQualityProfile.STUDIO;
 		}
 	}
 
 	public static void save() {
-		JsonObject json = new JsonObject();
-		json.addProperty("maxVisualizerLights", maxVisualizerLights);
-		json.addProperty("particleDensityMultiplier", particleDensityMultiplier);
-		json.addProperty("enableBloomGlow", enableBloomGlow);
-		json.addProperty("studioQuality", studioQuality);
+		try {
+			Files.createDirectories(CONFIG_PATH.getParent());
+			JsonObject json = new JsonObject();
+			json.addProperty("audioQuality", qualityProfile.getId());
+			json.addProperty("enableStageEffects", enableStageEffects);
+			json.addProperty("antiStrobe", antiStrobe);
+			json.addProperty("beamQuality", beamQuality.getId());
+			json.addProperty("beamRenderDistance", beamRenderDistance);
+			json.addProperty("laserRenderIntensity", laserRenderIntensity);
+			json.addProperty("enableFogParticles", enableFogParticles);
+			json.addProperty("particleDensityMultiplier", particleDensityMultiplier);
+			json.addProperty("enableLaserBeams", enableLaserBeams);
 
-		try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
-			GSON.toJson(json, writer);
-		} catch (IOException e) {
-			LOGGER.error("Failed to save client config", e);
+			try (Writer writer = Files.newBufferedWriter(CONFIG_PATH)) {
+				GSON.toJson(json, writer);
+			}
+		} catch (Exception ignored) {
 		}
 	}
 }

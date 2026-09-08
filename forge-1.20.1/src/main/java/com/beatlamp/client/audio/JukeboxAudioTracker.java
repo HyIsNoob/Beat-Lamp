@@ -57,6 +57,9 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static void onSoundPlayed(SoundInstance soundInstance) {
+		if (BeatLampClientConfig.isAudioDisabled()) {
+			return;
+		}
 		if (soundInstance == null || soundInstance.getSource() != SoundSource.RECORDS) {
 			return;
 		}
@@ -266,6 +269,13 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static void clientTick() {
+		if (BeatLampClientConfig.isAudioDisabled()) {
+			if (!ACTIVE_SONGS.isEmpty()) {
+				clear();
+			}
+			return;
+		}
+
 		Minecraft mc = Minecraft.getInstance();
 
 		for (Map.Entry<BlockPos, ActiveSong> entry : ACTIVE_SONGS.entrySet()) {

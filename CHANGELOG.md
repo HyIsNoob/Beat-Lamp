@@ -1,41 +1,42 @@
 # Changelog
 
-All notable changes to the Beat Lamp mod will be documented in this file.
+All notable changes to the Beat Lamp mod are documented in this file.
 
 ## [1.1.0] - 2026-09-07
 
 ### Performance & Engine
-- **Zero-Allocation Rendering**: Rebuilt vertex builders for `BeatLampRenderer` and `StageLightRenderer` to eliminate all heap array allocations per frame. This resolves Garbage Collection (GC) pauses and micro-stuttering, boosting FPS significantly (often from ~60 FPS up to 100+ FPS).
-- **LAN Host & Server TPS Protection**: Eliminating client-side GC pressure prevents Stop-The-World freezes on integrated LAN servers, keeping multiplayer server TPS stable at 20.
+- **Zero-Allocation Rendering**: Rebuilt vertex builders for `BeatLampRenderer` and `StageLightRenderer` to eliminate heap array allocations per frame. Resolves garbage collection pauses and significantly boosts framerates (up to 100+ FPS).
+- **Multiplayer TPS Protection**: Client-side audio decoding and rendering optimizations prevent tick stalls on integrated LAN hosts and dedicated servers.
+- **Client Settings Menu (Key `O`)**: Added a dedicated client configuration GUI accessible via the configurable `O` hotkey.
+- **Client Quality Scaling**: Added toggles for Master Stage Effects (instant on/off), Audio Engine modes (`STUDIO`, `LITE`, `OFF`), Volumetric Beam quality (`HIGH`, `MEDIUM`, `OFF`), 3D Lasers, Particle Density (`100%`, `50%`, `25%`, `OFF`), and Render Distance culling (16m to 128m).
+- **Anti-Strobe Mode**: Added a photosensitivity protection option that smoothly dims strobe flashes instead of rapid on/off flickering.
 
 ### Audio & Beat Sync
-- **Jukebox Pause Beat Synchronization**: Fixed a major desync where pausing the game in Singleplayer caused the Jukebox background decoder to drift ahead of OpenAL audio. The decoder now tracks pause duration and smoothly aligns the metronome upon unpausing.
-- **Runaway Catch-Up Clamp**: Added a lag compensation clamp (200ms threshold) to prevent burst decoding if a system freeze or lag spike occurs.
+- **Jukebox Pause Synchronization**: Fixed beat drift when pausing and resuming in Singleplayer by calculating pause duration and realigning audio metronomes.
+- **Runaway Catch-Up Clamp**: Added a 200ms lag threshold to prevent burst audio decoding after lag spikes.
+- **DreamDisplays Support**: Added direct audio synchronization with the DreamDisplays screen mod/plugin for multiplayer video sessions.
 
-### Features
-- **Stage Light Tempo Pulse Option**: Added a configurable `Tempo Pulse` toggle to Stage Lights (Moving Heads). Allows switching between smoothed tempo pulse assist and raw kick transient reactivity.
-- **Stage Light GUI & DMX Integration**: Integrated the new `Tempo Pulse` toggle into `StageLightConfigScreen` and remote DMX console configuration with full network synchronization.
-- **DreamDisplays Integration**: Seamless real-time audio reactivity with the DreamDisplays screen plugin/mod for online videos and multiplayer watch parties.
-
-### Area Group Linking Improvements
-- **Flexible Bounding Box Linking**: The first clicked stage device sets the target device type. The second click can now be placed on any block (including vanilla blocks like stone, dirt, or other stage devices) to define the opposite corner of a 3D bounding box. All matching devices within the box are automatically linked into one group (up to the maximum group limit). Perfect for quickly grouping staircase, triangular, or staggered stage layouts.
-- **Localization Fixes**: Fixed missing translation keys for link feedback messages (`message.beatlamp.link.success`, `message.beatlamp.link.single`, `message.beatlamp.link.type_mismatch`, `message.beatlamp.source.cancel`), and fully localized all UI screens and tooltips across both English and Vietnamese.
-- **1.21.4 Version String**: Fixed `fabric-1.21.4` resource expansion to properly bundle version `1.1.0` and cleaned up residual 1.0.0 artifacts.
+### Features & Usability
+- **Stage Light Tempo Pulse**: Added a configurable `Tempo Pulse` toggle to Moving Head lights for alternating between smoothed tempo tracking and raw kick drum response.
+- **Flexible Bounding Box Linking**: The Group Linker now accepts any target block (including vanilla blocks) as the second corner of the selection box. All matching fixtures inside the 3D volume are automatically grouped.
+- **100% Korean Localization**: Complete native Korean (`ko_kr`) translations for all blocks, items, GUI screens, DMX console, guide tooltips, and chat messages.
+- **Full Translation Parity**: Synchronized all 215 translation keys across English, Korean, and Vietnamese.
+- **Multi-Loader Parity**: Clean builds and feature parity across Minecraft 1.20.1 (Fabric/Forge), 1.21.1 (Fabric/NeoForge/Forge), and 1.21.4 (Fabric/NeoForge).
 
 ### Compatibility
-- **Replay Mod Notice**: Added documentation regarding Replay Mod video rendering. Because Replay Mod mutes and stops OpenAL audio during offline headless video rendering, lamps receive no audio signal during export and remain dark.
+- **Replay Mod Notice**: Documented that offline video rendering with Replay Mod is unsupported due to sound engine muting during export (normal in-game playback remains unaffected).
 
 ---
 
 ## [1.0.0] - Initial Release
 
 - Initial multi-loader release for Minecraft 1.20.1, 1.21.1, and 1.21.4 (Fabric, NeoForge, Forge).
-- Beat Lamp with 9 reactive modes, 16 dye colors + OLED rainbow, and frameless mode.
+- Beat Lamp with 9 reactive modes, 16 dye colors, OLED rainbow mode, and frameless options.
 - Stage Light with 5 moving-head lighting modes and dual-layer atmospheric volumetric beams.
-- RGB Laser Projector with 1 to 8 customizable 3D beams and 4 fan sweep modes.
+- RGB Laser Projector with 1 to 16 customizable 3D beams and 4 sweep modes.
 - Stage Fog Generator with low-lying dry ice fog and high-pressure CO2 jet blasts.
-- Beat Fountain with stage pyro jets and real firework rockets on music drops.
-- Beat Emitter with 6 music-to-redstone modes.
+- Beat Fountain with stage pyro jets and firework rocket launches on music drops.
+- Beat Emitter with 6 music-to-redstone conversion modes.
 - Titanium Obsidian Stage Jukebox, DJ Deck, and Line Array Speakers.
-- Master DMX Console with Blackout, Strobe All, Dimmer, and remote group control.
+- Master DMX Console with Blackout, Strobe All, Dimmer, and remote group controls.
 - Group Linker and universal Lamp Controller tools.

@@ -264,7 +264,7 @@ public class DmxConsoleScreen extends Screen {
 
 		this.qualityButton = this.addRenderableWidget(
 			Button.builder(this.qualityLabel(), button -> {
-				BeatLampClientConfig.studioQuality = !BeatLampClientConfig.studioQuality;
+				BeatLampClientConfig.setQualityProfile(BeatLampClientConfig.getQualityProfile().next());
 				button.setMessage(this.qualityLabel());
 			}).bounds(centerX - 100, y + 100, width, 20).build()
 		);
@@ -627,7 +627,13 @@ public class DmxConsoleScreen extends Screen {
 	}
 
 	private Component qualityLabel() {
-		return Component.literal("Studio Quality: " + (BeatLampClientConfig.studioQuality ? "ON" : "OFF"));
+		BeatLampClientConfig.AudioQualityProfile p = BeatLampClientConfig.getQualityProfile();
+		String key = switch (p) {
+			case LITE -> "screen.beatlamp.client_settings.audio_engine.lite";
+			case STUDIO -> "screen.beatlamp.client_settings.audio_engine.studio";
+			case OFF -> "screen.beatlamp.client_settings.audio_engine.off";
+		};
+		return Component.translatable("screen.beatlamp.dmx.quality", Component.translatable(key));
 	}
 
 	private void sendConfig() {

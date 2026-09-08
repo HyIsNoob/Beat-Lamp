@@ -65,6 +65,13 @@ public class BeatLampClient {
 		}
 
 		BlockPos blockPos = beatLamp.getBlockPos();
+		if (!BeatLampClientConfig.enableStageEffects) {
+			beatLamp.pulse = 0.0F;
+			beatLamp.smoothLevel = 0.0F;
+			beatLamp.beatPulse = 0.0F;
+			beatLamp.displayColor = 0;
+			return;
+		}
 		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
 			beatLamp.pulse = 0.0F;
 			beatLamp.smoothLevel = 0.0F;
@@ -332,6 +339,11 @@ public class BeatLampClient {
 		}
 
 		BlockPos blockPos = light.getBlockPos();
+		if (!BeatLampClientConfig.enableStageEffects) {
+			light.beamEnergy = 0.0F;
+			light.beamBeat = 0.0F;
+			return;
+		}
 		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
 			light.beamEnergy = 0.0F;
 			light.beamBeat = 0.0F;
@@ -401,6 +413,11 @@ public class BeatLampClient {
 		}
 
 		BlockPos blockPos = fountain.getBlockPos();
+		if (!BeatLampClientConfig.enableStageEffects) {
+			fountain.fountainEnergy = 0.0F;
+			fountain.fountainImpact = 0.0F;
+			return;
+		}
 		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
 			fountain.fountainEnergy = 0.0F;
 			fountain.fountainImpact = 0.0F;
@@ -855,6 +872,11 @@ public class BeatLampClient {
 		}
 
 		BlockPos blockPos = laser.getBlockPos();
+		if (!BeatLampClientConfig.enableStageEffects || !BeatLampClientConfig.enableLaserBeams) {
+			laser.activeIntensity = 0.0F;
+			laser.burstExpansion = 0.0F;
+			return;
+		}
 		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
 			laser.activeIntensity = 0.0F;
 			return;
@@ -899,6 +921,9 @@ public class BeatLampClient {
 		}
 
 		BlockPos blockPos = fog.getBlockPos();
+		if (!BeatLampClientConfig.enableStageEffects) {
+			return;
+		}
 		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
 			return;
 		}

@@ -44,6 +44,9 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 		int packedLight,
 		int packedOverlay
 	) {
+		if (!com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects) {
+			return;
+		}
 		if (!com.beatlamp.client.config.BeatLampClientConfig.enableLaserBeams) {
 			return;
 		}

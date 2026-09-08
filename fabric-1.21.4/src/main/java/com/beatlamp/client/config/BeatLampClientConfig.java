@@ -16,7 +16,8 @@ public final class BeatLampClientConfig {
 
 	public enum AudioQualityProfile {
 		LITE("lite"),
-		STUDIO("studio");
+		STUDIO("studio"),
+		OFF("off");
 
 		private final String id;
 
@@ -29,7 +30,11 @@ public final class BeatLampClientConfig {
 		}
 
 		public AudioQualityProfile next() {
-			return this == LITE ? STUDIO : LITE;
+			return switch (this) {
+				case STUDIO -> LITE;
+				case LITE -> OFF;
+				case OFF -> STUDIO;
+			};
 		}
 
 		public static AudioQualityProfile byId(String id) {
@@ -42,7 +47,43 @@ public final class BeatLampClientConfig {
 		}
 	}
 
+	public enum BeamQuality {
+		HIGH("high"),
+		MEDIUM("medium"),
+		OFF("off");
+
+		private final String id;
+
+		BeamQuality(String id) {
+			this.id = id;
+		}
+
+		public String getId() {
+			return this.id;
+		}
+
+		public BeamQuality next() {
+			return switch (this) {
+				case HIGH -> MEDIUM;
+				case MEDIUM -> OFF;
+				case OFF -> HIGH;
+			};
+		}
+
+		public static BeamQuality byId(String id) {
+			for (BeamQuality quality : values()) {
+				if (quality.id.equalsIgnoreCase(id)) {
+					return quality;
+				}
+			}
+			return HIGH;
+		}
+	}
+
 	private static AudioQualityProfile qualityProfile = AudioQualityProfile.STUDIO;
+	public static boolean enableStageEffects = true;
+	public static boolean antiStrobe = false;
+	public static BeamQuality beamQuality = BeamQuality.HIGH;
 	public static int beamRenderDistance = 64;
 	public static float laserRenderIntensity = 1.0F;
 	public static boolean enableFogParticles = true;
@@ -64,6 +105,10 @@ public final class BeatLampClientConfig {
 		return qualityProfile == AudioQualityProfile.STUDIO;
 	}
 
+	public static boolean isAudioDisabled() {
+		return qualityProfile == AudioQualityProfile.OFF;
+	}
+
 	public static void load() {
 		if (!Files.exists(CONFIG_PATH)) {
 			save();
@@ -74,6 +119,15 @@ public final class BeatLampClientConfig {
 			JsonObject json = JsonParser.parseReader(reader).getAsJsonObject();
 			if (json.has("audioQuality")) {
 				qualityProfile = AudioQualityProfile.byId(json.get("audioQuality").getAsString());
+			}
+			if (json.has("enableStageEffects")) {
+				enableStageEffects = json.get("enableStageEffects").getAsBoolean();
+			}
+			if (json.has("antiStrobe")) {
+				antiStrobe = json.get("antiStrobe").getAsBoolean();
+			}
+			if (json.has("beamQuality")) {
+				beamQuality = BeamQuality.byId(json.get("beamQuality").getAsString());
 			}
 			if (json.has("beamRenderDistance")) {
 				beamRenderDistance = Math.clamp(json.get("beamRenderDistance").getAsInt(), 16, 256);
@@ -100,6 +154,9 @@ public final class BeatLampClientConfig {
 			Files.createDirectories(CONFIG_PATH.getParent());
 			JsonObject json = new JsonObject();
 			json.addProperty("audioQuality", qualityProfile.getId());
+			json.addProperty("enableStageEffects", enableStageEffects);
+			json.addProperty("antiStrobe", antiStrobe);
+			json.addProperty("beamQuality", beamQuality.getId());
 			json.addProperty("beamRenderDistance", beamRenderDistance);
 			json.addProperty("laserRenderIntensity", laserRenderIntensity);
 			json.addProperty("enableFogParticles", enableFogParticles);

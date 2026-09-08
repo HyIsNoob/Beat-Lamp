@@ -42,11 +42,26 @@ import net.minecraft.client.renderer.blockentity.BlockEntityRenderers;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
 
+import com.beatlamp.client.gui.BeatLampClientSettingsScreen;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.KeyMapping;
+import org.lwjgl.glfw.GLFW;
+
 public class BeatLampFabricClient implements ClientModInitializer {
+	public static KeyMapping OPEN_SETTINGS_KEY;
+
 	@Override
 	public void onInitializeClient() {
 		PlatformNetwork.setSender(ClientPlayNetworking::send);
 		BeatLampClientConfig.load();
+
+		OPEN_SETTINGS_KEY = KeyBindingHelper.registerKeyBinding(new KeyMapping(
+			"key.beatlamp.open_settings",
+			InputConstants.Type.KEYSYM,
+			GLFW.GLFW_KEY_O,
+			"key.categories.beatlamp"
+		));
 
 		BlockRenderLayerMap.INSTANCE.putBlock(BeatLampBlocks.BEAT_LAMP, RenderType.cutout());
 		BlockEntityRenderers.register(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);
@@ -145,7 +160,14 @@ public class BeatLampFabricClient implements ClientModInitializer {
 			}
 		});
 
-		ClientTickEvents.END_CLIENT_TICK.register(client -> JukeboxAudioTracker.clientTick());
+		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			JukeboxAudioTracker.clientTick();
+			while (OPEN_SETTINGS_KEY.consumeClick()) {
+				if (client.screen == null) {
+					client.setScreen(new BeatLampClientSettingsScreen());
+				}
+			}
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> JukeboxAudioTracker.clear());
 	}
 }

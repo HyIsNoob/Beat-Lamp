@@ -30,9 +30,25 @@ import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
+import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
+import net.minecraft.client.KeyMapping;
+import com.mojang.blaze3d.platform.InputConstants;
+import org.lwjgl.glfw.GLFW;
+import com.beatlamp.client.gui.BeatLampClientSettingsScreen;
 
 @Mod.EventBusSubscriber(modid = BeatLamp.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class BeatLampForgeClient {
+	public static final KeyMapping OPEN_SETTINGS_KEY = new KeyMapping(
+		"key.beatlamp.open_settings",
+		InputConstants.Type.KEYSYM,
+		GLFW.GLFW_KEY_O,
+		"key.categories.beatlamp"
+	);
+
+	@SubscribeEvent
+	public static void onRegisterKeyMappings(RegisterKeyMappingsEvent event) {
+		event.register(OPEN_SETTINGS_KEY);
+	}
 
 	@SubscribeEvent
 	public static void onClientSetup(FMLClientSetupEvent event) {
@@ -67,6 +83,12 @@ public class BeatLampForgeClient {
 		public static void onClientTick(TickEvent.ClientTickEvent event) {
 			if (event.phase == TickEvent.Phase.END) {
 				JukeboxAudioTracker.clientTick();
+				while (OPEN_SETTINGS_KEY.consumeClick()) {
+					Minecraft mc = Minecraft.getInstance();
+					if (mc.screen == null) {
+						mc.setScreen(new BeatLampClientSettingsScreen());
+					}
+				}
 			}
 		}
 
