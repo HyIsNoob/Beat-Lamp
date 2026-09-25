@@ -1,0 +1,29 @@
+modLoader = "javafml" #mandatory
+loaderVersion = "[4,)" #mandatory
+license = "All Rights Reserved" # Review your options at https://choosealicense.com/.
+issueTrackerURL="https://www.curseforge.com/minecraft/mc-mods/music-disc-maker/comments" #optional
+[[mods]] #mandatory
+modId = "music_disc_maker" #mandatory
+version = "3.0.2" #mandatory
+displayName = "Music Disc Maker" #mandatory
+displayURL="https://www.curseforge.com/minecraft/mc-mods/music-disc-maker" #optional (displayed in the mod UI)
+logoFile = "music_disc_maker.png" #optional (needs to be in the root of your mod jar (root of your 'resources' folder))
+credits="" #optional
+authors = "KURONAMI" #optional
+description = '''Paste a URL into the Music Disc Maker block and turn a Blank Disc into a custom music disc you can play in any vanilla jukebox. Supports YouTube, Spotify, SoundCloud, Bandcamp, Vimeo, Twitch and direct HTTP audio streams (audio is bundled via LavaPlayer, no extra install). Disclaimer: streaming audio from third-party services is the user's responsibility. Please respect the Terms of Service of each service you use.''' #mandatory (Supports multiline text)
+[[mixins]]
+config = "music_disc_maker.mixins.json"
+[[mixins]]
+config = "music_disc_maker.neoforge.mixins.json"
+[[dependencies.music_disc_maker]] #optional
+modId = "neoforge" #mandatory
+type="required" #mandatory (Can be one of "required", "optional", "incompatible" or "discouraged")
+versionRange = "[21.1.227,)" #mandatory
+ordering = "NONE" # The order that this dependency should load in relation to your mod, required to be either 'BEFORE' or 'AFTER' if the dependency is not mandatory
+side = "BOTH" # Side this dependency is applied on - 'BOTH', 'CLIENT' or 'SERVER'
+[[dependencies.music_disc_maker]]
+modId = "minecraft"
+type="required" #mandatory (Can be one of "required", "optional", "incompatible" or "discouraged")
+versionRange = "[1.21.1, 1.22)"
+ordering = "NONE"
+side = "BOTH"

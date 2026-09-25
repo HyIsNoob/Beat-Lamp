@@ -8,6 +8,7 @@ import com.beatlamp.client.audio.JukeboxAudioTracker;
 import com.beatlamp.client.render.BeatLampRenderer;
 import com.beatlamp.client.render.LampOutlineRenderer;
 import com.beatlamp.client.render.LaserProjectorRenderer;
+import com.beatlamp.client.render.RainbowLedRenderer;
 import com.beatlamp.client.render.StageLightRenderer;
 import com.beatlamp.item.StageBlockItem;
 
@@ -34,7 +35,9 @@ import net.minecraftforge.client.event.RegisterKeyMappingsEvent;
 import net.minecraft.client.KeyMapping;
 import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
+import com.beatlamp.block.StageJukeboxBlockEntity;
 import com.beatlamp.client.gui.BeatLampClientSettingsScreen;
+import com.beatlamp.client.gui.StageJukeboxConfigScreen;
 
 @Mod.EventBusSubscriber(modid = BeatLamp.MOD_ID, bus = Mod.EventBusSubscriber.Bus.MOD, value = Dist.CLIENT)
 public class BeatLampForgeClient {
@@ -53,6 +56,9 @@ public class BeatLampForgeClient {
 	@SubscribeEvent
 	public static void onClientSetup(FMLClientSetupEvent event) {
 		BeatLampClient.init();
+		StageJukeboxBlockEntity.controllerUser = jukebox -> {
+			Minecraft.getInstance().setScreen(new StageJukeboxConfigScreen(jukebox));
+		};
 		MinecraftForge.EVENT_BUS.register(ClientTickEvents.class);
 	}
 
@@ -76,8 +82,15 @@ public class BeatLampForgeClient {
 				return new LaserProjectorRenderer(context);
 			}
 		});
+		event.registerBlockEntityRenderer(BeatLampForge.RAINBOW_LED_BE.get(), new net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider<com.beatlamp.block.RainbowLedBlockEntity>() {
+			@Override
+			public net.minecraft.client.renderer.blockentity.BlockEntityRenderer<com.beatlamp.block.RainbowLedBlockEntity> create(net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider.Context context) {
+				return new RainbowLedRenderer(context);
+			}
+		});
 	}
 
+	@Mod.EventBusSubscriber(modid = BeatLamp.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)
 	public static class ClientTickEvents {
 		@SubscribeEvent
 		public static void onClientTick(TickEvent.ClientTickEvent event) {

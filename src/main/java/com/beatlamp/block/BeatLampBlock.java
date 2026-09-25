@@ -34,7 +34,7 @@ public class BeatLampBlock extends BaseEntityBlock {
 
 	public BeatLampBlock(Properties properties) {
 		super(properties);
-		this.registerDefaultState(this.stateDefinition.any().setValue(FRAMELESS, true).setValue(LIT, false));
+		this.registerDefaultState(this.stateDefinition.any().setValue(FRAMELESS, false).setValue(LIT, false));
 	}
 
 	@Override

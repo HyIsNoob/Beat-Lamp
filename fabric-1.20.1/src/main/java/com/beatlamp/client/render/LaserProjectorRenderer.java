@@ -14,6 +14,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -25,6 +26,11 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 	private static final ResourceLocation BEAM_TEXTURE = new ResourceLocation("minecraft", "textures/entity/beacon_beam.png");
 
 	public LaserProjectorRenderer(BlockEntityRendererProvider.Context context) {
+	}
+
+	@Override
+	public boolean shouldRenderOffScreen(LaserProjectorBlockEntity blockEntity) {
+		return true;
 	}
 
 	@Override
@@ -45,7 +51,13 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 			return;
 		}
 
-		float intensity = laser.beamIntensity;
+		BlockPos leadPos = (laser.getManualGroup() == null || laser.getManualGroup().isEmpty()) ? null : laser.getManualGroup().get(0);
+		if (com.beatlamp.client.DmxMasterTracker.isBlackoutNear(laser.getBlockPos()) || com.beatlamp.client.DmxMasterTracker.isGroupMuted(laser.getBlockPos(), leadPos)) {
+			return;
+		}
+
+		float masterDimmer = com.beatlamp.client.DmxMasterTracker.getMasterDimmerNear(laser.getBlockPos());
+		float intensity = laser.activeIntensity * com.beatlamp.client.config.BeatLampClientConfig.laserRenderIntensity * masterDimmer;
 		if (intensity <= 0.02F) {
 			return;
 		}

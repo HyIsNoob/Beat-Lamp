@@ -24,6 +24,11 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 	}
 
 	@Override
+	public boolean shouldRenderOffScreen(BeatLampBlockEntity blockEntity) {
+		return true;
+	}
+
+	@Override
 	public int getViewDistance() {
 		return 192;
 	}
@@ -41,6 +46,17 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		boolean blackback = beatLamp.isBlackback();
 
 		if (!com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects) {
+			if (beatLamp.isFrameless()) {
+				poseStack.pushPose();
+				poseStack.translate(0.5F, 0.5F, 0.5F);
+				PoseStack.Pose pose = poseStack.last();
+				Matrix4f matrix = pose.pose();
+				VertexConsumer buffer = multiBufferSource.getBuffer(RenderType.entityTranslucent(CORE_TEXTURE));
+				float standbyAlpha = blackback ? 1.0F : 0.45F;
+				drawCube(buffer, pose, matrix, FULL_HALF, FULL_HALF, FULL_HALF, 0.04F, 0.04F, 0.06F, standbyAlpha, 0xF000F0);
+				poseStack.popPose();
+				return;
+			}
 			if (!blackback) {
 				return;
 			}
@@ -49,9 +65,22 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float pulse = Mth.clamp(beatLamp.pulse + beatLamp.beatPulse * 0.65F, 0.0F, 1.0F);
 		float bar = Mth.clamp(beatLamp.barValue, 0.0F, 1.0F);
 		float beat = Mth.clamp(beatLamp.beatPulse, 0.0F, 1.0F);
-		float intensity = com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects ? Math.max(Math.max(pulse, bar), beat) : 0.0F;
+		float masterDimmer = com.beatlamp.client.DmxMasterTracker.getMasterDimmerNear(beatLamp.getBlockPos());
+		float intensity = com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects ? Math.max(Math.max(pulse, bar), beat) * masterDimmer : 0.0F;
 
 		if (intensity <= 0.02F || beatLamp.displayColor == 0) {
+			if (beatLamp.isFrameless()) {
+				poseStack.pushPose();
+				poseStack.translate(0.5F, 0.5F, 0.5F);
+				PoseStack.Pose pose = poseStack.last();
+				Matrix4f matrix = pose.pose();
+				VertexConsumer buffer = multiBufferSource.getBuffer(RenderType.entityTranslucent(CORE_TEXTURE));
+				float standbyAlpha = blackback ? 1.0F : 0.45F;
+				drawCube(buffer, pose, matrix, FULL_HALF, FULL_HALF, FULL_HALF, 0.04F, 0.04F, 0.06F, standbyAlpha, 0xF000F0);
+				poseStack.popPose();
+				return;
+			}
+
 			if (!blackback) {
 				return;
 			}
@@ -94,7 +123,7 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 			}
 		}
 
-		brightness = Math.min(brightness, 1.5F);
+		brightness = Math.min(brightness * masterDimmer, 1.5F);
 		float coreRed = Math.min(red * brightness, 1.0F);
 		float coreGreen = Math.min(green * brightness, 1.0F);
 		float coreBlue = Math.min(blue * brightness, 1.0F);

@@ -7,6 +7,7 @@ import com.beatlamp.BeatLampBlockEntities;
 import com.beatlamp.BeatLampBlocks;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.LongTag;
@@ -43,6 +44,9 @@ public class BeatEmitterBlockEntity extends BlockEntity {
 
 	private int currentSignal = 0;
 	private long lastPulseTick = 0;
+	private int lastSentSignal = -1;
+	private long lastSendTime;
+	private long lastServerUpdate;
 
 	private final List<BlockPos> manualGroup = new java.util.ArrayList<>();
 
@@ -104,23 +108,56 @@ public class BeatEmitterBlockEntity extends BlockEntity {
 		this.markUpdated();
 	}
 
+	public boolean shouldSendSignal(long gameTime, int signal) {
+		if (gameTime - this.lastSendTime < 2L) {
+			return false;
+		}
+		return signal != this.lastSentSignal || (gameTime - this.lastSendTime >= 40L);
+	}
+
+	public void markSent(long gameTime, int signal) {
+		this.lastSendTime = gameTime;
+		this.lastSentSignal = signal;
+	}
+
 	public int getSignal() {
 		return this.currentSignal;
 	}
 
 	public void setSignal(int signal, long gameTime) {
+		if (!com.beatlamp.config.BeatLampConfig.enableRedstoneEmitter) {
+			signal = 0;
+		}
 		int clamped = net.minecraft.util.Mth.clamp(signal, 0, 15);
 		if (this.currentSignal != clamped) {
 			this.currentSignal = clamped;
 			this.lastPulseTick = gameTime;
+			this.lastServerUpdate = gameTime;
 			this.markUpdated();
 
 			Level level = this.level;
 			if (level != null && !level.isClientSide) {
 				BlockState state = this.getBlockState();
-				level.setBlock(this.worldPosition, state.setValue(BeatEmitterBlock.POWERED, clamped > 0), Block.UPDATE_ALL);
+				if (state.hasProperty(BeatEmitterBlock.POWERED)) {
+					state = state.setValue(BeatEmitterBlock.POWERED, clamped > 0);
+				}
+				if (state.hasProperty(BeatEmitterBlock.POWER)) {
+					state = state.setValue(BeatEmitterBlock.POWER, clamped);
+				}
+				level.setBlock(this.worldPosition, state, Block.UPDATE_ALL);
 				level.updateNeighborsAt(this.worldPosition, state.getBlock());
+				for (Direction dir : Direction.values()) {
+					level.updateNeighborsAt(this.worldPosition.relative(dir), state.getBlock());
+				}
 			}
+		} else {
+			this.lastServerUpdate = gameTime;
+		}
+	}
+
+	public void tickServerTimeout(Level level) {
+		if (this.currentSignal != 0 && level.getGameTime() - this.lastServerUpdate > 40L) {
+			this.setSignal(0, level.getGameTime());
 		}
 	}
 

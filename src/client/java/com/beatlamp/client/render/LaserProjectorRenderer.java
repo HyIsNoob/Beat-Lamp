@@ -31,6 +31,11 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 	}
 
 	@Override
+	public boolean shouldRenderOffScreen(LaserProjectorBlockEntity blockEntity) {
+		return true;
+	}
+
+	@Override
 	public int getViewDistance() {
 		return com.beatlamp.client.config.BeatLampClientConfig.beamRenderDistance;
 	}
@@ -51,7 +56,8 @@ public class LaserProjectorRenderer implements BlockEntityRenderer<LaserProjecto
 			return;
 		}
 
-		float intensity = laser.activeIntensity * com.beatlamp.client.config.BeatLampClientConfig.laserRenderIntensity;
+		float masterDimmer = com.beatlamp.client.DmxMasterTracker.getMasterDimmerNear(laser.getBlockPos());
+		float intensity = laser.activeIntensity * com.beatlamp.client.config.BeatLampClientConfig.laserRenderIntensity * masterDimmer;
 		if (intensity <= 0.02F) {
 			return;
 		}

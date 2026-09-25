@@ -9,8 +9,10 @@ import com.beatlamp.block.DmxConsoleBlockEntity;
 import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LaserProjectorBlockEntity;
+import com.beatlamp.block.RainbowLedBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.network.DmxConsolePayload;
+import com.beatlamp.network.EmitterConfigurePayload;
 import com.beatlamp.network.EmitterSignalPayload;
 import com.beatlamp.network.FogGeneratorConfigurePayload;
 import com.beatlamp.network.FountainConfigurePayload;
@@ -18,6 +20,7 @@ import com.beatlamp.network.FountainFirePayload;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
 import com.beatlamp.network.LaserProjectorConfigurePayload;
+import com.beatlamp.network.RainbowLedConfigurePayload;
 import com.beatlamp.network.StageLightConfigurePayload;
 
 import io.netty.buffer.Unpooled;
@@ -36,10 +39,13 @@ public final class FabricNetwork {
 	public static final ResourceLocation FOUNTAIN_CONFIGURE_ID = new ResourceLocation(BeatLamp.MOD_ID, "fountain_configure");
 	public static final ResourceLocation LASER_PROJECTOR_CONFIGURE_ID = new ResourceLocation(BeatLamp.MOD_ID, "laser_projector_configure");
 	public static final ResourceLocation FOG_GENERATOR_CONFIGURE_ID = new ResourceLocation(BeatLamp.MOD_ID, "fog_generator_configure");
+	public static final ResourceLocation EMITTER_CONFIGURE_ID = new ResourceLocation(BeatLamp.MOD_ID, "emitter_configure");
 	public static final ResourceLocation EMITTER_SIGNAL_ID = new ResourceLocation(BeatLamp.MOD_ID, "emitter_signal");
 	public static final ResourceLocation LAMP_SOURCE_ID = new ResourceLocation(BeatLamp.MOD_ID, "lamp_source");
 	public static final ResourceLocation FOUNTAIN_FIRE_ID = new ResourceLocation(BeatLamp.MOD_ID, "fountain_fire");
 	public static final ResourceLocation DMX_CONSOLE_ID = new ResourceLocation(BeatLamp.MOD_ID, "dmx_console");
+	public static final ResourceLocation RAINBOW_LED_CONFIGURE_ID = new ResourceLocation(BeatLamp.MOD_ID, "rainbow_led_configure");
+	public static final ResourceLocation STAGE_JUKEBOX_CONFIGURE_ID = new ResourceLocation(BeatLamp.MOD_ID, "stage_jukebox_configure");
 
 	private FabricNetwork() {
 	}
@@ -192,8 +198,8 @@ public final class FabricNetwork {
 			return true;
 		}
 
-		if (EMITTER_SIGNAL_ID.equals(id)) {
-			EmitterSignalPayload msg = EmitterSignalPayload.read(buf);
+		if (EMITTER_CONFIGURE_ID.equals(id)) {
+			EmitterConfigurePayload msg = EmitterConfigurePayload.read(buf);
 			player.server.execute(() -> {
 				ServerLevel level = player.serverLevel();
 				BlockPos pos = msg.pos();
@@ -216,6 +222,18 @@ public final class FabricNetwork {
 			return true;
 		}
 
+		if (EMITTER_SIGNAL_ID.equals(id)) {
+			EmitterSignalPayload msg = EmitterSignalPayload.read(buf);
+			player.server.execute(() -> {
+				ServerLevel level = player.serverLevel();
+				BlockPos pos = msg.pos();
+				if (level.isLoaded(pos) && level.getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
+					emitter.setSignal(msg.signal(), level.getGameTime());
+				}
+			});
+			return true;
+		}
+
 		if (LAMP_SOURCE_ID.equals(id)) {
 			LampSourcePayload msg = LampSourcePayload.read(buf);
 			player.server.execute(() -> {
@@ -224,13 +242,7 @@ public final class FabricNetwork {
 				BlockPos sourcePos = msg.sourcePos();
 
 				if (sourcePos == null) {
-					BlockEntity be = level.getBlockEntity(targetPos);
-					if (be instanceof BeatLampBlockEntity l) l.setSource(null);
-					else if (be instanceof StageLightBlockEntity s) s.setSource(null);
-					else if (be instanceof FountainBlockEntity f) f.setSource(null);
-					else if (be instanceof LaserProjectorBlockEntity lp) lp.setSource(null);
-					else if (be instanceof FogGeneratorBlockEntity fg) fg.setSource(null);
-					else if (be instanceof BeatEmitterBlockEntity em) em.setSource(null);
+					BeatLamp.unbindSource(level, targetPos, player);
 				} else {
 					BeatLamp.bindSource(level, targetPos, sourcePos, player, player.getMainHandItem());
 				}
@@ -267,6 +279,58 @@ public final class FabricNetwork {
 					dmx.setStrobeAll(msg.strobeAll());
 					dmx.setMasterDimmer(msg.masterDimmer());
 					dmx.setMasterSpeed(msg.masterSpeed());
+					dmx.getMutedGroups().clear();
+					if (msg.mutedGroups() != null) {
+						for (BlockPos p : msg.mutedGroups()) {
+							dmx.setGroupMuted(p, true);
+						}
+					}
+					dmx.markUpdated();
+				}
+			});
+			return true;
+		}
+
+		if (RAINBOW_LED_CONFIGURE_ID.equals(id)) {
+			RainbowLedConfigurePayload msg = RainbowLedConfigurePayload.read(buf);
+			player.server.execute(() -> {
+				ServerLevel level = player.serverLevel();
+				BlockPos pos = msg.pos();
+
+				if (msg.unlink()) {
+					BeatLamp.unlinkRainbowLedGroup(level, pos);
+					return;
+				}
+
+				BlockEntity be = level.getBlockEntity(pos);
+				if (be instanceof RainbowLedBlockEntity led) {
+					List<BlockPos> group = led.getManualGroup().isEmpty() ? BeatLamp.floodFillRainbowLed(level, pos) : led.getManualGroup();
+					for (BlockPos memberPos : group) {
+						if (level.getBlockEntity(memberPos) instanceof RainbowLedBlockEntity memberLed) {
+							memberLed.applyConfig(msg.mode(), msg.speed(), msg.color(), msg.brightness(), msg.frameless());
+						}
+					}
+				}
+			});
+			return true;
+		}
+
+		if (STAGE_JUKEBOX_CONFIGURE_ID.equals(id)) {
+			com.beatlamp.network.StageJukeboxConfigurePayload msg = com.beatlamp.network.StageJukeboxConfigurePayload.read(buf);
+			player.server.execute(() -> {
+				ServerLevel level = player.serverLevel();
+				BlockPos pos = msg.pos();
+				if (level.getBlockEntity(pos) instanceof com.beatlamp.block.StageJukeboxBlockEntity jukebox) {
+					switch (msg.action()) {
+						case com.beatlamp.network.StageJukeboxConfigurePayload.ACTION_UPDATE_SETTINGS ->
+							jukebox.applyConfiguration(msg.volume(), msg.range(), msg.loop());
+						case com.beatlamp.network.StageJukeboxConfigurePayload.ACTION_TOGGLE_PAUSE ->
+							jukebox.togglePause();
+						case com.beatlamp.network.StageJukeboxConfigurePayload.ACTION_EJECT ->
+							jukebox.ejectRecord(player);
+						case com.beatlamp.network.StageJukeboxConfigurePayload.ACTION_SEEK ->
+							jukebox.seekTo(msg.seekSeconds());
+					}
 				}
 			});
 			return true;
@@ -294,6 +358,9 @@ public final class FabricNetwork {
 		} else if (message instanceof FogGeneratorConfigurePayload payload) {
 			channelId = FOG_GENERATOR_CONFIGURE_ID;
 			payload.write(buf);
+		} else if (message instanceof EmitterConfigurePayload payload) {
+			channelId = EMITTER_CONFIGURE_ID;
+			payload.write(buf);
 		} else if (message instanceof EmitterSignalPayload payload) {
 			channelId = EMITTER_SIGNAL_ID;
 			payload.write(buf);
@@ -306,13 +373,23 @@ public final class FabricNetwork {
 		} else if (message instanceof DmxConsolePayload payload) {
 			channelId = DMX_CONSOLE_ID;
 			payload.write(buf);
+		} else if (message instanceof RainbowLedConfigurePayload payload) {
+			channelId = RAINBOW_LED_CONFIGURE_ID;
+			payload.write(buf);
+		} else if (message instanceof com.beatlamp.network.StageJukeboxConfigurePayload payload) {
+			channelId = STAGE_JUKEBOX_CONFIGURE_ID;
+			payload.write(buf);
 		} else {
 			throw new IllegalArgumentException("Unknown payload type: " + message.getClass());
 		}
 
 		Minecraft mc = Minecraft.getInstance();
 		if (mc.getConnection() != null) {
-			mc.getConnection().send(new ServerboundCustomPayloadPacket(channelId, buf));
+			if (net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.canSend(channelId)) {
+				net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.send(channelId, buf);
+			} else {
+				mc.getConnection().send(new ServerboundCustomPayloadPacket(channelId, buf));
+			}
 		}
 	}
 }

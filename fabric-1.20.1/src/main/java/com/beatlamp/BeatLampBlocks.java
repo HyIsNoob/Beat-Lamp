@@ -7,6 +7,7 @@ import com.beatlamp.block.DmxConsoleBlock;
 import com.beatlamp.block.FogGeneratorBlock;
 import com.beatlamp.block.FountainBlock;
 import com.beatlamp.block.LaserProjectorBlock;
+import com.beatlamp.block.RainbowLedBlock;
 import com.beatlamp.block.StageJukeboxBlock;
 import com.beatlamp.block.StageLightBlock;
 import com.beatlamp.block.StageSpeakerBlock;
@@ -16,6 +17,7 @@ import net.minecraft.world.level.block.state.BlockBehaviour;
 
 public class BeatLampBlocks {
 	public static BeatLampBlock BEAT_LAMP;
+	public static RainbowLedBlock RAINBOW_LED_BLOCK;
 	public static BeatEmitterBlock BEAT_EMITTER;
 	public static StageLightBlock STAGE_LIGHT;
 	public static FountainBlock FOUNTAIN;
@@ -31,6 +33,14 @@ public class BeatLampBlocks {
 			.strength(0.6F, 3.0F)
 			.sound(SoundType.GLASS)
 			.lightLevel(state -> 15));
+	}
+
+	public static RainbowLedBlock createRainbowLedBlock() {
+		return new RainbowLedBlock(BlockBehaviour.Properties.of()
+			.strength(0.6F, 3.0F)
+			.sound(SoundType.GLASS)
+			.lightLevel(state -> 15)
+			.noOcclusion());
 	}
 
 	public static BeatEmitterBlock createBeatEmitter() {

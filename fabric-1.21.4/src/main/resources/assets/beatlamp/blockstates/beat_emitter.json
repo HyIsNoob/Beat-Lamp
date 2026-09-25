@@ -2,12 +2,6 @@
 	"variants": {
 		"": {
 			"model": "beatlamp:block/beat_emitter"
-		},
-		"powered=false": {
-			"model": "beatlamp:block/beat_emitter"
-		},
-		"powered=true": {
-			"model": "beatlamp:block/beat_emitter"
 		}
 	}
 }

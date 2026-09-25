@@ -10,6 +10,7 @@ import net.minecraft.world.item.Rarity;
 
 public class BeatLampItems {
 	public static StageBlockItem BEAT_LAMP;
+	public static StageBlockItem RAINBOW_LED_BLOCK;
 	public static StageBlockItem BEAT_EMITTER;
 	public static StageBlockItem STAGE_LIGHT;
 	public static StageBlockItem FOUNTAIN;

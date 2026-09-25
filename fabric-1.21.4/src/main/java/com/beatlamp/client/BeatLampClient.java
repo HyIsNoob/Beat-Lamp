@@ -72,7 +72,8 @@ public class BeatLampClient {
 			beatLamp.displayColor = 0;
 			return;
 		}
-		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+		BlockPos leadPos = (beatLamp.getManualGroup() == null || beatLamp.getManualGroup().isEmpty()) ? null : beatLamp.getManualGroup().get(0);
+		if (DmxMasterTracker.isBlackoutNear(blockPos) || DmxMasterTracker.isGroupMuted(blockPos, leadPos)) {
 			beatLamp.pulse = 0.0F;
 			beatLamp.smoothLevel = 0.0F;
 			beatLamp.beatPulse = 0.0F;
@@ -288,6 +289,16 @@ public class BeatLampClient {
 		}
 
 		BlockPos blockPos = emitter.getBlockPos();
+		BlockPos leadPos = emitter.getManualGroup().isEmpty() ? null : emitter.getManualGroup().get(0);
+		if (DmxMasterTracker.isBlackoutNear(blockPos) || DmxMasterTracker.isGroupMuted(blockPos, leadPos)) {
+			int finalSignal = emitter.isInverted() ? 15 : 0;
+			long gameTime = level.getGameTime();
+			if (emitter.shouldSendSignal(gameTime, finalSignal)) {
+				PlatformNetwork.sendToServer(new EmitterSignalPayload(blockPos, finalSignal));
+				emitter.markSent(gameTime, finalSignal);
+			}
+			return;
+		}
 		Vec3 center = Vec3.atCenterOf(blockPos);
 		BlockPos source = emitter.getSource();
 
@@ -344,7 +355,8 @@ public class BeatLampClient {
 			light.beamBeat = 0.0F;
 			return;
 		}
-		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+		BlockPos leadPos = light.getManualGroup().isEmpty() ? null : light.getManualGroup().get(0);
+		if (DmxMasterTracker.isBlackoutNear(blockPos) || DmxMasterTracker.isGroupMuted(blockPos, leadPos)) {
 			light.beamEnergy = 0.0F;
 			light.beamBeat = 0.0F;
 			return;
@@ -418,7 +430,8 @@ public class BeatLampClient {
 			fountain.fountainImpact = 0.0F;
 			return;
 		}
-		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+		BlockPos leadPos = fountain.getManualGroup().isEmpty() ? null : fountain.getManualGroup().get(0);
+		if (DmxMasterTracker.isBlackoutNear(blockPos) || DmxMasterTracker.isGroupMuted(blockPos, leadPos)) {
 			fountain.fountainEnergy = 0.0F;
 			fountain.fountainImpact = 0.0F;
 			return;
@@ -474,7 +487,7 @@ public class BeatLampClient {
 			}
 
 			if (fountain.isSmokeEnabled() && random.nextInt(4) == 0) {
-				level.addParticle(ParticleTypes.SMOKE, originX, originY, originZ, 0.0, 0.06, 0.0);
+				addStageParticle(level, ParticleTypes.SMOKE, originX, originY, originZ, 0.0, 0.06, 0.0);
 			}
 		}
 
@@ -488,7 +501,7 @@ public class BeatLampClient {
 				double vy = 0.38 + beatPulse * 0.42 + random.nextDouble() * 0.18;
 				double vz = (random.nextDouble() - 0.5) * 0.08;
 
-				level.addParticle(ParticleTypes.FIREWORK, px, originY, pz, vx, vy, vz);
+				addStageParticle(level, ParticleTypes.FIREWORK, px, originY, pz, vx, vy, vz);
 				spawnFountainParticle(level, pType, px, originY, pz, vx * 0.8, vy * 0.9, vz * 0.8, dust, random);
 			}
 		}
@@ -504,12 +517,12 @@ public class BeatLampClient {
 				double vy = 0.35 + random.nextDouble() * 0.55;
 				double vz = Math.sin(angle) * spread;
 
-				level.addParticle(ParticleTypes.FIREWORK, originX, originY + 0.1, originZ, vx, vy, vz);
+				addStageParticle(level, ParticleTypes.FIREWORK, originX, originY + 0.1, originZ, vx, vy, vz);
 				if (i % 2 == 0) {
-					level.addParticle(dust, originX, originY + 0.1, originZ, vx * 0.8, vy * 0.9, vz * 0.8);
+					addStageParticle(level, dust, originX, originY + 0.1, originZ, vx * 0.8, vy * 0.9, vz * 0.8);
 				}
 				if (i % 3 == 0) {
-					level.addParticle(ParticleTypes.GLOW, originX, originY + 0.1, originZ, vx * 0.6, vy * 0.8, vz * 0.6);
+					addStageParticle(level, ParticleTypes.GLOW, originX, originY + 0.1, originZ, vx * 0.6, vy * 0.8, vz * 0.6);
 				}
 			}
 		}
@@ -533,19 +546,19 @@ public class BeatLampClient {
 		RandomSource random
 	) {
 		switch (pType) {
-			case SOUL_FLAME -> level.addParticle(ParticleTypes.SOUL_FIRE_FLAME, x, y, z, vx, vy, vz);
-			case FIREWORK -> level.addParticle(ParticleTypes.FIREWORK, x, y, z, vx, vy, vz);
-			case GLOW -> level.addParticle(ParticleTypes.GLOW, x, y, z, vx, vy, vz);
-			case SPARK -> level.addParticle(ParticleTypes.ELECTRIC_SPARK, x, y, z, vx, vy, vz);
-			case DUST -> level.addParticle(dust, x, y, z, vx, vy, vz);
+			case SOUL_FLAME -> addStageParticle(level, ParticleTypes.SOUL_FIRE_FLAME, x, y, z, vx, vy, vz);
+			case FIREWORK -> addStageParticle(level, ParticleTypes.FIREWORK, x, y, z, vx, vy, vz);
+			case GLOW -> addStageParticle(level, ParticleTypes.GLOW, x, y, z, vx, vy, vz);
+			case SPARK -> addStageParticle(level, ParticleTypes.ELECTRIC_SPARK, x, y, z, vx, vy, vz);
+			case DUST -> addStageParticle(level, dust, x, y, z, vx, vy, vz);
 			case MIXED -> {
 				int pick = random.nextInt(4);
-				if (pick == 0) level.addParticle(ParticleTypes.FLAME, x, y, z, vx, vy, vz);
-				else if (pick == 1) level.addParticle(ParticleTypes.FIREWORK, x, y, z, vx, vy, vz);
-				else if (pick == 2) level.addParticle(ParticleTypes.GLOW, x, y, z, vx, vy, vz);
-				else level.addParticle(dust, x, y, z, vx, vy, vz);
+				if (pick == 0) addStageParticle(level, ParticleTypes.FLAME, x, y, z, vx, vy, vz);
+				else if (pick == 1) addStageParticle(level, ParticleTypes.FIREWORK, x, y, z, vx, vy, vz);
+				else if (pick == 2) addStageParticle(level, ParticleTypes.GLOW, x, y, z, vx, vy, vz);
+				else addStageParticle(level, dust, x, y, z, vx, vy, vz);
 			}
-			default -> level.addParticle(ParticleTypes.FLAME, x, y, z, vx, vy, vz);
+			default -> addStageParticle(level, ParticleTypes.FLAME, x, y, z, vx, vy, vz);
 		}
 	}
 
@@ -583,18 +596,27 @@ public class BeatLampClient {
 				int display = beatLamp.displayColor;
 
 				if (display == 0) {
-					level.addParticle(ParticleTypes.NOTE, x, y, z, 0.5, 0.0, 0.0);
+					addStageParticle(level, ParticleTypes.NOTE, x, y, z, 0.5, 0.0, 0.0);
 				} else {
 					float[] hsb = java.awt.Color.RGBtoHSB((display >> 16) & 0xFF, (display >> 8) & 0xFF, display & 0xFF, null);
-					level.addParticle(ParticleTypes.NOTE, x, y, z, hsb[0], 0.0, 0.0);
+					addStageParticle(level, ParticleTypes.NOTE, x, y, z, hsb[0], 0.0, 0.0);
 				}
 			}
-			case END_ROD -> level.addParticle(ParticleTypes.END_ROD, x, y, z, vx, vy + 0.01, vz);
-			case FIREWORK -> level.addParticle(ParticleTypes.FIREWORK, x, y, z, vx, vy + 0.02, vz);
-			case GLOW -> level.addParticle(ParticleTypes.GLOW, x, y, z, vx, vy + 0.01, vz);
+			case END_ROD -> addStageParticle(level, ParticleTypes.END_ROD, x, y, z, vx, vy + 0.01, vz);
+			case FIREWORK -> addStageParticle(level, ParticleTypes.FIREWORK, x, y, z, vx, vy + 0.02, vz);
+			case GLOW -> addStageParticle(level, ParticleTypes.GLOW, x, y, z, vx, vy + 0.01, vz);
 			default -> {
 			}
 		}
+	}
+
+	private static void addStageParticle(
+		Level level,
+		net.minecraft.core.particles.ParticleOptions particle,
+		double x, double y, double z,
+		double vx, double vy, double vz
+	) {
+		level.addAlwaysVisibleParticle(particle, true, x, y, z, vx, vy, vz);
 	}
 
 	private static Direction randomExposedFace(Level level, BlockPos blockPos, RandomSource random) {
@@ -877,8 +899,10 @@ public class BeatLampClient {
 			laser.burstExpansion = 0.0F;
 			return;
 		}
-		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+		BlockPos leadPos = laser.getManualGroup().isEmpty() ? null : laser.getManualGroup().get(0);
+		if (DmxMasterTracker.isBlackoutNear(blockPos) || DmxMasterTracker.isGroupMuted(blockPos, leadPos)) {
 			laser.activeIntensity = 0.0F;
+			laser.burstExpansion = 0.0F;
 			return;
 		}
 
@@ -924,7 +948,8 @@ public class BeatLampClient {
 		if (!BeatLampClientConfig.enableStageEffects) {
 			return;
 		}
-		if (DmxMasterTracker.isBlackoutNear(blockPos)) {
+		BlockPos leadPos = fog.getManualGroup().isEmpty() ? null : fog.getManualGroup().get(0);
+		if (DmxMasterTracker.isBlackoutNear(blockPos) || DmxMasterTracker.isGroupMuted(blockPos, leadPos)) {
 			return;
 		}
 		Vec3 center = getGroupCenter(blockPos, fog.getManualGroup());
@@ -997,18 +1022,18 @@ public class BeatLampClient {
 			}
 
 			// 1. Billowing dense stage smoke cloud
-			level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, py, pz, vx, vy, vz);
+			addStageParticle(level, ParticleTypes.CAMPFIRE_COSY_SMOKE, px, py, pz, vx, vy, vz);
 
 			// 2. Extra soft cloud puffs for low-lying density
 			if (i % 2 == 0) {
-				level.addParticle(ParticleTypes.CLOUD, px, py, pz, vx * 0.7, vy * 0.5, vz * 0.7);
+				addStageParticle(level, ParticleTypes.CLOUD, px, py, pz, vx * 0.7, vy * 0.5, vz * 0.7);
 			}
 
 			// 3. Colored stage lighting illumination
 			if (isColored) {
-				level.addParticle(new net.minecraft.core.particles.DustParticleOptions(color, 2.2F), px, py, pz, vx * 0.9, vy, vz * 0.9);
+				addStageParticle(level, new net.minecraft.core.particles.DustParticleOptions(color, 2.2F), px, py, pz, vx * 0.9, vy, vz * 0.9);
 				if (i % 3 == 0) {
-					level.addParticle(ParticleTypes.GLOW, px, py, pz, vx * 0.5, vy, vz * 0.5);
+					addStageParticle(level, ParticleTypes.GLOW, px, py, pz, vx * 0.5, vy, vz * 0.5);
 				}
 			}
 		}

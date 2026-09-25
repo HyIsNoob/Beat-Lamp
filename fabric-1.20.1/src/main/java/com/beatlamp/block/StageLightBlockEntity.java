@@ -49,6 +49,14 @@ public class StageLightBlockEntity extends BlockEntity {
 	public float targetYaw;
 	public float targetPitch = 45.0F;
 	public float beamIntensity;
+	public float beamEnergy;
+	public float beamBeat;
+	public float currentPan;
+	public float targetPan;
+	public float currentTilt = 30.0F;
+	public float targetTilt = 30.0F;
+	public int beatColorIndex;
+	public long lastBeatChange;
 	public float stepAngle;
 	public int groupIndex;
 	public int groupSize = 1;

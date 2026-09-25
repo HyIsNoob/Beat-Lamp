@@ -2,6 +2,10 @@
   "replace": false,
   "values": [
     "minecraft:jukebox",
-    "beatlamp:stage_jukebox"
+    "beatlamp:stage_jukebox",
+    {
+      "id": "music_disc_maker:golden_jukebox",
+      "required": false
+    }
   ]
 }

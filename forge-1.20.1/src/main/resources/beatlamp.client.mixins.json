@@ -1,0 +1,13 @@
+{
+	"required": false,
+	"package": "com.beatlamp.forge.mixin",
+	"compatibilityLevel": "JAVA_17",
+	"plugin": "com.beatlamp.forge.mixin.BeatLampForgeMixinPlugin",
+	"client": [
+		"musicdiscmaker.MusicDiscMakerStreamMixin",
+		"musicdiscmaker.MusicDiscMakerDiscMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,22 +1,49 @@
 package com.beatlamp.block;
 
-public enum LampOrientation {
-	AUTO("screen.beatlamp.orientation.auto"),
-	HORIZONTAL("screen.beatlamp.orientation.horizontal"),
-	VERTICAL("screen.beatlamp.orientation.vertical");
+import net.minecraft.core.Direction;
+import net.minecraft.util.StringRepresentable;
 
-	private final String translationKey;
+public enum LampOrientation implements StringRepresentable {
+	AUTO("auto"),
+	EAST_WEST("east_west"),
+	NORTH_SOUTH("north_south"),
+	VERTICAL("vertical");
 
-	LampOrientation(String translationKey) {
-		this.translationKey = translationKey;
+	private final String name;
+
+	LampOrientation(String name) {
+		this.name = name;
+	}
+
+	@Override
+	public String getSerializedName() {
+		return this.name;
 	}
 
 	public String getTranslationKey() {
-		return this.translationKey;
+		return "screen.beatlamp.orientation." + this.name;
 	}
 
 	public LampOrientation next() {
-		LampOrientation[] values = values();
-		return values[(this.ordinal() + 1) % values.length];
+		return values()[(this.ordinal() + 1) % values().length];
+	}
+
+	public Direction.Axis getAxis() {
+		return switch (this) {
+			case EAST_WEST -> Direction.Axis.X;
+			case VERTICAL -> Direction.Axis.Y;
+			case NORTH_SOUTH -> Direction.Axis.Z;
+			default -> null;
+		};
+	}
+
+	public static LampOrientation byName(String name) {
+		for (LampOrientation value : values()) {
+			if (value.name.equals(name)) {
+				return value;
+			}
+		}
+
+		return AUTO;
 	}
 }

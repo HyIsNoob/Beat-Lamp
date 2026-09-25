@@ -47,6 +47,9 @@ public class LaserProjectorBlockEntity extends BlockEntity {
 	public float currentAngle;
 	public float currentSpread;
 	public float beamIntensity;
+	public float activeIntensity;
+	public float burstExpansion = 1.0F;
+	public float targetBurst = 1.0F;
 	public float rotationSpeed;
 	public int groupIndex;
 	public int groupSize = 1;
@@ -214,5 +217,12 @@ public class LaserProjectorBlockEntity extends BlockEntity {
 	@Override
 	public CompoundTag getUpdateTag() {
 		return this.saveWithoutMetadata();
+	}
+
+	public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+		return new net.minecraft.world.phys.AABB(
+			Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY,
+			Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY
+		);
 	}
 }

@@ -6,6 +6,7 @@ import com.beatlamp.block.DmxConsoleBlockEntity;
 import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LaserProjectorBlockEntity;
+import com.beatlamp.block.RainbowLedBlockEntity;
 import com.beatlamp.block.StageJukeboxBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 
@@ -13,6 +14,7 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 
 public class BeatLampBlockEntities {
 	public static BlockEntityType<BeatLampBlockEntity> BEAT_LAMP;
+	public static BlockEntityType<RainbowLedBlockEntity> RAINBOW_LED;
 	public static BlockEntityType<BeatEmitterBlockEntity> BEAT_EMITTER;
 	public static BlockEntityType<StageLightBlockEntity> STAGE_LIGHT;
 	public static BlockEntityType<FountainBlockEntity> FOUNTAIN;

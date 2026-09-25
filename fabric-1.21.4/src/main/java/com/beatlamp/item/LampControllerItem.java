@@ -31,6 +31,30 @@ public class LampControllerItem extends Item {
 		super(properties);
 	}
 
+	public static boolean isSelectableAudioSource(Level level, BlockPos pos) {
+		if (level == null || pos == null) {
+			return false;
+		}
+		// BeatLamp stage fixtures are targets, not external music sources
+		if (level.getBlockEntity(pos) instanceof BeatLampBlockEntity
+			|| level.getBlockEntity(pos) instanceof StageLightBlockEntity
+			|| level.getBlockEntity(pos) instanceof FountainBlockEntity
+			|| level.getBlockEntity(pos) instanceof LaserProjectorBlockEntity
+			|| level.getBlockEntity(pos) instanceof FogGeneratorBlockEntity
+			|| level.getBlockEntity(pos) instanceof BeatEmitterBlockEntity
+			|| level.getBlockEntity(pos) instanceof com.beatlamp.block.RainbowLedBlockEntity) {
+			return false;
+		}
+
+		var state = level.getBlockState(pos);
+		if (state.isAir()) {
+			return false;
+		}
+
+		// Jukeboxes, Music Disc Maker, and any external media/speaker block
+		return true;
+	}
+
 	@Override
 	public InteractionResult useOn(UseOnContext context) {
 		Level level = context.getLevel();
@@ -44,11 +68,9 @@ public class LampControllerItem extends Item {
 		ItemStack controller = context.getItemInHand();
 		BlockPos pendingSource = controller.get(BeatLampItems.SOURCE_POS);
 
-		// 1. Sneak interaction: Jukebox Source Select or Binding
+		// 1. Sneak interaction: Jukebox/TV Source Select, Binding or Unbinding
 		if (player.isShiftKeyDown()) {
-			if (level.getBlockState(blockPos).is(com.beatlamp.BeatLampTags.JUKEBOX_SOURCES)
-				|| level.getBlockState(blockPos).is(Blocks.JUKEBOX)
-				|| level.getBlockState(blockPos).is(com.beatlamp.BeatLampBlocks.STAGE_JUKEBOX)) {
+			if (isSelectableAudioSource(level, blockPos)) {
 				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer) {
 					BeatLamp.handleSourceSelect(serverPlayer, blockPos, controller);
 				}
@@ -68,6 +90,33 @@ public class LampControllerItem extends Item {
 					}
 				}
 				return InteractionResult.SUCCESS;
+			}
+
+			// If controller has no pending source: Shift+Right-Click on bound device to unbind it
+			if (level.getBlockEntity(blockPos) instanceof BeatLampBlockEntity lamp && lamp.getSource() != null) {
+				if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
+					BeatLamp.unbindSource(serverLevel, blockPos, serverPlayer);
+				}
+				return InteractionResult.SUCCESS;
+			} else if (level.getBlockEntity(blockPos) instanceof StageLightBlockEntity
+				|| level.getBlockEntity(blockPos) instanceof FountainBlockEntity
+				|| level.getBlockEntity(blockPos) instanceof LaserProjectorBlockEntity
+				|| level.getBlockEntity(blockPos) instanceof FogGeneratorBlockEntity
+				|| level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
+				net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(blockPos);
+				boolean hasSource = false;
+				if (be instanceof StageLightBlockEntity l && l.getSource() != null) hasSource = true;
+				else if (be instanceof FountainBlockEntity f && f.getSource() != null) hasSource = true;
+				else if (be instanceof LaserProjectorBlockEntity lp && lp.getSource() != null) hasSource = true;
+				else if (be instanceof FogGeneratorBlockEntity fg && fg.getSource() != null) hasSource = true;
+				else if (be instanceof BeatEmitterBlockEntity em && em.getSource() != null) hasSource = true;
+
+				if (hasSource) {
+					if (!level.isClientSide && player instanceof ServerPlayer serverPlayer && level instanceof ServerLevel serverLevel) {
+						BeatLamp.unbindTarget(serverLevel, blockPos, serverPlayer);
+					}
+					return InteractionResult.SUCCESS;
+				}
 			}
 
 			if (level.getBlockEntity(blockPos) instanceof BeatEmitterBlockEntity) {
@@ -113,6 +162,12 @@ public class LampControllerItem extends Item {
 				return InteractionResult.SUCCESS;
 			} else if (level.getBlockEntity(blockPos) instanceof FogGeneratorBlockEntity fog) {
 				FogGeneratorBlockEntity.controllerUser.use(fog);
+				return InteractionResult.SUCCESS;
+			} else if (level.getBlockEntity(blockPos) instanceof com.beatlamp.block.RainbowLedBlockEntity rainbowLed) {
+				com.beatlamp.block.RainbowLedBlockEntity.controllerUser.use(rainbowLed);
+				return InteractionResult.SUCCESS;
+			} else if (level.getBlockEntity(blockPos) instanceof com.beatlamp.block.StageJukeboxBlockEntity stageJukebox) {
+				com.beatlamp.block.StageJukeboxBlockEntity.controllerUser.use(stageJukebox);
 				return InteractionResult.SUCCESS;
 			}
 		}

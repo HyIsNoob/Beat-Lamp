@@ -1,0 +1,19 @@
+{
+	"type": "minecraft:crafting_shapeless",
+	"category": "misc",
+	"ingredients": [
+		{
+			"item": "minecraft:sea_lantern"
+		},
+		{
+			"item": "minecraft:glass"
+		},
+		{
+			"item": "minecraft:redstone"
+		}
+	],
+	"result": {
+		"count": 1,
+		"id": "beatlamp:stage_light"
+	}
+}

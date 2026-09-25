@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "beatlamp:block/stage_jukebox"
+    }
+  }
+}

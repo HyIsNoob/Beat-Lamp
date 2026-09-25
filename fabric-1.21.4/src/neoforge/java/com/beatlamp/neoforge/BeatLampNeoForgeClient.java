@@ -21,7 +21,10 @@ import com.beatlamp.client.gui.LaserProjectorConfigScreen;
 import com.beatlamp.client.gui.StageLightConfigScreen;
 import com.beatlamp.client.render.BeatLampRenderer;
 import com.beatlamp.client.render.LampOutlineRenderer;
+import com.beatlamp.block.RainbowLedBlockEntity;
+import com.beatlamp.client.gui.RainbowLedConfigScreen;
 import com.beatlamp.client.render.LaserProjectorRenderer;
+import com.beatlamp.client.render.RainbowLedRenderer;
 import com.beatlamp.client.render.StageLightRenderer;
 
 import net.minecraft.client.Minecraft;
@@ -60,6 +63,7 @@ public class BeatLampNeoForgeClient {
 	@SubscribeEvent
 	public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
 		event.registerBlockEntityRenderer(BeatLampNeoForge.BEAT_LAMP_BE.get(), BeatLampRenderer::new);
+		event.registerBlockEntityRenderer(BeatLampNeoForge.RAINBOW_LED_BE.get(), RainbowLedRenderer::new);
 		event.registerBlockEntityRenderer(BeatLampNeoForge.STAGE_LIGHT_BE.get(), StageLightRenderer::new);
 		event.registerBlockEntityRenderer(BeatLampNeoForge.LASER_PROJECTOR_BE.get(), LaserProjectorRenderer::new);
 	}
@@ -135,6 +139,15 @@ public class BeatLampNeoForgeClient {
 			minecraft.execute(() -> {
 				if (minecraft.screen == null && minecraft.player != null) {
 					minecraft.setScreen(new DmxConsoleScreen(dmx));
+				}
+			});
+		};
+
+		RainbowLedBlockEntity.controllerUser = led -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new RainbowLedConfigScreen(led));
 				}
 			});
 		};

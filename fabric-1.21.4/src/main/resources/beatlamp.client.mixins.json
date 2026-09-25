@@ -5,7 +5,9 @@
 	"plugin": "com.beatlamp.client.mixin.BeatLampClientMixinPlugin",
 	"client": [
 		"SoundEngineMixin",
-		"dreamdisplays.DreamDisplaysAudioSinkMixin"
+		"dreamdisplays.DreamDisplaysAudioSinkMixin",
+		"musicdiscmaker.MusicDiscMakerStreamMixin",
+		"musicdiscmaker.MusicDiscMakerDiscMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

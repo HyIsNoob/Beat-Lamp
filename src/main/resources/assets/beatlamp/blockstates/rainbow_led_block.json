@@ -1,0 +1,10 @@
+{
+    "variants": {
+        "frameless=false": {
+            "model": "beatlamp:block/rainbow_led_block"
+        },
+        "frameless=true": {
+            "model": "beatlamp:block/rainbow_led_block_frameless"
+        }
+    }
+}

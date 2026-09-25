@@ -49,6 +49,14 @@ public class StageLightBlockEntity extends BlockEntity {
 	public float targetYaw;
 	public float targetPitch = 45.0F;
 	public float beamIntensity;
+	public float beamEnergy;
+	public float beamBeat;
+	public float currentPan;
+	public float targetPan;
+	public float currentTilt = 30.0F;
+	public float targetTilt = 30.0F;
+	public int beatColorIndex;
+	public long lastBeatChange;
 	public float stepAngle;
 	public int groupIndex;
 	public int groupSize = 1;
@@ -216,5 +224,12 @@ public class StageLightBlockEntity extends BlockEntity {
 	@Override
 	public CompoundTag getUpdateTag() {
 		return this.saveWithoutMetadata();
+	}
+
+	public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+		return new net.minecraft.world.phys.AABB(
+			Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY, Double.NEGATIVE_INFINITY,
+			Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY, Double.POSITIVE_INFINITY
+		);
 	}
 }

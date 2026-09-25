@@ -2,11 +2,15 @@
 	"required": true,
 	"package": "com.beatlamp.fabric.mixin",
 	"compatibilityLevel": "JAVA_17",
+	"plugin": "com.beatlamp.fabric.mixin.BeatLampClientMixinPlugin",
 	"client": [
 		"SoundEngineMixin",
 		"LevelRendererMixin",
 		"MinecraftMixin",
-		"ItemStackMixin"
+		"ItemStackMixin",
+		"dreamdisplays.DreamDisplaysAudioSinkMixin",
+		"musicdiscmaker.MusicDiscMakerStreamMixin",
+		"musicdiscmaker.MusicDiscMakerDiscMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

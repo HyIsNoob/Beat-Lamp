@@ -368,8 +368,10 @@ public class DmxConsoleScreen extends Screen {
 		this.groupMuteButton = this.addRenderableWidget(
 			Button.builder(this.groupMuteLabel(g), button -> {
 				g.muted = !g.muted;
+				this.dmxEntity.setGroupMuted(g.leadPos, g.muted);
+				DmxMasterTracker.setGroupMuted(g.leadPos, g.muted);
 				button.setMessage(this.groupMuteLabel(g));
-				this.dispatchGroupConfig(g);
+				this.sendConfig();
 			}).bounds(rightX, rightY + 24, rightWidth, 20).build()
 		);
 
@@ -459,8 +461,8 @@ public class DmxConsoleScreen extends Screen {
 	}
 
 	private void dispatchGroupConfig(StageGroupInfo g) {
-		int targetColor = g.muted ? 0x000000 : PALETTE[g.colorIndex % PALETTE.length];
-		float targetSens = g.muted ? 0.0F : g.sensitivity;
+		int targetColor = PALETTE[g.colorIndex % PALETTE.length];
+		float targetSens = g.sensitivity;
 		String customName = StageGroupInfo.getCustomNameFromEntity(g.leadEntity);
 
 		switch (g.type) {
@@ -568,6 +570,7 @@ public class DmxConsoleScreen extends Screen {
 						lampCount++;
 						StageGroupInfo group = new StageGroupInfo(GroupType.LAMP, bePos, members, lamp, lampCount);
 						group.pinned = PINNED_POSITIONS.contains(bePos);
+						group.muted = this.dmxEntity.isGroupMuted(bePos) || DmxMasterTracker.isGroupMuted(bePos, this.pos);
 						this.rawGroups.add(group);
 					} else if (be instanceof StageLightBlockEntity light) {
 						if (!light.isDmxEnrolled()) continue;
@@ -576,6 +579,7 @@ public class DmxConsoleScreen extends Screen {
 						lightCount++;
 						StageGroupInfo group = new StageGroupInfo(GroupType.STAGE_LIGHT, bePos, members, light, lightCount);
 						group.pinned = PINNED_POSITIONS.contains(bePos);
+						group.muted = this.dmxEntity.isGroupMuted(bePos) || DmxMasterTracker.isGroupMuted(bePos, this.pos);
 						this.rawGroups.add(group);
 					} else if (be instanceof LaserProjectorBlockEntity laser) {
 						if (!laser.isDmxEnrolled()) continue;
@@ -584,6 +588,7 @@ public class DmxConsoleScreen extends Screen {
 						laserCount++;
 						StageGroupInfo group = new StageGroupInfo(GroupType.LASER, bePos, members, laser, laserCount);
 						group.pinned = PINNED_POSITIONS.contains(bePos);
+						group.muted = this.dmxEntity.isGroupMuted(bePos) || DmxMasterTracker.isGroupMuted(bePos, this.pos);
 						this.rawGroups.add(group);
 					} else if (be instanceof FountainBlockEntity fountain) {
 						if (!fountain.isDmxEnrolled()) continue;
@@ -592,6 +597,7 @@ public class DmxConsoleScreen extends Screen {
 						fountainCount++;
 						StageGroupInfo group = new StageGroupInfo(GroupType.FOUNTAIN, bePos, members, fountain, fountainCount);
 						group.pinned = PINNED_POSITIONS.contains(bePos);
+						group.muted = this.dmxEntity.isGroupMuted(bePos) || DmxMasterTracker.isGroupMuted(bePos, this.pos);
 						this.rawGroups.add(group);
 					} else if (be instanceof FogGeneratorBlockEntity fog) {
 						if (!fog.isDmxEnrolled()) continue;
@@ -600,6 +606,7 @@ public class DmxConsoleScreen extends Screen {
 						fogCount++;
 						StageGroupInfo group = new StageGroupInfo(GroupType.FOG, bePos, members, fog, fogCount);
 						group.pinned = PINNED_POSITIONS.contains(bePos);
+						group.muted = this.dmxEntity.isGroupMuted(bePos) || DmxMasterTracker.isGroupMuted(bePos, this.pos);
 						this.rawGroups.add(group);
 					} else if (be instanceof BeatEmitterBlockEntity emitter) {
 						if (!emitter.isDmxEnrolled()) continue;
@@ -608,6 +615,7 @@ public class DmxConsoleScreen extends Screen {
 						emitterCount++;
 						StageGroupInfo group = new StageGroupInfo(GroupType.EMITTER, bePos, members, emitter, emitterCount);
 						group.pinned = PINNED_POSITIONS.contains(bePos);
+						group.muted = this.dmxEntity.isGroupMuted(bePos) || DmxMasterTracker.isGroupMuted(bePos, this.pos);
 						this.rawGroups.add(group);
 					}
 				}
@@ -661,7 +669,7 @@ public class DmxConsoleScreen extends Screen {
 		this.dmxEntity.setMasterDimmer(this.masterDimmer);
 		this.dmxEntity.setMasterSpeed(this.masterSpeed);
 		DmxMasterTracker.register(this.dmxEntity);
-		PlatformNetwork.sendToServer(new DmxConsolePayload(this.pos, this.blackout, this.strobeAll, this.masterDimmer, this.masterSpeed));
+		PlatformNetwork.sendToServer(new DmxConsolePayload(this.pos, this.blackout, this.strobeAll, this.masterDimmer, this.masterSpeed, new java.util.ArrayList<>(this.dmxEntity.getMutedGroups())));
 	}
 
 	@Override

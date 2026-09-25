@@ -63,6 +63,7 @@ public class BeatLampForgeClient {
 		event.registerBlockEntityRenderer(BeatLampForge.BEAT_LAMP_BE.get(), BeatLampRenderer::new);
 		event.registerBlockEntityRenderer(BeatLampForge.STAGE_LIGHT_BE.get(), StageLightRenderer::new);
 		event.registerBlockEntityRenderer(BeatLampForge.LASER_PROJECTOR_BE.get(), LaserProjectorRenderer::new);
+		event.registerBlockEntityRenderer(BeatLampForge.RAINBOW_LED_BE.get(), com.beatlamp.client.render.RainbowLedRenderer::new);
 	}
 
 	@SubscribeEvent
@@ -136,6 +137,15 @@ public class BeatLampForgeClient {
 			minecraft.execute(() -> {
 				if (minecraft.screen == null && minecraft.player != null) {
 					minecraft.setScreen(new DmxConsoleScreen(dmx));
+				}
+			});
+		};
+
+		com.beatlamp.block.RainbowLedBlockEntity.controllerUser = led -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new com.beatlamp.client.gui.RainbowLedConfigScreen(led));
 				}
 			});
 		};

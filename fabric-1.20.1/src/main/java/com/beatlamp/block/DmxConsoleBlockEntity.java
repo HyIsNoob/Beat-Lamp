@@ -65,6 +65,26 @@ public class DmxConsoleBlockEntity extends BlockEntity {
 		this.markUpdated();
 	}
 
+	private final java.util.Set<BlockPos> mutedGroups = new java.util.HashSet<>();
+
+	public boolean isGroupMuted(BlockPos pos) {
+		return this.mutedGroups.contains(pos);
+	}
+
+	public void setGroupMuted(BlockPos pos, boolean muted) {
+		if (pos == null) return;
+		if (muted) {
+			this.mutedGroups.add(pos.immutable());
+		} else {
+			this.mutedGroups.remove(pos);
+		}
+		this.markUpdated();
+	}
+
+	public java.util.Set<BlockPos> getMutedGroups() {
+		return this.mutedGroups;
+	}
+
 	public void markUpdated() {
 		this.setChanged();
 		Level level = this.level;
@@ -80,6 +100,19 @@ public class DmxConsoleBlockEntity extends BlockEntity {
 		this.strobeAll = tag.getBoolean("StrobeAll");
 		this.masterDimmer = tag.contains("MasterDimmer") ? tag.getFloat("MasterDimmer") : 1.0F;
 		this.masterSpeed = tag.contains("MasterSpeed") ? tag.getFloat("MasterSpeed") : 1.0F;
+		this.mutedGroups.clear();
+		if (tag.contains("MutedGroups", net.minecraft.nbt.Tag.TAG_LIST)) {
+			net.minecraft.nbt.ListTag list = tag.getList("MutedGroups", net.minecraft.nbt.Tag.TAG_LONG);
+			for (int i = 0; i < list.size(); i++) {
+				this.mutedGroups.add(BlockPos.of(((net.minecraft.nbt.LongTag) list.get(i)).getAsLong()));
+			}
+		}
+		if (this.level != null && this.level.isClientSide) {
+			com.beatlamp.client.DmxMasterTracker.register(this);
+			for (BlockPos p : this.mutedGroups) {
+				com.beatlamp.client.DmxMasterTracker.setGroupMuted(p, true);
+			}
+		}
 	}
 
 	@Override
@@ -89,6 +122,11 @@ public class DmxConsoleBlockEntity extends BlockEntity {
 		tag.putBoolean("StrobeAll", this.strobeAll);
 		tag.putFloat("MasterDimmer", this.masterDimmer);
 		tag.putFloat("MasterSpeed", this.masterSpeed);
+		net.minecraft.nbt.ListTag list = new net.minecraft.nbt.ListTag();
+		for (BlockPos p : this.mutedGroups) {
+			list.add(net.minecraft.nbt.LongTag.valueOf(p.asLong()));
+		}
+		tag.put("MutedGroups", list);
 	}
 
 	@Override

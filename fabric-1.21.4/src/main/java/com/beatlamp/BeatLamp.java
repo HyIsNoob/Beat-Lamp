@@ -13,6 +13,7 @@ import com.beatlamp.block.BeatLampBlockEntity;
 import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LaserProjectorBlockEntity;
+import com.beatlamp.block.RainbowLedBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.config.BeatLampConfig;
 
@@ -84,7 +85,8 @@ public class BeatLamp {
 			BlockEntity startBe = level.getBlockEntity(pos);
 			if (!(startBe instanceof BeatLampBlockEntity || startBe instanceof StageLightBlockEntity
 				|| startBe instanceof FountainBlockEntity || startBe instanceof LaserProjectorBlockEntity
-				|| startBe instanceof FogGeneratorBlockEntity || startBe instanceof BeatEmitterBlockEntity)) {
+				|| startBe instanceof FogGeneratorBlockEntity || startBe instanceof BeatEmitterBlockEntity
+				|| startBe instanceof RainbowLedBlockEntity)) {
 				message(player, "message.beatlamp.link.invalid_start");
 				return;
 			}
@@ -110,7 +112,8 @@ public class BeatLamp {
 		BlockEntity anchorBe = level.getBlockEntity(anchor);
 		if (anchorBe == null || !(anchorBe instanceof BeatLampBlockEntity || anchorBe instanceof StageLightBlockEntity
 			|| anchorBe instanceof FountainBlockEntity || anchorBe instanceof LaserProjectorBlockEntity
-			|| anchorBe instanceof FogGeneratorBlockEntity || anchorBe instanceof BeatEmitterBlockEntity)) {
+			|| anchorBe instanceof FogGeneratorBlockEntity || anchorBe instanceof BeatEmitterBlockEntity
+			|| anchorBe instanceof RainbowLedBlockEntity)) {
 			linker.remove(BeatLampItems.ANCHOR_POS);
 			message(player, "message.beatlamp.link.cancel");
 			return;
@@ -143,6 +146,8 @@ public class BeatLamp {
 					setters.add(fog::setManualGroup);
 				} else if (be instanceof BeatEmitterBlockEntity emitter) {
 					setters.add(emitter::setManualGroup);
+				} else if (be instanceof RainbowLedBlockEntity led) {
+					setters.add(led::setManualGroup);
 				}
 
 				if (positions.size() > BeatLampConfig.maxGroupLinkSize) {
@@ -248,6 +253,19 @@ public class BeatLamp {
 		}
 	}
 
+	public static void unlinkRainbowLedGroup(Level level, BlockPos pos) {
+		if (!(level.getBlockEntity(pos) instanceof RainbowLedBlockEntity led)) {
+			return;
+		}
+
+		List<BlockPos> targets = led.getManualGroup().size() >= 2 ? led.getManualGroup() : floodFillRainbowLed(level, pos);
+		for (BlockPos target : targets) {
+			if (level.getBlockEntity(target) instanceof RainbowLedBlockEntity other) {
+				other.clearManualGroup();
+			}
+		}
+	}
+
 	public static void bindTarget(ServerLevel level, BlockPos pos, ServerPlayer player, ItemStack controller, BlockPos source) {
 		if (level.getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
 			List<BlockPos> members = emitter.getManualGroup().size() >= 2 ? emitter.getManualGroup() : List.of(pos);
@@ -256,6 +274,7 @@ public class BeatLamp {
 					e.setSource(source);
 				}
 			}
+			controller.remove(BeatLampItems.SOURCE_POS);
 			message(player, "message.beatlamp.source.bound", members.size());
 			return;
 		}
@@ -267,6 +286,7 @@ public class BeatLamp {
 					l.setSource(source);
 				}
 			}
+			controller.remove(BeatLampItems.SOURCE_POS);
 			message(player, "message.beatlamp.source.bound", members.size());
 			return;
 		}
@@ -278,6 +298,7 @@ public class BeatLamp {
 					f.setSource(source);
 				}
 			}
+			controller.remove(BeatLampItems.SOURCE_POS);
 			message(player, "message.beatlamp.source.bound", members.size());
 			return;
 		}
@@ -289,6 +310,7 @@ public class BeatLamp {
 					l.setSource(source);
 				}
 			}
+			controller.remove(BeatLampItems.SOURCE_POS);
 			message(player, "message.beatlamp.source.bound", members.size());
 			return;
 		}
@@ -300,11 +322,91 @@ public class BeatLamp {
 					f.setSource(source);
 				}
 			}
+			controller.remove(BeatLampItems.SOURCE_POS);
 			message(player, "message.beatlamp.source.bound", members.size());
 			return;
 		}
 
 		bindSource(level, pos, player, controller, source);
+	}
+
+	public static void unbindTarget(ServerLevel level, BlockPos pos, ServerPlayer player) {
+		if (level.getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
+			List<BlockPos> members = emitter.getManualGroup().size() >= 2 ? emitter.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof BeatEmitterBlockEntity e) {
+					e.setSource(null);
+				}
+			}
+			message(player, "message.beatlamp.source.cancel");
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof StageLightBlockEntity light) {
+			List<BlockPos> members = light.getManualGroup().size() >= 2 ? light.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof StageLightBlockEntity l) {
+					l.setSource(null);
+				}
+			}
+			message(player, "message.beatlamp.source.cancel");
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof FountainBlockEntity fountain) {
+			List<BlockPos> members = fountain.getManualGroup().size() >= 2 ? fountain.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof FountainBlockEntity f) {
+					f.setSource(null);
+				}
+			}
+			message(player, "message.beatlamp.source.cancel");
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof LaserProjectorBlockEntity laser) {
+			List<BlockPos> members = laser.getManualGroup().size() >= 2 ? laser.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof LaserProjectorBlockEntity l) {
+					l.setSource(null);
+				}
+			}
+			message(player, "message.beatlamp.source.cancel");
+			return;
+		}
+
+		if (level.getBlockEntity(pos) instanceof FogGeneratorBlockEntity fog) {
+			List<BlockPos> members = fog.getManualGroup().size() >= 2 ? fog.getManualGroup() : List.of(pos);
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof FogGeneratorBlockEntity f) {
+					f.setSource(null);
+				}
+			}
+			message(player, "message.beatlamp.source.cancel");
+			return;
+		}
+
+		unbindSource(level, pos, player);
+	}
+
+	public static void unbindSource(ServerLevel level, BlockPos lampPos, ServerPlayer player) {
+		List<BlockPos> members = null;
+
+		if (level.getBlockEntity(lampPos) instanceof BeatLampBlockEntity lamp && lamp.getManualGroup().size() >= 2) {
+			members = lamp.getManualGroup();
+		}
+
+		if (members == null) {
+			members = floodFill(level, lampPos);
+		}
+
+		for (BlockPos member : members) {
+			if (level.getBlockEntity(member) instanceof BeatLampBlockEntity beatLamp) {
+				beatLamp.setSource(null);
+			}
+		}
+
+		message(player, "message.beatlamp.source.cancel");
 	}
 
 	public static void toggleTarget(ServerPlayer player, BlockPos pos) {
@@ -369,6 +471,30 @@ public class BeatLamp {
 			for (Direction dir : Direction.values()) {
 				BlockPos neighbor = current.relative(dir);
 				if (!visited.contains(neighbor) && level.getBlockEntity(neighbor) instanceof BeatLampBlockEntity) {
+					visited.add(neighbor);
+					queue.add(neighbor);
+				}
+			}
+		}
+
+		return result;
+	}
+
+	public static List<BlockPos> floodFillRainbowLed(Level level, BlockPos start) {
+		List<BlockPos> result = new ArrayList<>();
+		Set<BlockPos> visited = new HashSet<>();
+		Queue<BlockPos> queue = new ArrayDeque<>();
+
+		queue.add(start.immutable());
+		visited.add(start.immutable());
+
+		while (!queue.isEmpty() && result.size() < BeatLampConfig.maxGroupLinkSize) {
+			BlockPos current = queue.poll();
+			result.add(current);
+
+			for (Direction dir : Direction.values()) {
+				BlockPos neighbor = current.relative(dir);
+				if (!visited.contains(neighbor) && (level.getBlockState(neighbor).is(BeatLampBlocks.RAINBOW_LED_BLOCK) || level.getBlockEntity(neighbor) instanceof RainbowLedBlockEntity)) {
 					visited.add(neighbor);
 					queue.add(neighbor);
 				}

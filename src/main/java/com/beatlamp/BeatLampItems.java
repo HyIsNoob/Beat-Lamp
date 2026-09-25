@@ -11,6 +11,7 @@ import net.minecraft.world.item.Item;
 
 public class BeatLampItems {
 	public static StageBlockItem BEAT_LAMP;
+	public static StageBlockItem RAINBOW_LED_BLOCK;
 	public static StageBlockItem BEAT_EMITTER;
 	public static StageBlockItem STAGE_LIGHT;
 	public static StageBlockItem FOUNTAIN;
@@ -37,6 +38,7 @@ public class BeatLampItems {
 	}
 
 	public static StageBlockItem createBeatLampItem() { return new StageBlockItem(BeatLampBlocks.BEAT_LAMP, new Item.Properties(), "beat_lamp", false); }
+	public static StageBlockItem createRainbowLedBlockItem() { return new StageBlockItem(BeatLampBlocks.RAINBOW_LED_BLOCK, new Item.Properties(), "rainbow_led_block", true); }
 	public static StageBlockItem createBeatEmitterItem() { return new StageBlockItem(BeatLampBlocks.BEAT_EMITTER, new Item.Properties(), "beat_emitter", false); }
 	public static StageBlockItem createStageLightItem() { return new StageBlockItem(BeatLampBlocks.STAGE_LIGHT, new Item.Properties(), "stage_light", false); }
 	public static StageBlockItem createFountainItem() { return new StageBlockItem(BeatLampBlocks.FOUNTAIN, new Item.Properties(), "fountain", false); }

@@ -79,6 +79,7 @@ public class BeatLampNeoForge {
 	public static final DeferredHolder<Block, DmxConsoleBlock> DMX_CONSOLE_BLOCK = BLOCKS.register("dmx_console", BeatLampBlocks::createDmxConsole);
 	public static final DeferredHolder<Block, DjDeckBlock> DJ_DECK_BLOCK = BLOCKS.register("dj_deck", BeatLampBlocks::createDjDeck);
 	public static final DeferredHolder<Block, StageSpeakerBlock> STAGE_SPEAKER_BLOCK = BLOCKS.register("stage_speaker", BeatLampBlocks::createStageSpeaker);
+	public static final DeferredHolder<Block, com.beatlamp.block.RainbowLedBlock> RAINBOW_LED_BLOCK = BLOCKS.register("rainbow_led_block", BeatLampBlocks::createRainbowLedBlock);
 
 	// 2. BlockEntities
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<BeatLampBlockEntity>> BEAT_LAMP_BE = BLOCK_ENTITIES.register("beat_lamp", () -> BlockEntityType.Builder.of(BeatLampBlockEntity::new, BEAT_LAMP_BLOCK.get()).build(null));
@@ -89,6 +90,7 @@ public class BeatLampNeoForge {
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FogGeneratorBlockEntity>> FOG_GENERATOR_BE = BLOCK_ENTITIES.register("fog_generator", () -> BlockEntityType.Builder.of(FogGeneratorBlockEntity::new, FOG_GENERATOR_BLOCK.get()).build(null));
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<StageJukeboxBlockEntity>> STAGE_JUKEBOX_BE = BLOCK_ENTITIES.register("stage_jukebox", () -> BlockEntityType.Builder.of(StageJukeboxBlockEntity::new, STAGE_JUKEBOX_BLOCK.get()).build(null));
 	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<DmxConsoleBlockEntity>> DMX_CONSOLE_BE = BLOCK_ENTITIES.register("dmx_console", () -> BlockEntityType.Builder.of(DmxConsoleBlockEntity::new, DMX_CONSOLE_BLOCK.get()).build(null));
+	public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<com.beatlamp.block.RainbowLedBlockEntity>> RAINBOW_LED_BE = BLOCK_ENTITIES.register("rainbow_led", () -> BlockEntityType.Builder.of(com.beatlamp.block.RainbowLedBlockEntity::new, RAINBOW_LED_BLOCK.get()).build(null));
 
 	// 3. Data Components
 	public static final DeferredHolder<DataComponentType<?>, DataComponentType<BlockPos>> ANCHOR_POS = DATA_COMPONENTS.register("anchor_pos", BeatLampItems::createAnchorPosComponent);
@@ -105,6 +107,7 @@ public class BeatLampNeoForge {
 	public static final DeferredHolder<Item, StageBlockItem> DMX_CONSOLE_ITEM = ITEMS.register("dmx_console", () -> new StageBlockItem(DMX_CONSOLE_BLOCK.get(), new Item.Properties(), "dmx_console", false));
 	public static final DeferredHolder<Item, StageBlockItem> DJ_DECK_ITEM = ITEMS.register("dj_deck", () -> new StageBlockItem(DJ_DECK_BLOCK.get(), new Item.Properties(), "dj_deck", true));
 	public static final DeferredHolder<Item, StageBlockItem> STAGE_SPEAKER_ITEM = ITEMS.register("stage_speaker", () -> new StageBlockItem(STAGE_SPEAKER_BLOCK.get(), new Item.Properties(), "stage_speaker", true));
+	public static final DeferredHolder<Item, StageBlockItem> RAINBOW_LED_BLOCK_ITEM = ITEMS.register("rainbow_led_block", () -> new StageBlockItem(RAINBOW_LED_BLOCK.get(), new Item.Properties(), "rainbow_led_block", true));
 	public static final DeferredHolder<Item, GroupLinkerItem> LINKER_ITEM = ITEMS.register("linker", BeatLampItems::createLinkerItem);
 	public static final DeferredHolder<Item, LampControllerItem> CONTROLLER_ITEM = ITEMS.register("controller", BeatLampItems::createControllerItem);
 
@@ -123,6 +126,7 @@ public class BeatLampNeoForge {
 			output.accept(DJ_DECK_ITEM.get());
 			output.accept(STAGE_SPEAKER_ITEM.get());
 			output.accept(BEAT_EMITTER_ITEM.get());
+			output.accept(RAINBOW_LED_BLOCK_ITEM.get());
 			output.accept(LINKER_ITEM.get());
 			output.accept(CONTROLLER_ITEM.get());
 		})
@@ -156,6 +160,7 @@ public class BeatLampNeoForge {
 			BeatLampBlocks.DMX_CONSOLE = DMX_CONSOLE_BLOCK.get();
 			BeatLampBlocks.DJ_DECK = DJ_DECK_BLOCK.get();
 			BeatLampBlocks.STAGE_SPEAKER = STAGE_SPEAKER_BLOCK.get();
+			BeatLampBlocks.RAINBOW_LED_BLOCK = RAINBOW_LED_BLOCK.get();
 
 			BeatLampBlockEntities.BEAT_LAMP = BEAT_LAMP_BE.get();
 			BeatLampBlockEntities.BEAT_EMITTER = BEAT_EMITTER_BE.get();
@@ -165,6 +170,7 @@ public class BeatLampNeoForge {
 			BeatLampBlockEntities.FOG_GENERATOR = FOG_GENERATOR_BE.get();
 			BeatLampBlockEntities.STAGE_JUKEBOX = STAGE_JUKEBOX_BE.get();
 			BeatLampBlockEntities.DMX_CONSOLE = DMX_CONSOLE_BE.get();
+			BeatLampBlockEntities.RAINBOW_LED = RAINBOW_LED_BE.get();
 
 			BeatLampItems.ANCHOR_POS = ANCHOR_POS.get();
 			BeatLampItems.SOURCE_POS = SOURCE_POS.get();
@@ -179,6 +185,7 @@ public class BeatLampNeoForge {
 			BeatLampItems.DMX_CONSOLE = DMX_CONSOLE_ITEM.get();
 			BeatLampItems.DJ_DECK = DJ_DECK_ITEM.get();
 			BeatLampItems.STAGE_SPEAKER = STAGE_SPEAKER_ITEM.get();
+			BeatLampItems.RAINBOW_LED_BLOCK = RAINBOW_LED_BLOCK_ITEM.get();
 			BeatLampItems.LINKER = LINKER_ITEM.get();
 			BeatLampItems.CONTROLLER = CONTROLLER_ITEM.get();
 			BeatLampItems.TAB = TAB.get();
@@ -198,6 +205,38 @@ public class BeatLampNeoForge {
 		registrar.playToServer(EmitterConfigurePayload.ID, EmitterConfigurePayload.CODEC, this::handleEmitterConfig);
 		registrar.playToServer(FountainFirePayload.ID, FountainFirePayload.CODEC, this::handleFountainFire);
 		registrar.playToServer(DmxConsolePayload.ID, DmxConsolePayload.CODEC, this::handleDmxConsole);
+		registrar.playToServer(com.beatlamp.network.RainbowLedConfigurePayload.ID, com.beatlamp.network.RainbowLedConfigurePayload.CODEC, this::handleRainbowLedConfig);
+	}
+
+	private void handleRainbowLedConfig(com.beatlamp.network.RainbowLedConfigurePayload payload, IPayloadContext context) {
+		context.enqueueWork(() -> {
+			Level level = context.player().level();
+			if (payload.unlink()) {
+				BeatLamp.unlinkRainbowLedGroup(level, payload.pos());
+				return;
+			}
+			java.util.List<BlockPos> members = null;
+			if (level.getBlockEntity(payload.pos()) instanceof com.beatlamp.block.RainbowLedBlockEntity led && led.getManualGroup().size() >= 2) {
+				members = led.getManualGroup();
+			}
+			if (members == null) {
+				members = BeatLamp.floodFillRainbowLed(level, payload.pos());
+			}
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof com.beatlamp.block.RainbowLedBlockEntity led) {
+					led.setMode(payload.mode());
+					led.setSpeed(payload.speed());
+					led.setColor(payload.color());
+					led.setBrightness(payload.brightness());
+					led.setFrameless(payload.frameless());
+
+					net.minecraft.world.level.block.state.BlockState state = level.getBlockState(member);
+					if (state.hasProperty(com.beatlamp.block.RainbowLedBlock.FRAMELESS) && state.getValue(com.beatlamp.block.RainbowLedBlock.FRAMELESS) != payload.frameless()) {
+						level.setBlock(member, state.setValue(com.beatlamp.block.RainbowLedBlock.FRAMELESS, payload.frameless()), 3);
+					}
+				}
+			}
+		});
 	}
 
 	private void handleDmxConsole(DmxConsolePayload payload, IPayloadContext context) {
@@ -208,6 +247,13 @@ public class BeatLampNeoForge {
 				dmx.setStrobeAll(payload.strobeAll());
 				dmx.setMasterDimmer(payload.masterDimmer());
 				dmx.setMasterSpeed(payload.masterSpeed());
+				dmx.getMutedGroups().clear();
+				if (payload.mutedGroups() != null) {
+					for (net.minecraft.core.BlockPos p : payload.mutedGroups()) {
+						dmx.setGroupMuted(p, true);
+					}
+				}
+				dmx.markUpdated();
 			}
 		});
 	}

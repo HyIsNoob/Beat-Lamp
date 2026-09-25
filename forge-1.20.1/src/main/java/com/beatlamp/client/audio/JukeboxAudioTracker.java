@@ -27,6 +27,9 @@ import net.minecraft.world.phys.Vec3;
 import com.mojang.blaze3d.audio.OggAudioStream;
 
 public final class JukeboxAudioTracker {
+	public static double getAudibleRadius() {
+		return Math.max(64.0, (double) com.beatlamp.config.BeatLampConfig.maxAudioRadius);
+	}
 	private static final double AUDIBLE_RADIUS = 64.0;
 	private static final Map<BlockPos, ActiveSong> ACTIVE_SONGS = new ConcurrentHashMap<>();
 	private static float effectTime;
@@ -62,6 +65,20 @@ public final class JukeboxAudioTracker {
 		}
 		if (soundInstance == null || soundInstance.getSource() != SoundSource.RECORDS) {
 			return;
+		}
+
+		ResourceLocation location = soundInstance.getLocation();
+		String className = soundInstance.getClass().getName();
+		if (location != null && "music_disc_maker".equals(location.getNamespace())) {
+			MusicDiscMakerAudioBridge.registerSoundInstance(soundInstance);
+			return;
+		}
+		if (className.contains("musicdiscmaker")) {
+			if (className.contains("DiscSoundInstance") || (location != null && !"minecraft".equals(location.getNamespace()))) {
+				MusicDiscMakerAudioBridge.registerSoundInstance(soundInstance);
+				return;
+			}
+			// VanillaSpeakerSoundInstance playing vanilla disc falls through to vanilla audio decoder
 		}
 
 		Minecraft minecraft = Minecraft.getInstance();
@@ -152,25 +169,56 @@ public final class JukeboxAudioTracker {
 			}
 		}
 		ACTIVE_SONGS.clear();
+		DreamDisplaysAudioBridge.clear();
+		MusicDiscMakerAudioBridge.clear();
+	}
+
+	public static float getEffectiveVolumeMultiplier() {
+		Minecraft mc = Minecraft.getInstance();
+		if (mc.options == null) return 1.0F;
+		float master = mc.options.getSoundSourceVolume(SoundSource.MASTER);
+		float records = mc.options.getSoundSourceVolume(SoundSource.RECORDS);
+		if (master <= 0.001F || records <= 0.001F) {
+			return 0.0F;
+		}
+		return 1.0F;
 	}
 
 	public static boolean isJukeboxPlayingAt(BlockPos pos) {
+		if (getEffectiveVolumeMultiplier() <= 0.001F) return false;
 		return ACTIVE_SONGS.containsKey(pos);
 	}
 
 	public static boolean isAnyJukeboxPlayingNear(Vec3 position) {
+		if (getEffectiveVolumeMultiplier() <= 0.001F) return false;
 		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			if (song.position.distanceTo(position) < AUDIBLE_RADIUS) {
+			if (song.position.distanceTo(position) < getAudibleRadius()) {
 				return true;
 			}
+		}
+		if (DreamDisplaysAudioBridge.isAnyDisplayPlayingNear(position)) {
+			return true;
+		}
+		if (MusicDiscMakerAudioBridge.isAnyDiscPlayingNear(position)) {
+			return true;
 		}
 		return false;
 	}
 
 	public static boolean isAnyJukeboxPlayingNear(Vec3 position, BlockPos source) {
+		if (getEffectiveVolumeMultiplier() <= 0.001F) return false;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song != null && song.position.distanceTo(position) < AUDIBLE_RADIUS;
+			if (song != null) {
+				return true;
+			}
+			if (DreamDisplaysAudioBridge.isDisplayPlayingNear(position, source)) {
+				return true;
+			}
+			if (MusicDiscMakerAudioBridge.isDiscPlayingNear(position, source)) {
+				return true;
+			}
+			return false;
 		}
 		return isAnyJukeboxPlayingNear(position);
 	}
@@ -227,14 +275,15 @@ public final class JukeboxAudioTracker {
 				double expectedSeconds = (double) analyzer.getTotalSamples() / analyzer.getSampleRate();
 				double elapsedSeconds = elapsedNanos / 1_000_000_000.0;
 				double lead = expectedSeconds - elapsedSeconds;
-				if (lead > 0.035) {
-					try {
-						Thread.sleep((long) ((lead - 0.020) * 1000.0));
-					} catch (InterruptedException interruptedException) {
-						Thread.currentThread().interrupt();
+				if (lead > 0.005) {
+					long parkNanos = (long) ((lead - 0.002) * 1_000_000_000.0);
+					if (parkNanos > 0) {
+						java.util.concurrent.locks.LockSupport.parkNanos(parkNanos);
+					}
+					if (Thread.currentThread().isInterrupted()) {
 						break;
 					}
-				} else if (lead < -0.200) {
+				} else if (lead < -0.150) {
 					startNanos = System.nanoTime() - (long) (expectedSeconds * 1_000_000_000.0);
 				}
 			}
@@ -277,6 +326,7 @@ public final class JukeboxAudioTracker {
 		}
 
 		Minecraft mc = Minecraft.getInstance();
+		scanNearbyJukeboxes(mc);
 
 		for (Map.Entry<BlockPos, ActiveSong> entry : ACTIVE_SONGS.entrySet()) {
 			BlockPos pos = entry.getKey();
@@ -284,15 +334,32 @@ public final class JukeboxAudioTracker {
 
 			song.ticksAlive++;
 
-			if (song.ticksAlive > 10 && song.soundInstance != null && mc.getSoundManager() != null && !mc.getSoundManager().isActive(song.soundInstance)) {
-				stopSong(pos);
-				continue;
-			}
-
 			if (mc.level != null && mc.level.hasChunkAt(pos)) {
 				BlockState state = mc.level.getBlockState(pos);
-				if (!state.hasProperty(BlockStateProperties.HAS_RECORD) || !state.getValue(BlockStateProperties.HAS_RECORD)) {
+				if (state.hasProperty(BlockStateProperties.HAS_RECORD) && !state.getValue(BlockStateProperties.HAS_RECORD)) {
 					stopSong(pos);
+					stopLevelRendererRecord(mc, pos);
+					MusicDiscMakerAudioBridge.stopDiscAt(pos);
+					RECENT_ATTEMPTS.remove(pos);
+					continue;
+				}
+			}
+
+			if (song.ticksAlive > 10 && song.soundInstance != null && mc.getSoundManager() != null && !mc.getSoundManager().isActive(song.soundInstance)) {
+				if (mc.level != null && mc.level.hasChunkAt(pos)) {
+					BlockState state = mc.level.getBlockState(pos);
+					if (state.hasProperty(BlockStateProperties.HAS_RECORD) && !state.getValue(BlockStateProperties.HAS_RECORD)) {
+						stopSong(pos);
+						stopLevelRendererRecord(mc, pos);
+						MusicDiscMakerAudioBridge.stopDiscAt(pos);
+						RECENT_ATTEMPTS.remove(pos);
+						continue;
+					}
+				} else {
+					stopSong(pos);
+					stopLevelRendererRecord(mc, pos);
+					MusicDiscMakerAudioBridge.stopDiscAt(pos);
+					RECENT_ATTEMPTS.remove(pos);
 					continue;
 				}
 			}
@@ -341,30 +408,154 @@ public final class JukeboxAudioTracker {
 			}
 		}
 
-		effectTime += 1.0F + 1.5F * maxBeat;
+		if (!ACTIVE_SONGS.isEmpty()) {
+			effectTime += 1.0F + 1.5F * maxBeat;
+		}
+
+		DreamDisplaysAudioBridge.clientTick();
+		MusicDiscMakerAudioBridge.clientTick();
+	}
+
+	private static final Map<BlockPos, Long> RECENT_ATTEMPTS = new ConcurrentHashMap<>();
+	private static int scanCooldown = 0;
+
+	private static void scanNearbyJukeboxes(Minecraft mc) {
+		if (mc.level == null || mc.player == null) return;
+		if (++scanCooldown < 10) return;
+		scanCooldown = 0;
+
+		float volumeMul = getEffectiveVolumeMultiplier();
+		if (volumeMul <= 0.001F) return;
+
+		BlockPos playerPos = mc.player.blockPosition();
+		int playerChunkX = playerPos.getX() >> 4;
+		int playerChunkZ = playerPos.getZ() >> 4;
+		double radius = getAudibleRadius();
+		long now = System.currentTimeMillis();
+
+		if (RECENT_ATTEMPTS.size() > 50) {
+			RECENT_ATTEMPTS.entrySet().removeIf(e -> now - e.getValue() > 10000L);
+		}
+
+		for (int dx = -2; dx <= 2; dx++) {
+			for (int dz = -2; dz <= 2; dz++) {
+				net.minecraft.world.level.chunk.LevelChunk chunk = mc.level.getChunkSource().getChunk(playerChunkX + dx, playerChunkZ + dz, false);
+				if (chunk == null) continue;
+
+				for (net.minecraft.world.level.block.entity.BlockEntity be : chunk.getBlockEntities().values()) {
+					BlockPos pos = be.getBlockPos();
+					if (!playerPos.closerThan(pos, radius)) continue;
+
+					if (be instanceof net.minecraft.world.level.block.entity.JukeboxBlockEntity jukebox) {
+						checkAndCatchUpVanillaJukebox(mc, jukebox, pos, now);
+					} else if (be instanceof com.beatlamp.block.StageJukeboxBlockEntity stageJukebox) {
+						checkAndCatchUpStageJukebox(mc, stageJukebox, pos, now);
+					}
+				}
+			}
+		}
+	}
+
+	private static void checkAndCatchUpVanillaJukebox(Minecraft mc, net.minecraft.world.level.block.entity.JukeboxBlockEntity jukebox, BlockPos pos, long now) {
+		if (mc.level == null) return;
+		BlockState state = mc.level.getBlockState(pos);
+		if (!state.hasProperty(BlockStateProperties.HAS_RECORD) || !state.getValue(BlockStateProperties.HAS_RECORD)) {
+			stopSong(pos);
+			stopLevelRendererRecord(mc, pos);
+			MusicDiscMakerAudioBridge.stopDiscAt(pos);
+			return;
+		}
+
+		if (ACTIVE_SONGS.containsKey(pos) || MusicDiscMakerAudioBridge.isDiscPlayingAt(pos)) {
+			return;
+		}
+		if (now - RECENT_ATTEMPTS.getOrDefault(pos, 0L) < 3000L) {
+			return;
+		}
+
+		net.minecraft.world.item.ItemStack stack = jukebox.getItem(0);
+		if (stack.isEmpty() || !jukebox.isRecordPlaying()) {
+			return;
+		}
+
+		if (stack.getItem() instanceof net.minecraft.world.item.RecordItem recordItem) {
+			RECENT_ATTEMPTS.put(pos, now);
+			mc.levelRenderer.playStreamingMusic(recordItem.getSound(), pos);
+		} else {
+			RECENT_ATTEMPTS.put(pos, now);
+			MusicDiscMakerAudioBridge.startCustomDiscPlayback(pos, stack, 0L, 64, 100);
+		}
+	}
+
+	private static void checkAndCatchUpStageJukebox(Minecraft mc, com.beatlamp.block.StageJukeboxBlockEntity stageJukebox, BlockPos pos, long now) {
+		if (mc.level == null) return;
+		BlockState state = mc.level.getBlockState(pos);
+		if (!state.hasProperty(BlockStateProperties.HAS_RECORD) || !state.getValue(BlockStateProperties.HAS_RECORD)) {
+			stopSong(pos);
+			stopLevelRendererRecord(mc, pos);
+			MusicDiscMakerAudioBridge.stopDiscAt(pos);
+			return;
+		}
+
+		if (ACTIVE_SONGS.containsKey(pos) || MusicDiscMakerAudioBridge.isDiscPlayingAt(pos)) {
+			return;
+		}
+		if (now - RECENT_ATTEMPTS.getOrDefault(pos, 0L) < 3000L) {
+			return;
+		}
+
+		net.minecraft.world.item.ItemStack stack = stageJukebox.getRecord();
+		if (stack.isEmpty() || stageJukebox.isPaused()) {
+			return;
+		}
+
+		if (stack.getItem() instanceof net.minecraft.world.item.RecordItem recordItem) {
+			if (stageJukebox.getElapsedTicks() < stageJukebox.getTotalDurationTicks()) {
+				RECENT_ATTEMPTS.put(pos, now);
+				mc.levelRenderer.playStreamingMusic(recordItem.getSound(), pos);
+			}
+		} else {
+			if (stageJukebox.getElapsedTicks() < stageJukebox.getTotalDurationTicks()) {
+				RECENT_ATTEMPTS.put(pos, now);
+				long offsetMs = stageJukebox.getElapsedTicks() * 50L;
+				MusicDiscMakerAudioBridge.startCustomDiscPlayback(pos, stack, offsetMs, stageJukebox.getRange(), stageJukebox.getVolume());
+			}
+		}
+	}
+
+	private static void stopLevelRendererRecord(Minecraft mc, BlockPos pos) {
+		if (mc.level != null) {
+			mc.level.levelEvent(1011, pos, 0);
+		}
+		if (mc.levelRenderer != null) {
+			mc.levelRenderer.playStreamingMusic(null, pos);
+		}
 	}
 
 	public static float getImpactPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.impactPulse;
-		}
-
-		float best = 0.0F;
-
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			float impact = song.impactPulse * falloff;
-			if (impact > best) {
-				best = impact;
+			if (song != null) {
+				best = song.impactPulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				float impact = song.impactPulse * falloff;
+				if (impact > best) {
+					best = impact;
+				}
 			}
 		}
 
-		return best;
+		float ddImpact = DreamDisplaysAudioBridge.getImpactPulseAt(position, source);
+		float mdmImpact = MusicDiscMakerAudioBridge.getImpactPulseAt(position, source);
+		return Math.max(best, Math.max(ddImpact, mdmImpact)) * getEffectiveVolumeMultiplier();
 	}
 
 	public static float getEffectTime() {
-		return effectTime;
+		return effectTime + DreamDisplaysAudioBridge.getEffectTime() + MusicDiscMakerAudioBridge.getEffectTime();
 	}
 
 	public static float getLevelAt(Vec3 position) {
@@ -372,70 +563,81 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static float getRawLevelAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.analyzer.getLevel();
+			if (song != null) {
+				best = song.analyzer.getLevel();
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float level = song.analyzer.getLevel() * falloff;
+				if (level > best) {
+					best = level;
+				}
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float level = song.analyzer.getLevel() * falloff;
-			if (level > best) {
-				best = level;
-			}
-		}
-
-		return best;
+		float ddRaw = DreamDisplaysAudioBridge.getRawLevelAt(position, source);
+		float mdmRaw = MusicDiscMakerAudioBridge.getRawLevelAt(position, source);
+		return Math.max(best, Math.max(ddRaw, mdmRaw)) * getEffectiveVolumeMultiplier();
 	}
 
 	public static float getGridPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.analyzer.getGridPulse();
+			if (song != null) {
+				best = song.analyzer.getGridPulse();
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float grid = song.analyzer.getGridPulse() * falloff;
+				if (grid > best) {
+					best = grid;
+				}
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float grid = song.analyzer.getGridPulse() * falloff;
-			if (grid > best) {
-				best = grid;
-			}
-		}
-
-		return best;
+		float ddGrid = DreamDisplaysAudioBridge.getGridPulseAt(position, source);
+		float mdmGrid = MusicDiscMakerAudioBridge.getGridPulseAt(position, source);
+		return Math.max(best, Math.max(ddGrid, mdmGrid)) * getEffectiveVolumeMultiplier();
 	}
 
 	public static float getLevelAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			if (song == null) return 0.0F;
-			return Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F);
+			if (song != null) {
+				best = Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F);
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float level = Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F) * falloff;
+				if (level > best) {
+					best = level;
+				}
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float level = Math.max(song.analyzer.getLevel(), song.analyzer.getGridPulse() * 0.28F) * falloff;
-			if (level > best) {
-				best = level;
-			}
-		}
-
-		return best;
+		float ddLevel = DreamDisplaysAudioBridge.getLevelAt(position, source);
+		float mdmLevel = MusicDiscMakerAudioBridge.getLevelAt(position, source);
+		return Math.max(best, Math.max(ddLevel, mdmLevel)) * getEffectiveVolumeMultiplier();
 	}
 
 	public static float getBeatPulseAt(Vec3 position) {
@@ -443,126 +645,143 @@ public final class JukeboxAudioTracker {
 	}
 
 	public static float getBeatPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.beatPulse;
+			if (song != null) {
+				best = song.beatPulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float pulse = song.beatPulse * falloff;
+				if (pulse > best) {
+					best = pulse;
+				}
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float pulse = song.beatPulse * falloff;
-			if (pulse > best) {
-				best = pulse;
-			}
-		}
-
-		return best;
+		float ddBeat = DreamDisplaysAudioBridge.getBeatPulseAt(position, source);
+		float mdmBeat = MusicDiscMakerAudioBridge.getBeatPulseAt(position, source);
+		return Math.max(best, Math.max(ddBeat, mdmBeat)) * getEffectiveVolumeMultiplier();
 	}
 
 	public static float getKickPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.kickPulse;
+			if (song != null) {
+				best = song.kickPulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				float pulse = song.kickPulse * falloff;
+				if (pulse > best) best = pulse;
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			float pulse = song.kickPulse * falloff;
-			if (pulse > best) best = pulse;
-		}
-		return best;
+		float ddKick = DreamDisplaysAudioBridge.getKickPulseAt(position, source);
+		float mdmKick = MusicDiscMakerAudioBridge.getKickPulseAt(position, source);
+		return Math.max(best, Math.max(ddKick, mdmKick)) * getEffectiveVolumeMultiplier();
 	}
 
 	public static float getSnarePulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.snarePulse;
+			if (song != null) {
+				best = song.snarePulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				float pulse = song.snarePulse * falloff;
+				if (pulse > best) best = pulse;
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			float pulse = song.snarePulse * falloff;
-			if (pulse > best) best = pulse;
-		}
-		return best;
+		float ddSnare = DreamDisplaysAudioBridge.getSnarePulseAt(position, source);
+		float mdmSnare = MusicDiscMakerAudioBridge.getSnarePulseAt(position, source);
+		return Math.max(best, Math.max(ddSnare, mdmSnare)) * getEffectiveVolumeMultiplier();
 	}
 
 	public static float getHihatPulseAt(Vec3 position, BlockPos source) {
+		float best = 0.0F;
 		if (source != null) {
 			ActiveSong song = ACTIVE_SONGS.get(source);
-			return song == null ? 0.0F : song.hihatPulse;
+			if (song != null) {
+				best = song.hihatPulse;
+			}
+		} else {
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				float pulse = song.hihatPulse * falloff;
+				if (pulse > best) best = pulse;
+			}
 		}
 
-		float best = 0.0F;
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			float pulse = song.hihatPulse * falloff;
-			if (pulse > best) best = pulse;
-		}
-		return best;
+		float ddHihat = DreamDisplaysAudioBridge.getHihatPulseAt(position, source);
+		float mdmHihat = MusicDiscMakerAudioBridge.getHihatPulseAt(position, source);
+		return Math.max(best, Math.max(ddHihat, mdmHihat)) * getEffectiveVolumeMultiplier();
 	}
 
 	public static float getBandAt(Vec3 position, int band) {
-		float best = -1.0F;
-		ActiveSong bestSong = null;
-		float bestFalloff = 0.0F;
-
-		for (ActiveSong song : ACTIVE_SONGS.values()) {
-			float falloff = falloff(song.position.distanceTo(position));
-			if (falloff <= 0.0F) {
-				continue;
-			}
-
-			float level = song.analyzer.getLevel() * falloff;
-			if (level > best) {
-				best = level;
-				bestSong = song;
-				bestFalloff = falloff;
-			}
-		}
-
-		if (bestSong == null) {
-			return 0.0F;
-		}
-
-		float[] bands = bestSong.analyzer.getBands();
-		if (band < 0 || band >= bands.length) {
-			return 0.0F;
-		}
-
-		return bands[band] * bestFalloff;
+		return getBandAt(position, band, null);
 	}
 
 	public static float getBandAt(Vec3 position, int band, BlockPos source) {
-		if (source == null) {
-			return getBandAt(position, band);
+		float best = 0.0F;
+		if (source != null) {
+			ActiveSong song = ACTIVE_SONGS.get(source);
+			if (song != null) {
+				float[] bands = song.analyzer.getBands();
+				if (band >= 0 && band < bands.length) {
+					best = bands[band];
+				}
+			}
+		} else {
+			ActiveSong bestSong = null;
+			float bestFalloff = 0.0F;
+			float bestLevel = -1.0F;
+
+			for (ActiveSong song : ACTIVE_SONGS.values()) {
+				float falloff = falloff(song.position.distanceTo(position));
+				if (falloff <= 0.0F) {
+					continue;
+				}
+
+				float level = song.analyzer.getLevel() * falloff;
+				if (level > bestLevel) {
+					bestLevel = level;
+					bestSong = song;
+					bestFalloff = falloff;
+				}
+			}
+
+			if (bestSong != null) {
+				float[] bands = bestSong.analyzer.getBands();
+				if (band >= 0 && band < bands.length) {
+					best = bands[band] * bestFalloff;
+				}
+			}
 		}
 
-		ActiveSong song = ACTIVE_SONGS.get(source);
-		if (song == null) {
-			return 0.0F;
-		}
-
-		float[] bands = song.analyzer.getBands();
-		if (band < 0 || band >= bands.length) {
-			return 0.0F;
-		}
-
-		return bands[band];
+		float ddBand = DreamDisplaysAudioBridge.getBandAt(position, band, source);
+		float mdmBand = MusicDiscMakerAudioBridge.getBandAt(position, band, source);
+		return Math.max(best, Math.max(ddBand, mdmBand)) * getEffectiveVolumeMultiplier();
 	}
 
 	private static float falloff(double distance) {
-		if (distance >= AUDIBLE_RADIUS) {
+		double maxRadius = getAudibleRadius();
+		if (distance >= maxRadius) {
 			return 0.0F;
 		}
 
-		return (float) (1.0 - distance / AUDIBLE_RADIUS);
+		return (float) (1.0 - distance / maxRadius);
 	}
 }

@@ -47,6 +47,9 @@ public class LaserProjectorBlockEntity extends BlockEntity {
 	public float currentAngle;
 	public float currentSpread;
 	public float beamIntensity;
+	public float activeIntensity;
+	public float burstExpansion = 1.0F;
+	public float targetBurst = 1.0F;
 	public float rotationSpeed;
 	public int groupIndex;
 	public int groupSize = 1;

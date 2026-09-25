@@ -3,7 +3,7 @@ package com.beatlamp.client.gui;
 import com.beatlamp.block.BeatEmitterBlockEntity;
 import com.beatlamp.block.EmitterMode;
 import com.beatlamp.client.PlatformNetwork;
-import com.beatlamp.network.EmitterSignalPayload;
+import com.beatlamp.network.EmitterConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
 
 import net.minecraft.client.gui.GuiGraphics;
@@ -142,7 +142,7 @@ public class EmitterConfigScreen extends Screen {
 	public void onClose() {
 		String finalName = this.nameBox != null ? this.nameBox.getValue().trim() : this.customName;
 		PlatformNetwork.sendToServer(
-			new EmitterSignalPayload(
+			new EmitterConfigurePayload(
 				this.pos, this.mode, this.threshold, this.inverted, this.unlink, this.dmxEnrolled, finalName
 			)
 		);

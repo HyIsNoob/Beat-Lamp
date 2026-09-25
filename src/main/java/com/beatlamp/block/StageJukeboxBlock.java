@@ -7,6 +7,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -49,28 +50,51 @@ public class StageJukeboxBlock extends BaseEntityBlock {
 			return ItemInteractionResult.sidedSuccess(level.isClientSide);
 		}
 
-		if (itemStack.has(DataComponents.JUKEBOX_PLAYABLE)) {
-			JukeboxPlayable playable = itemStack.get(DataComponents.JUKEBOX_PLAYABLE);
-			if (playable != null) {
-				if (!level.isClientSide) {
-					BlockEntity blockEntity = level.getBlockEntity(blockPos);
-					if (blockEntity instanceof StageJukeboxBlockEntity jukebox) {
-						ItemStack singleDisc = itemStack.copyWithCount(1);
-						if (!player.getAbilities().instabuild) {
-							itemStack.shrink(1);
-						}
-						jukebox.setRecord(singleDisc);
-						level.setBlock(blockPos, blockState.setValue(HAS_RECORD, true), 3);
-
-						playable.song().unwrap(level.registryAccess()).ifPresent(jukebox::playSong);
-						level.gameEvent(player, GameEvent.JUKEBOX_PLAY, blockPos);
+		boolean isPlayable = itemStack.has(DataComponents.JUKEBOX_PLAYABLE);
+		boolean isCustomDisc = !isPlayable && isMusicDisc(itemStack);
+		if (isPlayable || isCustomDisc) {
+			if (!level.isClientSide) {
+				BlockEntity blockEntity = level.getBlockEntity(blockPos);
+				if (blockEntity instanceof StageJukeboxBlockEntity jukebox) {
+					ItemStack singleDisc = itemStack.copyWithCount(1);
+					if (!player.getAbilities().instabuild) {
+						itemStack.shrink(1);
 					}
+					jukebox.setRecord(singleDisc);
+					level.setBlock(blockPos, blockState.setValue(HAS_RECORD, true), 3);
+
+					if (isPlayable) {
+						JukeboxPlayable playable = itemStack.get(DataComponents.JUKEBOX_PLAYABLE);
+						if (playable != null) {
+							playable.song().unwrap(level.registryAccess()).ifPresent(jukebox::playSong);
+						}
+					} else {
+						jukebox.playCustomDisc();
+					}
+					level.gameEvent(player, GameEvent.JUKEBOX_PLAY, blockPos);
 				}
-				return ItemInteractionResult.sidedSuccess(level.isClientSide);
 			}
+			return ItemInteractionResult.sidedSuccess(level.isClientSide);
 		}
 
 		return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+	}
+
+	@Override
+	protected InteractionResult useWithoutItem(BlockState blockState, Level level, BlockPos blockPos, Player player, BlockHitResult blockHitResult) {
+		if (blockState.getValue(HAS_RECORD)) {
+			this.dropRecording(level, blockPos, player);
+			return InteractionResult.sidedSuccess(level.isClientSide);
+		}
+		return InteractionResult.PASS;
+	}
+
+	private static boolean isMusicDisc(ItemStack stack) {
+		if (stack == null || stack.isEmpty()) return false;
+		String name = stack.getItem().getClass().getName();
+		if (name.contains("MusicDisc") || name.contains("musicdiscmaker")) return true;
+		net.minecraft.resources.ResourceLocation loc = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem());
+		return loc != null && ("music_disc_maker".equals(loc.getNamespace()) || loc.getPath().contains("disc"));
 	}
 
 	private void dropRecording(Level level, BlockPos blockPos, @Nullable Player player) {
@@ -83,6 +107,7 @@ public class StageJukeboxBlock extends BaseEntityBlock {
 					jukebox.setRecord(ItemStack.EMPTY);
 					level.setBlock(blockPos, level.getBlockState(blockPos).setValue(HAS_RECORD, false), 3);
 					level.gameEvent(null, GameEvent.JUKEBOX_STOP_PLAY, blockPos);
+					level.sendBlockUpdated(blockPos, level.getBlockState(blockPos), level.getBlockState(blockPos), 3);
 
 					if (player != null && !player.getAbilities().instabuild) {
 						if (!player.getInventory().add(record)) {
@@ -111,7 +136,7 @@ public class StageJukeboxBlock extends BaseEntityBlock {
 
 	@Override
 	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState blockState, BlockEntityType<T> blockEntityType) {
-		return level.isClientSide ? null : createTickerHelper(blockEntityType, BeatLampBlockEntities.STAGE_JUKEBOX, StageJukeboxBlockEntity::tick);
+		return createTickerHelper(blockEntityType, BeatLampBlockEntities.STAGE_JUKEBOX, level.isClientSide ? StageJukeboxBlockEntity::clientTick : StageJukeboxBlockEntity::tick);
 	}
 
 	@Override

@@ -28,6 +28,11 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 	}
 
 	@Override
+	public boolean shouldRenderOffScreen(StageLightBlockEntity blockEntity) {
+		return true;
+	}
+
+	@Override
 	public int getViewDistance() {
 		return com.beatlamp.client.config.BeatLampClientConfig.beamRenderDistance;
 	}
@@ -48,8 +53,9 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 			return;
 		}
 
-		float energy = Mth.clamp(light.beamEnergy * light.getSensitivity(), 0.0F, 1.0F);
-		float beat = Mth.clamp(light.beamBeat, 0.0F, 1.0F);
+		float masterDimmer = com.beatlamp.client.DmxMasterTracker.getMasterDimmerNear(light.getBlockPos());
+		float energy = Mth.clamp(light.beamEnergy * light.getSensitivity(), 0.0F, 1.0F) * masterDimmer;
+		float beat = Mth.clamp(light.beamBeat, 0.0F, 1.0F) * masterDimmer;
 
 		if (energy <= 0.02F) {
 			return;
@@ -258,7 +264,12 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 
 		int color = light.getColor();
 
-		if (color == BeatLampBlockEntity.COLOR_OLED) {
+		if (color == BeatLampBlockEntity.COLOR_OLED || color == 0) {
+			if (light.getMode() == StageLightMode.BEAT_STEP) {
+				float[] hues = {0.0F, 0.15F, 0.33F, 0.5F, 0.66F, 0.83F};
+				float hue = hues[Math.abs(light.beatColorIndex) % hues.length];
+				return java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
+			}
 			float hue = (JukeboxAudioTracker.getEffectTime() * 2.0F % 360.0F) / 360.0F;
 			return java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
 		}

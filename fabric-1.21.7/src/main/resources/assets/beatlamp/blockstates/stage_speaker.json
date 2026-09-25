@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "beatlamp:block/stage_speaker"
+    },
+    "facing=south": {
+      "model": "beatlamp:block/stage_speaker",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "beatlamp:block/stage_speaker",
+      "y": 270
+    },
+    "facing=east": {
+      "model": "beatlamp:block/stage_speaker",
+      "y": 90
+    }
+  }
+}

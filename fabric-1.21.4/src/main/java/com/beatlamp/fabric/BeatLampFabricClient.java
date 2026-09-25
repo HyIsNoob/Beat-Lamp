@@ -20,10 +20,13 @@ import com.beatlamp.client.gui.FogGeneratorConfigScreen;
 import com.beatlamp.client.gui.FountainConfigScreen;
 import com.beatlamp.client.gui.LampConfigScreen;
 import com.beatlamp.client.gui.LaserProjectorConfigScreen;
+import com.beatlamp.client.gui.RainbowLedConfigScreen;
 import com.beatlamp.client.gui.StageLightConfigScreen;
+import com.beatlamp.block.RainbowLedBlockEntity;
 import com.beatlamp.client.render.BeatLampRenderer;
 import com.beatlamp.client.render.LampOutlineRenderer;
 import com.beatlamp.client.render.LaserProjectorRenderer;
+import com.beatlamp.client.render.RainbowLedRenderer;
 import com.beatlamp.client.render.StageLightRenderer;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -64,9 +67,11 @@ public class BeatLampFabricClient implements ClientModInitializer {
 		));
 
 		BlockRenderLayerMap.INSTANCE.putBlock(BeatLampBlocks.BEAT_LAMP, RenderType.cutout());
+		BlockRenderLayerMap.INSTANCE.putBlock(BeatLampBlocks.RAINBOW_LED_BLOCK, RenderType.cutout());
 		BlockEntityRenderers.register(BeatLampBlockEntities.BEAT_LAMP, BeatLampRenderer::new);
 		BlockEntityRenderers.register(BeatLampBlockEntities.STAGE_LIGHT, StageLightRenderer::new);
 		BlockEntityRenderers.register(BeatLampBlockEntities.LASER_PROJECTOR, LaserProjectorRenderer::new);
+		BlockEntityRenderers.register(BeatLampBlockEntities.RAINBOW_LED, RainbowLedRenderer::new);
 
 		BeatLampBlockEntity.clientTicker = BeatLampClient::tickLamp;
 		BeatEmitterBlockEntity.clientTicker = BeatLampClient::tickEmitter;
@@ -128,6 +133,22 @@ public class BeatLampFabricClient implements ClientModInitializer {
 			minecraft.execute(() -> {
 				if (minecraft.screen == null && minecraft.player != null) {
 					minecraft.setScreen(new DmxConsoleScreen(dmx));
+				}
+			});
+		};
+		RainbowLedBlockEntity.controllerUser = led -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new RainbowLedConfigScreen(led));
+				}
+			});
+		};
+		com.beatlamp.block.StageJukeboxBlockEntity.controllerUser = jukebox -> {
+			Minecraft minecraft = Minecraft.getInstance();
+			minecraft.execute(() -> {
+				if (minecraft.screen == null && minecraft.player != null) {
+					minecraft.setScreen(new com.beatlamp.client.gui.StageJukeboxConfigScreen(jukebox));
 				}
 			});
 		};

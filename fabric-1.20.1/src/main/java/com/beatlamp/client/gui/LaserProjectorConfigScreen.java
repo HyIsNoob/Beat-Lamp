@@ -222,7 +222,10 @@ public class LaserProjectorConfigScreen extends Screen {
 		@Override
 		protected void updateMessage() {
 			double val = Mth.lerp(this.value, this.min, this.max);
-			this.setMessage(Component.translatable("screen.beatlamp.slider.value", this.prefix, String.format(this.format, this.format.contains("d") ? (int) Math.round(val) : val)));
+			String formatted = this.format.contains("%d") || this.format.endsWith("d")
+				? String.format(this.format, (int) Math.round(val))
+				: String.format(this.format, val);
+			this.setMessage(Component.translatable("screen.beatlamp.slider.value", this.prefix, formatted));
 		}
 	}
 }

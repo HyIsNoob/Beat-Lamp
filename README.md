@@ -1,55 +1,53 @@
 # Beat Lamp
 
-Beat Lamp is a multi-loader stage lighting, concert effects, and audio-reactive visualizer mod for Minecraft. Powered by real-time client-side FFT audio processing, it dynamically synchronizes stage lights, volumetric beams, laser projectors, pyro fountains, fog, and redstone signals with nearby jukebox music and video displays.
+Beat Lamp brings real concert lighting, festival visualizers, and stage special effects to Minecraft. All lights, lasers, moving beams, fog, and fountains automatically detect and dance to the beat of nearby music!
 
-Compatible with vanilla discs, modded music discs, and resource packs.
-
----
-
-### Important Compatibility Notice
-* **Replay Mod**: In-game playback functions normally. However, offline video rendering is incompatible because Replay Mod mutes sound engine output during export, leaving lamps without an audio signal.
+Works with vanilla music discs, modded discs, online music streams, and resource packs.
 
 ---
 
-## Features
+### Compatibility Note
+* **Replay Mod**: In-game recording works normally. However, offline video export mutes Minecraft audio, so lamps will not receive sound signals during export rendering.
 
-### Stage Fixtures
-* **Beat Lamp**: Matrix lamp visualizer with 9 reactive display modes (Pulse, RGB, Spectrum, VU Meter, Oscilloscope, Matrix Rain, Ripple, Wave, Scan), 16 dye colors, OLED rainbow mode, and frameless styling.
-* **Stage Light**: Moving-head concert spotlights projecting dual-layer 3D volumetric light beams. Features 5 modes (Sweep, Beat Step, Static, Strobe, Chase) and a configurable Tempo Pulse option.
-* **RGB Laser Projector**: High-intensity 3D laser system with 1 to 16 beams and 4 sweep/burst modes.
-* **Beat Fountain**: Music-triggered particle fountain with customizable spray height and explosive firework bursts on bass drops.
-* **Stage Fog Generator**: Low-lying atmospheric dry ice fog and high-pressure CO2 stage jets.
-* **Beat Emitter**: Redstone controller outputting 0 to 15 analog signal strength mapped to live music frequency bands, kicks, snares, and drops.
-* **Master DMX Console**: Central control station with real-time audio monitor, instant Blackout, Strobe All, Master Dimmer, and remote fixture group management.
-* **Stage Props**: Titanium Obsidian Stage Jukebox, Neon DJ Deck, and Line Array Stage Speakers.
+---
+
+## Stage Equipment
+
+### Lights and Effects
+* **Beat Lamp**: Music visualizer block with 9 reactive modes (Spectrum, VU Meter, Wave, Matrix Rain, Pulse, and more), 16 dye colors, OLED rainbow, and frameless mode.
+* **Rainbow LED Block**: Ambient aesthetic LED block that runs 24/7 independently of music. Features 11 animated modes (Rainbow Cycle, Breathing, Fire, Police, Wave, and more) and framed/frameless styling.
+* **Stage Light**: Concert moving-head spotlights projecting realistic 3D light beams with 5 movement modes and tempo sync.
+* **RGB Laser Projector**: High-energy stage lasers with 1 to 16 customizable beams and dynamic sweep patterns.
+* **Beat Fountain**: Water and stage pyro fountain that shoots fireworks and sparks on heavy bass drops.
+* **Stage Fog Generator**: Atmospheric stage fog machine with low-lying dry ice fog and high-pressure CO2 blast jets.
+* **Beat Emitter**: Converts live music beats into redstone power (strength 0 to 15) for kicks, snares, and drops.
+* **Master DMX Console**: Central control station with live audio monitor, instant Blackout, Strobe All, Master Dimmer, and remote group controls.
+* **Stage Props**: Titanium Obsidian Stage Jukebox, Neon DJ Deck, and Line Array Speakers.
 
 ### Setup Tools
-* **Group Linker (`beatlamp:linker`)**: Click a stage device, then click any block to define the opposite corner of a 3D bounding box. All matching fixtures within the box are instantly linked into a synchronized group.
-* **Lamp Controller (`beatlamp:controller`)**: Right-click fixtures to open their dark-mode configuration GUI. Sneak-click any jukebox to bind fixtures exclusively to that audio source.
+* **Lamp Controller**: Right-click any light to open its configuration menu. Sneak + right-click any jukebox to bind lights to that specific jukebox so they only listen to that stage (bound fixtures will react to music regardless of distance).
+* **Group Linker**: Click a light, then click any block on the other side of your stage to box-select and synchronize all lights inside.
 
 ---
 
-## Client Settings & Optimization (Default Key: `O`)
+## Quick Settings Menu (Default Key: O)
 
-Beat Lamp includes a dedicated client configuration menu to ensure smooth performance on multiplayer servers and low-end hardware:
+Press **O** at any time to open the client settings menu and customize your concert experience:
 
-* **Hotkey**: Press **`O`** (rebindable in Controls) to open the settings screen anytime.
-* **Stage Effects (Master Switch)**: Instantly toggle all stage lighting and visual effects on or off.
-* **Audio Engine Profile**:
-  * **STUDIO**: Full multi-band Fourier frequency analysis.
-  * **LITE**: Fast envelope detection optimized for maximum FPS.
-  * **OFF**: Stops audio decoders entirely, consuming 0% audio CPU.
-* **Volumetric Beams**: Choose between **HIGH** (dual-layer glow cone), **MEDIUM** (single-layer, 50% fillrate reduction), or **OFF**.
+* **Stage Effects**: Master switch to turn all stage lights and effects on or off.
+* **Audio Engine Profile**: Switch between Studio quality (full spectrum), Lite (low CPU), or Off.
+* **Volumetric Beams**: Set beam quality to High, Medium, or Off to boost FPS.
 * **3D Lasers**: Toggle laser beam rendering on or off.
-* **Particle Density**: Adjust stage particles to **100%**, **50%**, **25%**, or **OFF**.
-* **Anti-Strobe (Photosensitivity Protection)**: Converts harsh strobing into smooth gradual fading for light-sensitive players.
-* **Render Distance**: Adjustable distance slider (16 to 128 blocks) to cull distant fixtures.
+* **Particle Density**: Adjust stage fog and smoke from 100% down to Off.
+* **Anti-Strobe**: Replaces rapid strobe flashes with soft fading for photosensitive players.
+* **Render Distance**: Culls lights farther than your preferred distance (16 to 128 blocks).
 
 ---
 
 ## Crafting Recipes
 
 * **Beat Lamp (x4)**: 7 Glass surrounding 1 Redstone Lamp and 1 Note Block.
+* **Rainbow LED Block (x1)**: 1 Beat Lamp + 1 Glowstone Dust (shapeless).
 * **Beat Emitter (x1)**: 1 Note Block + 4 Redstone Dust (shapeless).
 * **Stage Light (x1)**: 1 Sea Lantern + 1 Glass + 1 Redstone Dust (shapeless).
 * **Laser Projector (x1)**: 1 Amethyst Shard + 1 Glowstone Dust + 1 Iron Ingot + 1 Redstone Dust (shapeless).
@@ -59,27 +57,25 @@ Beat Lamp includes a dedicated client configuration menu to ensure smooth perfor
 * **Stage Jukebox (x1)**: 1 Jukebox + 1 Obsidian + 1 Amethyst Shard + 1 Redstone Dust (shapeless).
 * **DJ Deck (x1)**: 1 Iron Bars + 1 Obsidian + 1 Redstone Dust + 1 Glowstone Dust (shapeless).
 * **Stage Speaker (x1)**: 1 Note Block + 1 Iron Ingot + 1 Oak Planks + 1 Redstone Dust (shapeless).
-* **Lamp Controller (x1)**: 5 Iron Ingots, 1 Beat Lamp, 1 Redstone Dust (shaped).
-* **Group Linker (x1)**: 3 Iron Ingots, 2 Gold Ingots, 1 Redstone Dust (shaped).
+* **Lamp Controller (x1)**: 5 Iron Ingots + 1 Beat Lamp + 1 Redstone Dust.
+* **Group Linker (x1)**: 3 Iron Ingots + 2 Gold Ingots + 1 Redstone Dust.
 
 ---
 
-## Integrations
+## Mod Compatibility
 
-* **DreamDisplays**: Fully compatible. Stage fixtures synchronize in real-time with audio from DreamDisplays video screens during multiplayer watch parties.
-
----
-
-## Supported Languages
-
-* **English (`en_us`)** - 100% complete
-* **Korean (`ko_kr` / 한국어)** - 100% complete
-* **Vietnamese (`vi_vn` / Tiếng Việt)** - 100% complete
+* **Music Disc Maker**: Fully supported. Lights sync in real-time to custom online music discs, with support for binding lights to specific jukeboxes.
+* **DreamDisplays**: Fully supported. Lights sync directly with audio from TV and video screens during watch parties.
 
 ---
 
 ## Supported Platforms
 
-* **Minecraft 1.21.4**: Fabric, NeoForge
-* **Minecraft 1.21.1**: Fabric, NeoForge, Forge
-* **Minecraft 1.20.1**: Fabric, Forge
+| Minecraft Version | Mod Loaders |
+| :--- | :--- |
+| **1.21.7** | Fabric, NeoForge |
+| **1.21.4** | Fabric, NeoForge |
+| **1.21.1** | Fabric, NeoForge, Forge |
+| **1.20.1** | Fabric, Forge |
+
+Supported in **English**, **Vietnamese**, and **Korean**.

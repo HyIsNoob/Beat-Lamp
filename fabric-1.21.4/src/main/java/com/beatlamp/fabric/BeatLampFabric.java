@@ -36,6 +36,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 
 public class BeatLampFabric implements ModInitializer {
 	@Override
@@ -44,6 +45,7 @@ public class BeatLampFabric implements ModInitializer {
 
 		// 1. Register Blocks
 		BeatLampBlocks.BEAT_LAMP = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("beat_lamp"), BeatLampBlocks.createBeatLamp());
+		BeatLampBlocks.RAINBOW_LED_BLOCK = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("rainbow_led_block"), BeatLampBlocks.createRainbowLedBlock());
 		BeatLampBlocks.BEAT_EMITTER = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("beat_emitter"), BeatLampBlocks.createBeatEmitter());
 		BeatLampBlocks.STAGE_LIGHT = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("stage_light"), BeatLampBlocks.createStageLight());
 		BeatLampBlocks.FOUNTAIN = Registry.register(BuiltInRegistries.BLOCK, BeatLamp.id("fountain"), BeatLampBlocks.createFountain());
@@ -63,6 +65,7 @@ public class BeatLampFabric implements ModInitializer {
 		BeatLampBlockEntities.FOG_GENERATOR = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("fog_generator"), BeatLampBlockEntities.createFogGenerator());
 		BeatLampBlockEntities.STAGE_JUKEBOX = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("stage_jukebox"), BeatLampBlockEntities.createStageJukebox());
 		BeatLampBlockEntities.DMX_CONSOLE = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("dmx_console"), BeatLampBlockEntities.createDmxConsole());
+		BeatLampBlockEntities.RAINBOW_LED = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, BeatLamp.id("rainbow_led_block"), BeatLampBlockEntities.createRainbowLed());
 
 		// 3. Register Data Components
 		BeatLampItems.ANCHOR_POS = Registry.register(BuiltInRegistries.DATA_COMPONENT_TYPE, BeatLamp.id("anchor_pos"), BeatLampItems.createAnchorPosComponent());
@@ -70,6 +73,7 @@ public class BeatLampFabric implements ModInitializer {
 
 		// 4. Register Items
 		BeatLampItems.BEAT_LAMP = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("beat_lamp"), BeatLampItems.createBeatLampItem());
+		BeatLampItems.RAINBOW_LED_BLOCK = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("rainbow_led_block"), BeatLampItems.createRainbowLedBlockItem());
 		BeatLampItems.BEAT_EMITTER = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("beat_emitter"), BeatLampItems.createBeatEmitterItem());
 		BeatLampItems.STAGE_LIGHT = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("stage_light"), BeatLampItems.createStageLightItem());
 		BeatLampItems.FOUNTAIN = Registry.register(BuiltInRegistries.ITEM, BeatLamp.id("fountain"), BeatLampItems.createFountainItem());
@@ -91,6 +95,7 @@ public class BeatLampFabric implements ModInitializer {
 				.icon(() -> new ItemStack(BeatLampItems.CONTROLLER))
 				.displayItems((parameters, output) -> {
 					output.accept(BeatLampItems.BEAT_LAMP);
+					output.accept(BeatLampItems.RAINBOW_LED_BLOCK);
 					output.accept(BeatLampItems.STAGE_LIGHT);
 					output.accept(BeatLampItems.LASER_PROJECTOR);
 					output.accept(BeatLampItems.FOUNTAIN);
@@ -117,6 +122,8 @@ public class BeatLampFabric implements ModInitializer {
 		PayloadTypeRegistry.playC2S().register(EmitterConfigurePayload.ID, EmitterConfigurePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(FountainFirePayload.ID, FountainFirePayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(DmxConsolePayload.ID, DmxConsolePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(com.beatlamp.network.RainbowLedConfigurePayload.ID, com.beatlamp.network.RainbowLedConfigurePayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(com.beatlamp.network.StageJukeboxConfigurePayload.ID, com.beatlamp.network.StageJukeboxConfigurePayload.CODEC);
 
 		// 1. Lamp config receiver
 		ServerPlayNetworking.registerGlobalReceiver(LampConfigurePayload.ID, (payload, context) -> {
@@ -385,6 +392,64 @@ public class BeatLampFabric implements ModInitializer {
 				dmx.setStrobeAll(payload.strobeAll());
 				dmx.setMasterDimmer(payload.masterDimmer());
 				dmx.setMasterSpeed(payload.masterSpeed());
+				dmx.getMutedGroups().clear();
+				if (payload.mutedGroups() != null) {
+					for (net.minecraft.core.BlockPos p : payload.mutedGroups()) {
+						dmx.setGroupMuted(p, true);
+					}
+				}
+				dmx.markUpdated();
+			}
+		});
+
+		// 10. Rainbow LED config receiver
+		ServerPlayNetworking.registerGlobalReceiver(com.beatlamp.network.RainbowLedConfigurePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+
+			if (payload.unlink()) {
+				BeatLamp.unlinkRainbowLedGroup(level, payload.pos());
+				return;
+			}
+
+			List<BlockPos> members = null;
+			if (level.getBlockEntity(payload.pos()) instanceof com.beatlamp.block.RainbowLedBlockEntity led && led.getManualGroup().size() >= 2) {
+				members = led.getManualGroup();
+			}
+
+			if (members == null) {
+				members = BeatLamp.floodFillRainbowLed(level, payload.pos());
+			}
+
+			for (BlockPos member : members) {
+				if (level.getBlockEntity(member) instanceof com.beatlamp.block.RainbowLedBlockEntity led) {
+					led.setMode(payload.mode());
+					led.setSpeed(payload.speed());
+					led.setColor(payload.color());
+					led.setBrightness(payload.brightness());
+					led.setFrameless(payload.frameless());
+
+					BlockState state = level.getBlockState(member);
+					if (state.hasProperty(com.beatlamp.block.RainbowLedBlock.FRAMELESS) && state.getValue(com.beatlamp.block.RainbowLedBlock.FRAMELESS) != payload.frameless()) {
+						level.setBlock(member, state.setValue(com.beatlamp.block.RainbowLedBlock.FRAMELESS, payload.frameless()), 3);
+					}
+				}
+			}
+		});
+
+		// 11. Stage Jukebox config receiver
+		ServerPlayNetworking.registerGlobalReceiver(com.beatlamp.network.StageJukeboxConfigurePayload.ID, (payload, context) -> {
+			Level level = context.player().level();
+			if (level.getBlockEntity(payload.pos()) instanceof com.beatlamp.block.StageJukeboxBlockEntity jukebox) {
+				switch (payload.action()) {
+					case com.beatlamp.network.StageJukeboxConfigurePayload.ACTION_UPDATE_SETTINGS ->
+						jukebox.applyConfiguration(payload.volume(), payload.range(), payload.loop());
+					case com.beatlamp.network.StageJukeboxConfigurePayload.ACTION_TOGGLE_PAUSE ->
+						jukebox.togglePause();
+					case com.beatlamp.network.StageJukeboxConfigurePayload.ACTION_EJECT ->
+						jukebox.ejectRecord(context.player());
+					case com.beatlamp.network.StageJukeboxConfigurePayload.ACTION_SEEK ->
+						jukebox.seekTo(payload.seekSeconds());
+				}
 			}
 		});
 	}

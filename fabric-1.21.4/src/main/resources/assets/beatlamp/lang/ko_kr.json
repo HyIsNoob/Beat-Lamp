@@ -20,51 +20,37 @@
 	"block.beatlamp.dj_deck": "DJ 퍼포먼스 데크",
 	"item.beatlamp.stage_speaker": "무대 라인 어레이 스피커",
 	"block.beatlamp.stage_speaker": "무대 라인 어레이 스피커",
-
 	"item.beatlamp.tag.decoration": "장식",
 	"item.beatlamp.tag.hold_shift": "[Shift]를 길게 눌러 가이드 확인",
 	"item.beatlamp.tag.guide_header": "▪ 무대 가이드 ▪",
-
 	"item.beatlamp.beat_lamp.tooltip.summary": "9가지 비주얼라이저 모드를 갖춘 음악 반응형 네온 램프.",
 	"item.beatlamp.beat_lamp.tooltip.details": "• 음악에 맞춰 빛납니다. 9가지 시각화 모드.\n• 컨트롤러로 우클릭하여 설정합니다.",
-
 	"item.beatlamp.stage_light.tooltip.summary": "콘서트 무빙헤드 스포트라이트 빔 조명.",
 	"item.beatlamp.stage_light.tooltip.details": "• 콘서트 스포트라이트 빔 (최대 34블록).\n• 컨트롤러로 우클릭하여 설정합니다.",
-
 	"item.beatlamp.laser_projector.tooltip.summary": "3D 멀티 빔 콘서트 레이저 조명 장치.",
 	"item.beatlamp.laser_projector.tooltip.details": "• 1~8개 빔의 3D 콘서트 레이저.\n• 컨트롤러로 우클릭하여 설정합니다.",
-
 	"item.beatlamp.fog_generator.tooltip.summary": "저지대 드라이아이스 무대 포그 & CO2 분사기.",
 	"item.beatlamp.fog_generator.tooltip.details": "• 바닥 안개 및 비트에 맞춘 CO2 분사.\n• 컨트롤러로 우클릭하여 설정합니다.",
-
 	"item.beatlamp.fountain.tooltip.summary": "무대 파이로 파운틴 & 폭죽 발사기.",
 	"item.beatlamp.fountain.tooltip.details": "• 비트에 불꽃 분사 & 드롭 시 폭죽 로켓 발사.\n• 컨트롤러로 우클릭하여 설정합니다.",
-
 	"item.beatlamp.beat_emitter.tooltip.summary": "음악 비트를 레드스톤 신호로 변환합니다.",
 	"item.beatlamp.beat_emitter.tooltip.details": "• 음악 비트에 맞춰 레드스톤 펄스 출력.\n• 쉬프트 + 우클릭으로 오디오 소스 설정.",
-
 	"item.beatlamp.stage_jukebox.tooltip.summary": "무대 공연을 위한 모던 티타늄 주크박스.",
 	"item.beatlamp.stage_jukebox.tooltip.details": "• 비트 트래킹과 함께 음반 재생.\n• 음반으로 우클릭하여 재생, 클릭하여 꺼내기.",
-
 	"item.beatlamp.dmx_console.tooltip.summary": "무대 연출을 위한 조명 통합 컨트롤 데스크.",
 	"item.beatlamp.dmx_console.tooltip.details": "• 마스터 조명 제어 (블랙아웃 및 전체 스트로브).\n• 우클릭하여 DMX 제어판 열기.",
-
 	"item.beatlamp.dj_deck.tooltip.summary": "듀얼 조그 전문 DJ 퍼포먼스 스테이션.",
 	"item.beatlamp.dj_deck.tooltip.details": "• 전문 DJ 무대 연출 장비.\n• 장식용 소품.",
-
 	"item.beatlamp.stage_speaker.tooltip.summary": "고출력 콘서트용 라인 어레이 스피커 캐비닛.",
 	"item.beatlamp.stage_speaker.tooltip.details": "• 고출력 콘서트 라인 어레이 스피커.\n• 쌓아서 배치 가능한 장식용 소품.",
-
 	"item.beatlamp.linker": "그룹 링커",
 	"item.beatlamp.linker.tooltip.summary": "스마트 3D 바운딩 박스 무대 장치 연결 도구.",
 	"item.beatlamp.linker.tooltip.details": "• 모서리 1을 클릭한 뒤, 모서리 2를 클릭하여 그룹 연결.\n• 쉬프트 + 우클릭으로 선택 취소.",
 	"item.beatlamp.linker.anchor": "선택된 모서리 좌표: %s, %s, %s",
-
 	"item.beatlamp.controller": "램프 컨트롤러",
 	"item.beatlamp.controller.tooltip.summary": "범용 무대 리모컨 및 주크박스 소스 연결 도구.",
 	"item.beatlamp.controller.tooltip.details": "• 장치를 우클릭하여 설정 GUI 열기.\n• 쉬프트 + 주크박스 우클릭으로 오디오 소스 연결.",
 	"item.beatlamp.controller.source": "대기 중인 오디오 소스: %s, %s, %s",
-
 	"message.beatlamp.mode.pulse": "모드: 펄스 (비트 크기 반응)",
 	"message.beatlamp.mode.rgb": "모드: RGB (색상 순환)",
 	"message.beatlamp.mode.spectrum": "모드: 스펙트럼 (이퀄라이저 바)",
@@ -85,7 +71,6 @@
 	"message.beatlamp.link.too_far": "모서리 간의 거리가 너무 멉니다 (최대 %s블록)",
 	"message.beatlamp.link.full": "영역 내에 장치가 너무 많습니다 (최대 %s개), 연결할 수 없습니다",
 	"message.beatlamp.link.empty": "선택한 영역에서 일치하는 무대 장치를 찾을 수 없습니다",
-
 	"screen.beatlamp.config": "비트 램프 설정",
 	"screen.beatlamp.mode": "모드: %s",
 	"screen.beatlamp.mode.pulse": "펄스",
@@ -131,7 +116,6 @@
 	"screen.beatlamp.dmx_link": "DMX 연결: %s",
 	"screen.beatlamp.name_hint": "그룹 이름 입력...",
 	"screen.beatlamp.slider.value": "%s: %s",
-
 	"screen.beatlamp.stagelight.config": "무대 조명 설정",
 	"screen.beatlamp.stagelight.mode": "모드: %s",
 	"screen.beatlamp.stagelight.mode.sweep": "콘서트 스윕",
@@ -140,7 +124,6 @@
 	"screen.beatlamp.stagelight.mode.strobe": "스트로브",
 	"screen.beatlamp.stagelight.mode.chase": "체이스",
 	"screen.beatlamp.stagelight.color.cycle": "비트 색상 순환",
-
 	"screen.beatlamp.fountain.config": "비트 분수 설정",
 	"screen.beatlamp.fountain.firework": "폭죽 발사: %s",
 	"screen.beatlamp.fountain.spray_threshold": "분사 감도 기준값",
@@ -154,7 +137,6 @@
 	"screen.beatlamp.fountain.particle.spark": "전기 스파크",
 	"screen.beatlamp.fountain.particle.dust": "컬러 더스트",
 	"screen.beatlamp.fountain.particle.mixed": "혼합",
-
 	"screen.beatlamp.laser.config": "RGB 레이저 프로젝터 설정",
 	"screen.beatlamp.laser.mode": "모드: %s",
 	"screen.beatlamp.laser.mode.fan_sweep": "팬 스윕",
@@ -163,7 +145,6 @@
 	"screen.beatlamp.laser.mode.beat_burst": "비트 버스트",
 	"screen.beatlamp.laser.beams": "광선 수: %s",
 	"screen.beatlamp.laser.spread": "부채꼴 펼침 각도",
-
 	"screen.beatlamp.fog.config": "무대 포그 생성기 설정",
 	"screen.beatlamp.fog.density": "포그 밀도: %s",
 	"screen.beatlamp.fog.density.low": "낮음",
@@ -171,14 +152,12 @@
 	"screen.beatlamp.fog.density.high": "높음",
 	"screen.beatlamp.fog.radius": "확산 반경: %s블록",
 	"screen.beatlamp.fog.color.white": "화이트 포그",
-
 	"screen.beatlamp.source.none": "오디오: 근처 모든 주크박스",
 	"screen.beatlamp.source.bound": "오디오: 좌표 (%s, %s, %s) 주크박스에 고정",
 	"message.beatlamp.source.selected": "주크박스가 선택되었습니다! 아무 무대 장치를 우클릭하여 오디오 소스로 지정하세요",
 	"message.beatlamp.source.bound": "%s개의 장치를 주크박스에 연결했습니다",
 	"message.beatlamp.source.bound_emitter": "비트 이미터를 주크박스에 연결했습니다",
 	"message.beatlamp.source.cancel": "오디오 소스 연결이 해제되었습니다",
-
 	"screen.beatlamp.emitter.config": "비트 이미터 설정",
 	"screen.beatlamp.emitter.mode": "모드: %s",
 	"screen.beatlamp.emitter.mode.pulse": "펄스 (비트 시계)",
@@ -189,7 +168,6 @@
 	"screen.beatlamp.emitter.mode.hihat": "하이햇 (트레블)",
 	"screen.beatlamp.emitter.threshold": "감도",
 	"screen.beatlamp.emitter.invert": "신호 반전: %s",
-
 	"screen.beatlamp.dmx.title": "마스터 DMX 무대 콘솔",
 	"screen.beatlamp.dmx.dimmer": "마스터 디머",
 	"screen.beatlamp.dmx.quality": "오디오 엔진: %s",
@@ -199,7 +177,6 @@
 	"message.beatlamp.emitter.mode.level": "이미터 모드: 연속 에너지 (0-15 레벨 신호)",
 	"message.beatlamp.emitter.inverted": "비트 이미터: 신호가 반전되었습니다",
 	"message.beatlamp.emitter.normal": "비트 이미터: 정상 신호로 설정되었습니다",
-
 	"tooltip.beatlamp.linker.summary": "쉬프트-우클릭으로 앵커 취소. 2개 모서리를 우클릭하여 장치를 그룹으로 연결합니다.",
 	"tooltip.beatlamp.linker.anchor": "앵커 좌표: %s",
 	"tooltip.beatlamp.controller.summary": "쉬프트-우클릭으로 주크박스 선택. 무대 장치를 우클릭하여 설정하거나 소스를 연결합니다.",
@@ -216,7 +193,6 @@
 	"screen.beatlamp.fountain.spray": "분사: %s",
 	"screen.beatlamp.laser.beam_count": "광선 수: %s",
 	"screen.beatlamp.particles.soul": "영혼 화염",
-
 	"key.categories.beatlamp": "비트 램프",
 	"key.beatlamp.open_settings": "클라이언트 설정 열기",
 	"screen.beatlamp.client_settings.title": "비트 램프 클라이언트 최적화 설정",
@@ -237,5 +213,24 @@
 	"screen.beatlamp.client_settings.particle_density.off": "끄기",
 	"screen.beatlamp.client_settings.anti_strobe": "안티 스트로브 (눈 보호): %s",
 	"screen.beatlamp.client_settings.render_distance": "이펙트 렌더링 거리",
-	"screen.beatlamp.client_settings.render_distance.format": "%s블록"
+	"screen.beatlamp.client_settings.render_distance.format": "%s블록",
+	"item.beatlamp.rainbow_led_block": "무지개 LED 블록",
+	"block.beatlamp.rainbow_led_block": "무지개 LED 블록",
+	"item.beatlamp.rainbow_led_block.tooltip.summary": "건축 및 사이버펑크용 연속 무지개 LED 조명입니다.",
+	"item.beatlamp.rainbow_led_block.tooltip.details": "• 다양한 효과 모드로 24시간 화려하게 켜져 있습니다.\n• 조명 컨트롤러로 우클릭하여 설정 메뉴를 엽니다.\n• Shift + 우클릭으로 프레임 유/무를 전환합니다.",
+	"screen.beatlamp.rainbow_led.config": "무지개 LED 설정",
+	"screen.beatlamp.rainbow_led.mode": "모드: %s",
+	"screen.beatlamp.rainbow_led.mode.rainbow": "무지개 회전",
+	"screen.beatlamp.rainbow_led.mode.breathing": "숨쉬기 (Breathing)",
+	"screen.beatlamp.rainbow_led.mode.strobe": "스트로브 펄스",
+	"screen.beatlamp.rainbow_led.mode.static": "고정 색상",
+	"screen.beatlamp.rainbow_led.mode.wave": "공간 웨이브",
+	"screen.beatlamp.rainbow_led.frame": "프레임: %s",
+	"screen.beatlamp.rainbow_led.frame.framed": "프레임 있음",
+	"screen.beatlamp.rainbow_led.frame.frameless": "프레임리스",
+	"screen.beatlamp.rainbow_led.speed": "속도",
+	"screen.beatlamp.rainbow_led.brightness": "밝기",
+	"screen.beatlamp.rainbow_led.color.rainbow": "무지개 (OLED)",
+	"screen.beatlamp.brightness": "밝기",
+	"screen.beatlamp.color.rainbow": "무지개 (OLED)"
 }

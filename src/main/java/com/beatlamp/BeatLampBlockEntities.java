@@ -20,9 +20,13 @@ public class BeatLampBlockEntities {
 	public static BlockEntityType<FogGeneratorBlockEntity> FOG_GENERATOR;
 	public static BlockEntityType<StageJukeboxBlockEntity> STAGE_JUKEBOX;
 	public static BlockEntityType<DmxConsoleBlockEntity> DMX_CONSOLE;
+	public static BlockEntityType<com.beatlamp.block.RainbowLedBlockEntity> RAINBOW_LED;
 
 	public static BlockEntityType<BeatLampBlockEntity> createBeatLamp() {
 		return BlockEntityType.Builder.of(BeatLampBlockEntity::new, BeatLampBlocks.BEAT_LAMP).build(null);
+	}
+	public static BlockEntityType<com.beatlamp.block.RainbowLedBlockEntity> createRainbowLed() {
+		return BlockEntityType.Builder.of(com.beatlamp.block.RainbowLedBlockEntity::new, BeatLampBlocks.RAINBOW_LED_BLOCK).build(null);
 	}
 	public static BlockEntityType<BeatEmitterBlockEntity> createBeatEmitter() {
 		return BlockEntityType.Builder.of(BeatEmitterBlockEntity::new, BeatLampBlocks.BEAT_EMITTER).build(null);

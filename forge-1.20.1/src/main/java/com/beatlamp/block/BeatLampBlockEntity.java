@@ -293,4 +293,19 @@ public class BeatLampBlockEntity extends BlockEntity {
 	public CompoundTag getUpdateTag() {
 		return this.saveWithoutMetadata();
 	}
+
+	public void onDataPacket(net.minecraft.network.Connection net, ClientboundBlockEntityDataPacket pkt) {
+		CompoundTag tag = pkt.getTag();
+		if (tag != null) {
+			this.load(tag);
+		}
+	}
+
+	public void handleUpdateTag(CompoundTag tag) {
+		this.load(tag);
+	}
+
+	public net.minecraft.world.phys.AABB getRenderBoundingBox() {
+		return new net.minecraft.world.phys.AABB(this.worldPosition).inflate(1.0);
+	}
 }

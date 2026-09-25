@@ -1,24 +1,41 @@
 package com.beatlamp.block;
 
-public enum LampParticles {
-	OFF("screen.beatlamp.particles.off"),
-	NOTE("screen.beatlamp.particles.note"),
-	FIREWORK("screen.beatlamp.particles.firework"),
-	GLOW("screen.beatlamp.particles.glow"),
-	SOUL("screen.beatlamp.particles.soul");
+import net.minecraft.util.StringRepresentable;
 
-	private final String translationKey;
+public enum LampParticles implements StringRepresentable {
+	OFF("off"),
+	NOTE("note"),
+	END_ROD("end_rod"),
+	FIREWORK("firework"),
+	GLOW("glow"),
+	MIXED("mixed");
 
-	LampParticles(String translationKey) {
-		this.translationKey = translationKey;
+	private final String name;
+
+	LampParticles(String name) {
+		this.name = name;
+	}
+
+	@Override
+	public String getSerializedName() {
+		return this.name;
 	}
 
 	public String getTranslationKey() {
-		return this.translationKey;
+		return "screen.beatlamp.particles." + this.name;
 	}
 
 	public LampParticles next() {
-		LampParticles[] values = values();
-		return values[(this.ordinal() + 1) % values.length];
+		return values()[(this.ordinal() + 1) % values().length];
+	}
+
+	public static LampParticles byName(String name) {
+		for (LampParticles value : values()) {
+			if (value.name.equals(name)) {
+				return value;
+			}
+		}
+
+		return NOTE;
 	}
 }

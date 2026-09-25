@@ -10,11 +10,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
-/**
- * Helper để tạo BlockEntityType cho Forge 1.20.1 (Java 17).
- * BlockEntityType$BlockEntitySupplier có package-private access nên
- * phải dùng reflection để bypass giới hạn này.
- */
 public final class BlockEntityTypeHelper {
 	@FunctionalInterface
 	public interface Factory<T extends BlockEntity> {
@@ -53,3 +48,4 @@ public final class BlockEntityTypeHelper {
 		}
 	}
 }
+

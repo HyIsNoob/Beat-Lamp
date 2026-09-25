@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "beatlamp:block/dj_deck"
+    },
+    "facing=south": {
+      "model": "beatlamp:block/dj_deck",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "beatlamp:block/dj_deck",
+      "y": 270
+    },
+    "facing=east": {
+      "model": "beatlamp:block/dj_deck",
+      "y": 90
+    }
+  }
+}

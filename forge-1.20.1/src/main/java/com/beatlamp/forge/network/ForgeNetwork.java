@@ -9,8 +9,11 @@ import com.beatlamp.block.DmxConsoleBlockEntity;
 import com.beatlamp.block.FogGeneratorBlockEntity;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LaserProjectorBlockEntity;
+import com.beatlamp.block.RainbowLedBlockEntity;
+import com.beatlamp.block.StageJukeboxBlockEntity;
 import com.beatlamp.block.StageLightBlockEntity;
 import com.beatlamp.network.DmxConsolePayload;
+import com.beatlamp.network.EmitterConfigurePayload;
 import com.beatlamp.network.EmitterSignalPayload;
 import com.beatlamp.network.FogGeneratorConfigurePayload;
 import com.beatlamp.network.FountainConfigurePayload;
@@ -18,6 +21,8 @@ import com.beatlamp.network.FountainFirePayload;
 import com.beatlamp.network.LampConfigurePayload;
 import com.beatlamp.network.LampSourcePayload;
 import com.beatlamp.network.LaserProjectorConfigurePayload;
+import com.beatlamp.network.RainbowLedConfigurePayload;
+import com.beatlamp.network.StageJukeboxConfigurePayload;
 import com.beatlamp.network.StageLightConfigurePayload;
 
 import net.minecraft.core.BlockPos;
@@ -230,9 +235,9 @@ public class ForgeNetwork {
 
 		CHANNEL.registerMessage(
 			packetId++,
-			EmitterSignalPayload.class,
-			EmitterSignalPayload::write,
-			EmitterSignalPayload::read,
+			EmitterConfigurePayload.class,
+			EmitterConfigurePayload::write,
+			EmitterConfigurePayload::read,
 			(msg, ctxSupplier) -> {
 				var ctx = ctxSupplier.get();
 				ctx.enqueueWork(() -> {
@@ -262,6 +267,26 @@ public class ForgeNetwork {
 
 		CHANNEL.registerMessage(
 			packetId++,
+			EmitterSignalPayload.class,
+			EmitterSignalPayload::write,
+			EmitterSignalPayload::read,
+			(msg, ctxSupplier) -> {
+				var ctx = ctxSupplier.get();
+				ctx.enqueueWork(() -> {
+					ServerPlayer player = ctx.getSender();
+					if (player == null) return;
+					ServerLevel level = player.serverLevel();
+					BlockPos pos = msg.pos();
+					if (level.isLoaded(pos) && level.getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
+						emitter.setSignal(msg.signal(), level.getGameTime());
+					}
+				});
+				ctx.setPacketHandled(true);
+			}
+		);
+
+		CHANNEL.registerMessage(
+			packetId++,
 			LampSourcePayload.class,
 			LampSourcePayload::write,
 			LampSourcePayload::read,
@@ -275,13 +300,7 @@ public class ForgeNetwork {
 					BlockPos sourcePos = msg.sourcePos();
 
 					if (sourcePos == null) {
-						BlockEntity be = level.getBlockEntity(targetPos);
-						if (be instanceof BeatLampBlockEntity l) l.setSource(null);
-						else if (be instanceof StageLightBlockEntity s) s.setSource(null);
-						else if (be instanceof FountainBlockEntity f) f.setSource(null);
-						else if (be instanceof LaserProjectorBlockEntity lp) lp.setSource(null);
-						else if (be instanceof FogGeneratorBlockEntity fg) fg.setSource(null);
-						else if (be instanceof BeatEmitterBlockEntity em) em.setSource(null);
+						BeatLamp.unbindSource(level, targetPos, player);
 					} else {
 						BeatLamp.bindSource(level, targetPos, sourcePos, player, player.getMainHandItem());
 					}
@@ -334,6 +353,76 @@ public class ForgeNetwork {
 						dmx.setStrobeAll(msg.strobeAll());
 						dmx.setMasterDimmer(msg.masterDimmer());
 						dmx.setMasterSpeed(msg.masterSpeed());
+						dmx.getMutedGroups().clear();
+						if (msg.mutedGroups() != null) {
+							for (BlockPos p : msg.mutedGroups()) {
+								dmx.setGroupMuted(p, true);
+							}
+						}
+						dmx.markUpdated();
+					}
+				});
+				ctx.setPacketHandled(true);
+			}
+		);
+
+		CHANNEL.registerMessage(
+			packetId++,
+			RainbowLedConfigurePayload.class,
+			RainbowLedConfigurePayload::write,
+			RainbowLedConfigurePayload::read,
+			(msg, ctxSupplier) -> {
+				var ctx = ctxSupplier.get();
+				ctx.enqueueWork(() -> {
+					ServerPlayer player = ctx.getSender();
+					if (player == null) return;
+					ServerLevel level = player.serverLevel();
+					BlockPos pos = msg.pos();
+
+					if (msg.unlink()) {
+						BeatLamp.unlinkRainbowLedGroup(level, pos);
+						return;
+					}
+
+					BlockEntity be = level.getBlockEntity(pos);
+					if (be instanceof RainbowLedBlockEntity led) {
+						List<BlockPos> group = led.getManualGroup().isEmpty() ? BeatLamp.floodFillRainbowLed(level, pos) : led.getManualGroup();
+						for (BlockPos memberPos : group) {
+							if (level.getBlockEntity(memberPos) instanceof RainbowLedBlockEntity memberLed) {
+								memberLed.applyConfig(msg.mode(), msg.speed(), msg.color(), msg.brightness(), msg.frameless());
+							}
+						}
+					}
+				});
+				ctx.setPacketHandled(true);
+			}
+		);
+
+		CHANNEL.registerMessage(
+			packetId++,
+			StageJukeboxConfigurePayload.class,
+			StageJukeboxConfigurePayload::write,
+			StageJukeboxConfigurePayload::read,
+			(msg, ctxSupplier) -> {
+				var ctx = ctxSupplier.get();
+				ctx.enqueueWork(() -> {
+					ServerPlayer player = ctx.getSender();
+					if (player == null) return;
+					ServerLevel level = player.serverLevel();
+					BlockPos pos = msg.pos();
+
+					BlockEntity be = level.getBlockEntity(pos);
+					if (be instanceof StageJukeboxBlockEntity jukebox) {
+						switch (msg.action()) {
+							case StageJukeboxConfigurePayload.ACTION_UPDATE_SETTINGS ->
+								jukebox.applyConfiguration(msg.volume(), msg.range(), msg.loop());
+							case StageJukeboxConfigurePayload.ACTION_TOGGLE_PAUSE ->
+								jukebox.togglePause();
+							case StageJukeboxConfigurePayload.ACTION_EJECT ->
+								jukebox.ejectRecord(player);
+							case StageJukeboxConfigurePayload.ACTION_SEEK ->
+								jukebox.seekTo(msg.seekSeconds());
+						}
 					}
 				});
 				ctx.setPacketHandled(true);

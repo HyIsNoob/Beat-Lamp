@@ -43,11 +43,6 @@ public final class AudioAnalyzer {
 
 	private final float[] prevMag;
 
-	private static final int MEDIAN_WINDOW = 7;
-	private final float[] medianRing = new float[MEDIAN_WINDOW];
-	private final float[] medianScratch = new float[MEDIAN_WINDOW];
-	private int medianIndex;
-	private int medianFilled;
 
 	private float estimatedBpm = 124.0F;
 	private float gridPhase = 0.0F;
@@ -100,14 +95,17 @@ public final class AudioAnalyzer {
 			this.bandAverages[b] = 0.001F;
 		}
 
+		// 1. Bass band (Sub-bass & Kick drum punch: 30 - 250 Hz)
 		this.lowBassBin = Math.max(1, (int) (30.0F / binHz));
-		this.highBassBin = Math.min(this.fftSize / 2 - 1, (int) (150.0F / binHz));
+		this.highBassBin = Math.min(this.fftSize / 2 - 1, (int) (250.0F / binHz));
 
-		this.lowMidBin = Math.max(1, (int) (1100.0F / binHz));
+		// 2. Mid transient band (Snare body, Clap, Rimshot, Percussion: 250 - 4500 Hz)
+		this.lowMidBin = Math.max(this.highBassBin + 1, (int) (250.0F / binHz));
 		this.highMidBin = Math.min(this.fftSize / 2 - 1, (int) (4500.0F / binHz));
 
-		this.lowHighBin = Math.max(1, (int) (6000.0F / binHz));
-		this.highHighBin = Math.min(this.fftSize / 2 - 1, (int) (12000.0F / binHz));
+		// 3. High band (Hi-hat, Shakers, Cymbal sizzle: 5000 - 14000 Hz)
+		this.lowHighBin = Math.max(this.highMidBin + 1, (int) (5000.0F / binHz));
+		this.highHighBin = Math.min(this.fftSize / 2 - 1, (int) (14000.0F / binHz));
 
 		int maxTrackedBin = Math.max(this.highBassBin, Math.max(this.highMidBin, this.highHighBin)) + 1;
 		this.prevMag = new float[maxTrackedBin];
@@ -237,13 +235,8 @@ public final class AudioAnalyzer {
 		int highBins = this.highHighBin - this.lowHighBin + 1;
 		highFlux /= highBins * this.fftSize * 0.5F;
 
-		float rawFlux = bassFlux * 1.0F + midFlux * 0.40F;
-
-		this.medianRing[this.medianIndex] = rawFlux;
-		this.medianIndex = (this.medianIndex + 1) % MEDIAN_WINDOW;
-		if (this.medianFilled < MEDIAN_WINDOW) this.medianFilled++;
-
-		float filteredFlux = this.getMedianFlux(rawFlux);
+		// 4. Combined Instantaneous Onset Flux (Zero-Latency Transient Response)
+		float rawFlux = bassFlux * 1.0F + midFlux * 0.45F;
 
 		if (this.fluxFilled >= FLUX_HISTORY_SIZE) {
 			float oldVal = this.fluxValues[this.fluxCursor];
@@ -253,15 +246,16 @@ public final class AudioAnalyzer {
 			this.fluxFilled++;
 		}
 
-		this.fluxValues[this.fluxCursor] = filteredFlux;
-		this.fluxRunningSum += filteredFlux;
-		this.fluxRunningSumSq += filteredFlux * filteredFlux;
+		this.fluxValues[this.fluxCursor] = rawFlux;
+		this.fluxRunningSum += rawFlux;
+		this.fluxRunningSumSq += rawFlux * rawFlux;
 		this.fluxCursor = (this.fluxCursor + 1) % FLUX_HISTORY_SIZE;
 
 		float localAvg = this.fluxRunningSum / this.fluxFilled;
 		float localVariance = Math.max(0.0F, (this.fluxRunningSumSq / this.fluxFilled) - (localAvg * localAvg));
-		boolean rising = filteredFlux > this.previousFlux;
-		this.previousFlux = filteredFlux;
+		float localStdDev = (float) Math.sqrt(localVariance);
+		boolean rising = rawFlux > this.previousFlux && rawFlux > 0.003F;
+		this.previousFlux = rawFlux;
 
 		float previousAverage = this.bassAverage;
 		this.bassAverage = this.bassAverage * 0.995F + bassEnergy * 0.005F;
@@ -291,17 +285,17 @@ public final class AudioAnalyzer {
 		float elapsedSec = (float) (this.totalSamples - this.lastBeatSample) / this.sampleRate;
 		float refractoryDecay = this.lastBeatIntensity * 0.85F * (float) Math.exp(-elapsedSec / 0.085F);
 
-		float adaptiveThreshold = localAvg * 1.22F + (float) Math.sqrt(localVariance) * 0.36F + refractoryDecay + 0.0008F;
+		float adaptiveThreshold = localAvg * 1.20F + localStdDev * 0.35F + refractoryDecay + 0.0010F;
 		long minBeatGap = (long) (this.sampleRate * 0.115);
 
-		boolean hasKick = bassFlux > adaptiveThreshold * 0.95F && bassEnergy > 0.005F;
-		boolean hasSnare = midFlux > adaptiveThreshold * 0.65F && midFlux > 0.007F;
-		boolean hasHihat = highFlux > adaptiveThreshold * 0.45F && highFlux > 0.006F;
+		boolean hasKick = bassFlux > adaptiveThreshold * 0.90F && bassEnergy > 0.004F;
+		boolean hasSnare = midFlux > adaptiveThreshold * 0.60F && midFlux > 0.005F;
+		boolean hasHihat = highFlux > adaptiveThreshold * 0.40F && highFlux > 0.005F;
 
 		long minDropGap = (long) (this.sampleRate * 3.5);
 		if (rising && (this.totalSamples - this.lastImpactSample > minDropGap)) {
 			boolean dropSurge = this.envelope > 0.72F && this.envelope > this.preDropEnergyAvg * 2.8F && bassEnergy > 0.024F;
-			boolean dropExplosion = bassFlux > adaptiveThreshold * 3.2F && bassEnergy > 0.032F;
+			boolean dropExplosion = bassFlux > adaptiveThreshold * 3.0F && bassEnergy > 0.030F;
 
 			if (dropSurge || dropExplosion) {
 				float surgeScore = clamp01((this.envelope - 0.50F) / 0.50F);
@@ -331,7 +325,7 @@ public final class AudioAnalyzer {
 			this.gridPhase *= 0.25F;
 
 			this.lastBeatSample = this.totalSamples;
-			this.lastBeatIntensity = filteredFlux;
+			this.lastBeatIntensity = rawFlux;
 			this.beatReady = true;
 			if (hasKick) this.kickReady = true;
 			if (hasSnare) this.snareReady = true;
@@ -348,27 +342,6 @@ public final class AudioAnalyzer {
 
 	public float getEstimatedBpm() {
 		return this.estimatedBpm;
-	}
-
-	private float getMedianFlux(float fallback) {
-		int n = this.medianFilled;
-		if (n <= 0) return fallback;
-		if (n <= 2) return this.medianRing[0];
-
-		for (int i = 0; i < n; i++) {
-			this.medianScratch[i] = this.medianRing[i];
-		}
-
-		for (int i = 1; i < n; i++) {
-			float key = this.medianScratch[i];
-			int j = i - 1;
-			while (j >= 0 && this.medianScratch[j] > key) {
-				this.medianScratch[j + 1] = this.medianScratch[j];
-				j--;
-			}
-			this.medianScratch[j + 1] = key;
-		}
-		return this.medianScratch[n / 2];
 	}
 
 	private float magnitude(int bin) {

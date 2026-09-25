@@ -1,6 +1,7 @@
 package com.beatlamp.client;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.beatlamp.block.DmxConsoleBlockEntity;
@@ -10,6 +11,8 @@ import net.minecraft.core.BlockPos;
 
 public class DmxMasterTracker {
 	private static final Map<BlockPos, DmxConsoleBlockEntity> ACTIVE_CONSOLES = new ConcurrentHashMap<>();
+
+	private static final Set<BlockPos> MUTED_GROUPS = ConcurrentHashMap.newKeySet();
 
 	public static void register(DmxConsoleBlockEntity console) {
 		if (console.getBlockPos() != null) {
@@ -23,6 +26,48 @@ public class DmxMasterTracker {
 
 	public static void clear() {
 		ACTIVE_CONSOLES.clear();
+		MUTED_GROUPS.clear();
+	}
+
+	public static boolean isGroupMuted(BlockPos pos, BlockPos leadPos) {
+		if (leadPos != null && MUTED_GROUPS.contains(leadPos)) {
+			return true;
+		}
+		if (pos != null && MUTED_GROUPS.contains(pos)) {
+			return true;
+		}
+		if (!ACTIVE_CONSOLES.isEmpty() && (pos != null || leadPos != null)) {
+			double rangeSqr = getRangeSqr();
+			BlockPos target = pos != null ? pos : leadPos;
+			for (DmxConsoleBlockEntity console : ACTIVE_CONSOLES.values()) {
+				if (console.isRemoved() || console.getLevel() == null) {
+					continue;
+				}
+				BlockPos cPos = console.getBlockPos();
+				long dx = target.getX() - cPos.getX();
+				long dy = target.getY() - cPos.getY();
+				long dz = target.getZ() - cPos.getZ();
+				if (dx * dx + dy * dy + dz * dz <= rangeSqr) {
+					if ((leadPos != null && console.isGroupMuted(leadPos)) || (pos != null && console.isGroupMuted(pos))) {
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	public static void setGroupMuted(BlockPos leadPos, boolean muted) {
+		if (leadPos == null) return;
+		if (muted) {
+			MUTED_GROUPS.add(leadPos);
+		} else {
+			MUTED_GROUPS.remove(leadPos);
+		}
+	}
+
+	public static Set<BlockPos> getMutedGroups() {
+		return MUTED_GROUPS;
 	}
 
 	private static double getRangeSqr() {

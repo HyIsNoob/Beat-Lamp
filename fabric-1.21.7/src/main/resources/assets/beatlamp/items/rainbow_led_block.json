@@ -1,0 +1,6 @@
+{
+  "model": {
+    "type": "minecraft:model",
+    "model": "beatlamp:item/rainbow_led_block"
+  }
+}

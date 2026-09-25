@@ -17,6 +17,8 @@ import com.beatlamp.block.FountainBlock;
 import com.beatlamp.block.FountainBlockEntity;
 import com.beatlamp.block.LaserProjectorBlock;
 import com.beatlamp.block.LaserProjectorBlockEntity;
+import com.beatlamp.block.RainbowLedBlock;
+import com.beatlamp.block.RainbowLedBlockEntity;
 import com.beatlamp.block.StageJukeboxBlock;
 import com.beatlamp.block.StageJukeboxBlockEntity;
 import com.beatlamp.block.StageLightBlock;
@@ -54,6 +56,7 @@ public class BeatLampForge {
 
 	// Blocks
 	public static final RegistryObject<BeatLampBlock> BEAT_LAMP_BLOCK = BLOCKS.register("beat_lamp", BeatLampBlocks::createBeatLamp);
+	public static final RegistryObject<RainbowLedBlock> RAINBOW_LED_BLOCK = BLOCKS.register("rainbow_led_block", BeatLampBlocks::createRainbowLedBlock);
 	public static final RegistryObject<BeatEmitterBlock> BEAT_EMITTER_BLOCK = BLOCKS.register("beat_emitter", BeatLampBlocks::createBeatEmitter);
 	public static final RegistryObject<StageLightBlock> STAGE_LIGHT_BLOCK = BLOCKS.register("stage_light", BeatLampBlocks::createStageLight);
 	public static final RegistryObject<FountainBlock> FOUNTAIN_BLOCK = BLOCKS.register("fountain", BeatLampBlocks::createFountain);
@@ -67,6 +70,9 @@ public class BeatLampForge {
 	// Block Entities
 	public static final RegistryObject<BlockEntityType<BeatLampBlockEntity>> BEAT_LAMP_BE = BLOCK_ENTITIES.register(
 		"beat_lamp", () -> BlockEntityTypeHelper.create(BeatLampBlockEntity::new, BEAT_LAMP_BLOCK.get())
+	);
+	public static final RegistryObject<BlockEntityType<RainbowLedBlockEntity>> RAINBOW_LED_BE = BLOCK_ENTITIES.register(
+		"rainbow_led", () -> BlockEntityTypeHelper.create(RainbowLedBlockEntity::new, RAINBOW_LED_BLOCK.get())
 	);
 	public static final RegistryObject<BlockEntityType<BeatEmitterBlockEntity>> BEAT_EMITTER_BE = BLOCK_ENTITIES.register(
 		"beat_emitter", () -> BlockEntityTypeHelper.create(BeatEmitterBlockEntity::new, BEAT_EMITTER_BLOCK.get())
@@ -92,6 +98,7 @@ public class BeatLampForge {
 
 	// Items
 	public static final RegistryObject<StageBlockItem> BEAT_LAMP_ITEM = ITEMS.register("beat_lamp", () -> new StageBlockItem(BEAT_LAMP_BLOCK.get(), new Item.Properties(), "beat_lamp", false));
+	public static final RegistryObject<StageBlockItem> RAINBOW_LED_BLOCK_ITEM = ITEMS.register("rainbow_led_block", () -> new StageBlockItem(RAINBOW_LED_BLOCK.get(), new Item.Properties(), "rainbow_led_block", true));
 	public static final RegistryObject<StageBlockItem> BEAT_EMITTER_ITEM = ITEMS.register("beat_emitter", () -> new StageBlockItem(BEAT_EMITTER_BLOCK.get(), new Item.Properties(), "beat_emitter", false));
 	public static final RegistryObject<StageBlockItem> STAGE_LIGHT_ITEM = ITEMS.register("stage_light", () -> new StageBlockItem(STAGE_LIGHT_BLOCK.get(), new Item.Properties(), "stage_light", false));
 	public static final RegistryObject<StageBlockItem> FOUNTAIN_ITEM = ITEMS.register("fountain", () -> new StageBlockItem(FOUNTAIN_BLOCK.get(), new Item.Properties(), "fountain", false));
@@ -110,6 +117,7 @@ public class BeatLampForge {
 		.icon(() -> new ItemStack(CONTROLLER_ITEM.get()))
 		.displayItems((parameters, output) -> {
 			output.accept(BEAT_LAMP_ITEM.get());
+			output.accept(RAINBOW_LED_BLOCK_ITEM.get());
 			output.accept(STAGE_LIGHT_ITEM.get());
 			output.accept(LASER_PROJECTOR_ITEM.get());
 			output.accept(FOUNTAIN_ITEM.get());
@@ -138,6 +146,7 @@ public class BeatLampForge {
 		modEventBus.addListener((net.minecraftforge.registries.RegisterEvent event) -> {
 			if (event.getRegistryKey().equals(net.minecraft.core.registries.Registries.BLOCK)) {
 				BeatLampBlocks.BEAT_LAMP = BEAT_LAMP_BLOCK.get();
+				BeatLampBlocks.RAINBOW_LED_BLOCK = RAINBOW_LED_BLOCK.get();
 				BeatLampBlocks.BEAT_EMITTER = BEAT_EMITTER_BLOCK.get();
 				BeatLampBlocks.STAGE_LIGHT = STAGE_LIGHT_BLOCK.get();
 				BeatLampBlocks.FOUNTAIN = FOUNTAIN_BLOCK.get();
@@ -149,6 +158,7 @@ public class BeatLampForge {
 				BeatLampBlocks.STAGE_SPEAKER = STAGE_SPEAKER_BLOCK.get();
 			} else if (event.getRegistryKey().equals(net.minecraft.core.registries.Registries.BLOCK_ENTITY_TYPE)) {
 				BeatLampBlockEntities.BEAT_LAMP = BEAT_LAMP_BE.get();
+				BeatLampBlockEntities.RAINBOW_LED = RAINBOW_LED_BE.get();
 				BeatLampBlockEntities.BEAT_EMITTER = BEAT_EMITTER_BE.get();
 				BeatLampBlockEntities.STAGE_LIGHT = STAGE_LIGHT_BE.get();
 				BeatLampBlockEntities.FOUNTAIN = FOUNTAIN_BE.get();
@@ -158,6 +168,7 @@ public class BeatLampForge {
 				BeatLampBlockEntities.DMX_CONSOLE = DMX_CONSOLE_BE.get();
 			} else if (event.getRegistryKey().equals(net.minecraft.core.registries.Registries.ITEM)) {
 				BeatLampItems.BEAT_LAMP = BEAT_LAMP_ITEM.get();
+				BeatLampItems.RAINBOW_LED_BLOCK = RAINBOW_LED_BLOCK_ITEM.get();
 				BeatLampItems.BEAT_EMITTER = BEAT_EMITTER_ITEM.get();
 				BeatLampItems.STAGE_LIGHT = STAGE_LIGHT_ITEM.get();
 				BeatLampItems.FOUNTAIN = FOUNTAIN_ITEM.get();
@@ -175,6 +186,7 @@ public class BeatLampForge {
 		modEventBus.addListener((net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent event) -> {
 			event.enqueueWork(() -> {
 				BeatLampBlocks.BEAT_LAMP = BEAT_LAMP_BLOCK.get();
+				BeatLampBlocks.RAINBOW_LED_BLOCK = RAINBOW_LED_BLOCK.get();
 				BeatLampBlocks.BEAT_EMITTER = BEAT_EMITTER_BLOCK.get();
 				BeatLampBlocks.STAGE_LIGHT = STAGE_LIGHT_BLOCK.get();
 				BeatLampBlocks.FOUNTAIN = FOUNTAIN_BLOCK.get();
@@ -186,6 +198,7 @@ public class BeatLampForge {
 				BeatLampBlocks.STAGE_SPEAKER = STAGE_SPEAKER_BLOCK.get();
 
 				BeatLampBlockEntities.BEAT_LAMP = BEAT_LAMP_BE.get();
+				BeatLampBlockEntities.RAINBOW_LED = RAINBOW_LED_BE.get();
 				BeatLampBlockEntities.BEAT_EMITTER = BEAT_EMITTER_BE.get();
 				BeatLampBlockEntities.STAGE_LIGHT = STAGE_LIGHT_BE.get();
 				BeatLampBlockEntities.FOUNTAIN = FOUNTAIN_BE.get();
@@ -195,6 +208,7 @@ public class BeatLampForge {
 				BeatLampBlockEntities.DMX_CONSOLE = DMX_CONSOLE_BE.get();
 
 				BeatLampItems.BEAT_LAMP = BEAT_LAMP_ITEM.get();
+				BeatLampItems.RAINBOW_LED_BLOCK = RAINBOW_LED_BLOCK_ITEM.get();
 				BeatLampItems.BEAT_EMITTER = BEAT_EMITTER_ITEM.get();
 				BeatLampItems.STAGE_LIGHT = STAGE_LIGHT_ITEM.get();
 				BeatLampItems.FOUNTAIN = FOUNTAIN_ITEM.get();

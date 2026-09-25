@@ -1,0 +1,282 @@
+package com.beatlamp.client.render;
+
+import com.beatlamp.block.BeatLampBlockEntity;
+import com.beatlamp.block.StageLightBlockEntity;
+import com.beatlamp.block.StageLightMode;
+import com.beatlamp.client.audio.JukeboxAudioTracker;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
+import com.mojang.math.Axis;
+import net.minecraft.core.Direction;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.Mth;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.phys.Vec3;
+
+import org.joml.Matrix4f;
+
+public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEntity> {
+	private static final ResourceLocation BEAM_TEXTURE = ResourceLocation.withDefaultNamespace("textures/entity/beacon_beam.png");
+	private static final DyeColor[] DYES = DyeColor.values();
+
+	public StageLightRenderer(BlockEntityRendererProvider.Context context) {
+	}
+
+
+	@Override
+	public int getViewDistance() {
+		return com.beatlamp.client.config.BeatLampClientConfig.beamRenderDistance;
+	}
+
+	@Override
+	public void render(
+		StageLightBlockEntity light,
+		float partialTick,
+		PoseStack poseStack,
+		MultiBufferSource multiBufferSource,
+		int packedLight,
+		int packedOverlay,
+		Vec3 cameraPos
+	) {
+		if (!com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects) {
+			return;
+		}
+		if (com.beatlamp.client.config.BeatLampClientConfig.beamQuality == com.beatlamp.client.config.BeatLampClientConfig.BeamQuality.OFF) {
+			return;
+		}
+
+		float masterDimmer = com.beatlamp.client.DmxMasterTracker.getMasterDimmerNear(light.getBlockPos());
+		float energy = Mth.clamp(light.beamEnergy * light.getSensitivity(), 0.0F, 1.0F) * masterDimmer;
+		float beat = Mth.clamp(light.beamBeat, 0.0F, 1.0F) * masterDimmer;
+
+		if (energy <= 0.02F) {
+			return;
+		}
+
+		StageLightMode mode = light.getMode();
+
+		// Strobe mode check
+		if (mode == StageLightMode.STROBE) {
+			if (com.beatlamp.client.config.BeatLampClientConfig.antiStrobe) {
+				float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
+				energy *= (0.4F + 0.3F * Mth.sin(strobeTime * 0.4F));
+			} else {
+				float strobeTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
+				if ((int) (strobeTime * 0.8F) % 2 == 1 && beat < 0.7F) {
+					return;
+				}
+			}
+		}
+
+		int color = resolveColor(light, energy);
+		float red = ((color >> 16) & 0xFF) / 255.0F;
+		float green = ((color >> 8) & 0xFF) / 255.0F;
+		float blue = (color & 0xFF) / 255.0F;
+
+		float brightness = 0.6F + energy * 1.0F;
+		float coreRed = Math.min(red * brightness, 1.0F);
+		float coreGreen = Math.min(green * brightness, 1.0F);
+		float coreBlue = Math.min(blue * brightness, 1.0F);
+
+		poseStack.pushPose();
+		poseStack.translate(0.5F, 0.5F, 0.5F);
+		drawCore(poseStack, multiBufferSource, coreRed, coreGreen, coreBlue, 0.32F + beat * 0.12F);
+
+		poseStack.mulPose(alignment(light));
+		float effectTime = JukeboxAudioTracker.getEffectTime() * light.getSpeed();
+
+		switch (mode) {
+			case SWEEP -> {
+				float pan = Mth.sin(effectTime * 0.05F) * 48.0F;
+				float tilt = 28.0F + Mth.sin(effectTime * 0.075F + 0.8F) * 22.0F;
+				poseStack.mulPose(Axis.YP.rotationDegrees(pan));
+				poseStack.mulPose(Axis.XP.rotationDegrees(tilt));
+			}
+			case BEAT_STEP -> {
+				light.currentPan = Mth.lerp(0.28F, light.currentPan, light.targetPan);
+				light.currentTilt = Mth.lerp(0.28F, light.currentTilt, light.targetTilt);
+				poseStack.mulPose(Axis.YP.rotationDegrees(light.currentPan));
+				poseStack.mulPose(Axis.XP.rotationDegrees(light.currentTilt));
+			}
+			case CHASE -> {
+				float phase = effectTime * 0.12F + light.groupIndex * 0.5F;
+				float pan = Mth.sin(phase) * 52.0F;
+				float tilt = 30.0F + Mth.cos(phase) * 22.0F;
+				poseStack.mulPose(Axis.YP.rotationDegrees(pan));
+				poseStack.mulPose(Axis.XP.rotationDegrees(tilt));
+			}
+			case STATIC, STROBE -> {
+				// Fixed straight beam
+			}
+		}
+
+		VertexConsumer consumer = multiBufferSource.getBuffer(RenderType.beaconBeam(BEAM_TEXTURE, true));
+		Matrix4f matrix = poseStack.last().pose();
+
+		// Outer wide atmospheric glow cone (rendered only on HIGH quality)
+		if (com.beatlamp.client.config.BeatLampClientConfig.beamQuality == com.beatlamp.client.config.BeatLampClientConfig.BeamQuality.HIGH) {
+			float outerLength = 14.0F + beat * 18.0F;
+			float outerAlpha = 0.22F + energy * 0.35F;
+			drawBeam(consumer, matrix, outerLength, outerAlpha, 0.0F, 0.18F, 1.25F, coreRed, coreGreen, coreBlue);
+		}
+
+		// Inner intense core beam
+		float innerLength = 12.0F + beat * 16.0F;
+		float innerAlpha = 0.55F + energy * 0.4F;
+		drawBeam(consumer, matrix, innerLength, innerAlpha, 0.05F, 0.09F, 0.45F, coreRed, coreGreen, coreBlue);
+
+		poseStack.popPose();
+	}
+
+	private static org.joml.Quaternionf alignment(StageLightBlockEntity light) {
+		Direction facing = light.getBlockState().getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.FACING);
+
+		return switch (facing) {
+			case DOWN -> Axis.XP.rotationDegrees(180.0F);
+			case NORTH -> Axis.XN.rotationDegrees(90.0F);
+			case SOUTH -> Axis.XP.rotationDegrees(90.0F);
+			case WEST -> Axis.ZP.rotationDegrees(90.0F);
+			case EAST -> Axis.ZN.rotationDegrees(90.0F);
+			default -> Axis.YP.rotationDegrees(0.0F);
+		};
+	}
+
+	private static void drawCore(PoseStack poseStack, MultiBufferSource multiBufferSource, float red, float green, float blue, float half) {
+		VertexConsumer consumer = multiBufferSource.getBuffer(RenderType.beaconBeam(BEAM_TEXTURE, true));
+		PoseStack.Pose pose = poseStack.last();
+		Matrix4f matrix = pose.pose();
+		float a = 0.95F;
+
+		// South (+Z)
+		coreVertex(consumer, matrix, -half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, half, red, green, blue, a, pose);
+
+		// North (-Z)
+		coreVertex(consumer, matrix, half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, -half, red, green, blue, a, pose);
+
+		// East (+X)
+		coreVertex(consumer, matrix, half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, half, red, green, blue, a, pose);
+
+		// West (-X)
+		coreVertex(consumer, matrix, -half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, -half, red, green, blue, a, pose);
+
+		// Up (+Y)
+		coreVertex(consumer, matrix, -half, half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, half, -half, red, green, blue, a, pose);
+
+		// Down (-Y)
+		coreVertex(consumer, matrix, -half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, -half, -half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, half, -half, half, red, green, blue, a, pose);
+		coreVertex(consumer, matrix, -half, -half, half, red, green, blue, a, pose);
+	}
+
+	private static void coreVertex(VertexConsumer consumer, Matrix4f matrix, float x, float y, float z, float red, float green, float blue, float alpha, PoseStack.Pose pose) {
+		consumer.addVertex(matrix, x, y, z)
+			.setColor(red, green, blue, alpha)
+			.setUv(0.5F, 0.5F)
+			.setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
+			.setLight(0xF000F0)
+			.setNormal(pose, 0.0F, 1.0F, 0.0F);
+	}
+
+	private static void drawBeam(
+		VertexConsumer consumer,
+		Matrix4f matrix,
+		float length,
+		float alphaStart,
+		float alphaEnd,
+		float baseHalf,
+		float endHalf,
+		float red,
+		float green,
+		float blue
+	) {
+		drawBeamSide(consumer, matrix, -baseHalf, -baseHalf, baseHalf, -baseHalf, -endHalf, -endHalf, endHalf, -endHalf, length, alphaStart, alphaEnd, red, green, blue);
+		drawBeamSide(consumer, matrix, baseHalf, -baseHalf, baseHalf, baseHalf, endHalf, -endHalf, endHalf, endHalf, length, alphaStart, alphaEnd, red, green, blue);
+		drawBeamSide(consumer, matrix, baseHalf, baseHalf, -baseHalf, baseHalf, endHalf, endHalf, -endHalf, endHalf, length, alphaStart, alphaEnd, red, green, blue);
+		drawBeamSide(consumer, matrix, -baseHalf, baseHalf, -baseHalf, -baseHalf, -endHalf, endHalf, -endHalf, -endHalf, length, alphaStart, alphaEnd, red, green, blue);
+	}
+
+	private static void drawBeamSide(
+		VertexConsumer consumer,
+		Matrix4f matrix,
+		float b0x, float b0z, float b1x, float b1z,
+		float e0x, float e0z, float e1x, float e1z,
+		float length,
+		float alphaBottom, float alphaTop,
+		float red, float green, float blue
+	) {
+		// Front face
+		beamVertex(consumer, matrix, b0x, 0.0F, b0z, red, green, blue, alphaBottom, 0.0F, 0.0F);
+		beamVertex(consumer, matrix, b1x, 0.0F, b1z, red, green, blue, alphaBottom, 1.0F, 0.0F);
+		beamVertex(consumer, matrix, e1x, length, e1z, red, green, blue, alphaTop, 1.0F, 1.0F);
+		beamVertex(consumer, matrix, e0x, length, e0z, red, green, blue, alphaTop, 0.0F, 1.0F);
+
+		// Back face
+		beamVertex(consumer, matrix, b1x, 0.0F, b1z, red, green, blue, alphaBottom, 1.0F, 0.0F);
+		beamVertex(consumer, matrix, b0x, 0.0F, b0z, red, green, blue, alphaBottom, 0.0F, 0.0F);
+		beamVertex(consumer, matrix, e0x, length, e0z, red, green, blue, alphaTop, 0.0F, 1.0F);
+		beamVertex(consumer, matrix, e1x, length, e1z, red, green, blue, alphaTop, 1.0F, 1.0F);
+	}
+
+	private static void beamVertex(
+		VertexConsumer consumer,
+		Matrix4f matrix,
+		float x, float y, float z,
+		float red, float green, float blue,
+		float alpha,
+		float u, float v
+	) {
+		consumer.addVertex(matrix, x, y, z)
+			.setColor(red, green, blue, alpha)
+			.setUv(u, v)
+			.setOverlay(net.minecraft.client.renderer.texture.OverlayTexture.NO_OVERLAY)
+			.setLight(0xF000F0)
+			.setNormal(0.0F, 1.0F, 0.0F);
+	}
+
+	private static int resolveColor(StageLightBlockEntity light, float energy) {
+		if (energy < 0.03F) {
+			return 0;
+		}
+
+		int color = light.getColor();
+
+		if (color == BeatLampBlockEntity.COLOR_OLED || color == 0) {
+			if (light.getMode() == StageLightMode.BEAT_STEP) {
+				float[] hues = {0.0F, 0.15F, 0.33F, 0.5F, 0.66F, 0.83F};
+				float hue = hues[Math.abs(light.beatColorIndex) % hues.length];
+				return java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
+			}
+			float hue = (JukeboxAudioTracker.getEffectTime() * 2.0F % 360.0F) / 360.0F;
+			return java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
+		}
+
+		if (color == StageLightBlockEntity.COLOR_BEAT_CYCLE) {
+			int dyeIndex = Math.abs(light.beatColorIndex) % DYES.length;
+			return DYES[dyeIndex].getFireworkColor();
+		}
+
+		return color;
+	}
+}

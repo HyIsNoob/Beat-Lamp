@@ -92,7 +92,7 @@ dependencies {
 	forge1201Implementation "net.minecraftforge:fmlloader:1.20.1-47.3.0"
 	forge1201Implementation "net.minecraftforge:forgespi:6.0.0"
 	forge1201Implementation "net.minecraftforge:eventbus:6.0.5"
-
+	forge1201Implementation "org.spongepowered:mixin:0.8.5"
 }
 
 processResources {
@@ -145,11 +145,11 @@ task neoforgeJar(type: Jar, dependsOn: [classes, clientClasses, neoforgeClasses]
 	from sourceSets.main.output
 	from sourceSets.client.output
 	from sourceSets.neoforge.output
+	from "src/client/resources"
 	from("LICENSE") {
 		rename { "${it}_$projectName"}
 	}
 	exclude 'fabric.mod.json'
-	exclude 'beatlamp.client.mixins.json'
 	exclude 'com/beatlamp/fabric/**'
 }
 
@@ -160,11 +160,11 @@ task forgeJar(type: Jar, dependsOn: [classes, clientClasses, forgeClasses]) {
 	from sourceSets.main.output
 	from sourceSets.client.output
 	from sourceSets.forge.output
+	from "src/client/resources"
 	from("LICENSE") {
 		rename { "${it}_$projectName"}
 	}
 	exclude 'fabric.mod.json'
-	exclude 'beatlamp.client.mixins.json'
 	exclude 'com/beatlamp/fabric/**'
 }
 
@@ -184,6 +184,11 @@ task rawForge1201Jar(type: Jar, dependsOn: [forge1201Classes]) {
 	def projectName = project.name
 	archiveFileName = "beatlamp-forge-1.20.1-${project.version}-raw.jar"
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+	manifest {
+		attributes([
+			"MixinConfigs": "beatlamp.client.mixins.json"
+		])
+	}
 	from sourceSets.forge1201.output
 	from ("src/main/resources") {
 		exclude 'fabric.mod.json'
@@ -222,7 +227,7 @@ task forge1201Jar(dependsOn: [rawForge1201Jar]) {
 	}
 }
 
-assemble.dependsOn neoforgeJar, forgeJar, forge1201Jar, ':fabric-1.20.1:assemble', ':fabric-1.21.4:assemble'
+assemble.dependsOn neoforgeJar, forgeJar, forge1201Jar, ':fabric-1.20.1:assemble', ':fabric-1.21.4:assemble', ':fabric-1.21.7:assemble'
 
 tasks.register('copyFabric1201Jar', Copy) {
 	dependsOn ':fabric-1.20.1:assemble'
@@ -239,6 +244,14 @@ tasks.register('copy1214Jars', Copy) {
 	include "*${project.version}*.jar"
 }
 assemble.dependsOn copy1214Jars
+
+tasks.register('copy1217Jars', Copy) {
+	dependsOn ':fabric-1.21.7:assemble'
+	from project(':fabric-1.21.7').layout.buildDirectory.dir('libs')
+	into layout.buildDirectory.dir('libs')
+	include "*${project.version}*.jar"
+}
+assemble.dependsOn copy1217Jars
 
 // configure the maven publication
 publishing {

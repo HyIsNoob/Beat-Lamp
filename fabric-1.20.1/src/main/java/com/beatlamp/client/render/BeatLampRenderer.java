@@ -23,6 +23,11 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 	}
 
 	@Override
+	public boolean shouldRenderOffScreen(BeatLampBlockEntity blockEntity) {
+		return true;
+	}
+
+	@Override
 	public int getViewDistance() {
 		return 192;
 	}
@@ -40,6 +45,17 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		boolean blackback = beatLamp.isBlackback();
 
 		if (!com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects) {
+			if (beatLamp.isFrameless()) {
+				poseStack.pushPose();
+				poseStack.translate(0.5F, 0.5F, 0.5F);
+				PoseStack.Pose pose = poseStack.last();
+				Matrix4f matrix = pose.pose();
+				VertexConsumer buffer = multiBufferSource.getBuffer(RenderType.entityTranslucent(CORE_TEXTURE));
+				float standbyAlpha = blackback ? 1.0F : 0.45F;
+				renderFaces(beatLamp, buffer, pose, matrix, FULL_HALF, FULL_HALF, FULL_HALF, 0.04F, 0.04F, 0.06F, standbyAlpha, 0xF000F0);
+				poseStack.popPose();
+				return;
+			}
 			if (!blackback) {
 				return;
 			}
@@ -48,9 +64,27 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float pulse = Mth.clamp(beatLamp.pulse + beatLamp.beatPulse * 0.65F, 0.0F, 1.0F);
 		float bar = Mth.clamp(beatLamp.barValue, 0.0F, 1.0F);
 		float beat = Mth.clamp(beatLamp.beatPulse, 0.0F, 1.0F);
-		float intensity = com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects ? Math.max(Math.max(pulse, bar), beat) : 0.0F;
+		float masterDimmer = com.beatlamp.client.DmxMasterTracker.getMasterDimmerNear(beatLamp.getBlockPos());
+		float intensity = com.beatlamp.client.config.BeatLampClientConfig.enableStageEffects ? Math.max(Math.max(pulse, bar), beat) * masterDimmer : 0.0F;
+
+		net.minecraft.core.BlockPos leadPos = (beatLamp.getManualGroup() == null || beatLamp.getManualGroup().isEmpty()) ? null : beatLamp.getManualGroup().get(0);
+		if (com.beatlamp.client.DmxMasterTracker.isBlackoutNear(beatLamp.getBlockPos()) || com.beatlamp.client.DmxMasterTracker.isGroupMuted(beatLamp.getBlockPos(), leadPos)) {
+			intensity = 0.0F;
+		}
 
 		if (intensity <= 0.02F || beatLamp.displayColor == 0) {
+			if (beatLamp.isFrameless()) {
+				poseStack.pushPose();
+				poseStack.translate(0.5F, 0.5F, 0.5F);
+				PoseStack.Pose pose = poseStack.last();
+				Matrix4f matrix = pose.pose();
+				VertexConsumer buffer = multiBufferSource.getBuffer(RenderType.entityTranslucent(CORE_TEXTURE));
+				float standbyAlpha = blackback ? 1.0F : 0.45F;
+				renderFaces(beatLamp, buffer, pose, matrix, FULL_HALF, FULL_HALF, FULL_HALF, 0.04F, 0.04F, 0.06F, standbyAlpha, 0xF000F0);
+				poseStack.popPose();
+				return;
+			}
+
 			if (!blackback) {
 				return;
 			}
@@ -60,7 +94,7 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 			PoseStack.Pose pose = poseStack.last();
 			Matrix4f matrix = pose.pose();
 			VertexConsumer black = multiBufferSource.getBuffer(RenderType.entityCutoutNoCull(CORE_TEXTURE));
-			drawCube(black, pose, matrix, FULL_HALF, FULL_HALF, FULL_HALF, 0.0F, 0.0F, 0.0F, 1.0F, 0xF000F0);
+			renderFaces(beatLamp, black, pose, matrix, FULL_HALF, FULL_HALF, FULL_HALF, 0.0F, 0.0F, 0.0F, 1.0F, 0xF000F0);
 			poseStack.popPose();
 			return;
 		}
@@ -88,24 +122,25 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 				brightness = pulse * 1.5F;
 			}
 			default -> {
-				half = blackback ? FULL_HALF : 0.3F + pulse * 0.16F;
+				half = FULL_HALF;
 				brightness = pulse * 1.5F;
 			}
 		}
 
-		brightness = Math.min(brightness, 1.5F);
+		brightness = Math.min(brightness * masterDimmer, 1.5F);
 		float coreRed = Math.min(red * brightness, 1.0F);
 		float coreGreen = Math.min(green * brightness, 1.0F);
 		float coreBlue = Math.min(blue * brightness, 1.0F);
 
 		RenderType coreType = blackback ? RenderType.entityCutoutNoCull(CORE_TEXTURE) : RenderType.entityTranslucentEmissive(CORE_TEXTURE);
 		VertexConsumer core = multiBufferSource.getBuffer(coreType);
-		drawCube(core, pose, matrix, half, half, half, coreRed, coreGreen, coreBlue, 1.0F, 0xF000F0);
+		renderFaces(beatLamp, core, pose, matrix, half, half, half, coreRed, coreGreen, coreBlue, 1.0F, 0xF000F0);
 
 		poseStack.popPose();
 	}
 
-	private static void drawCube(
+	private static void renderFaces(
+		BeatLampBlockEntity beatLamp,
 		VertexConsumer consumer,
 		PoseStack.Pose pose,
 		Matrix4f matrix,
@@ -118,12 +153,32 @@ public class BeatLampRenderer implements BlockEntityRenderer<BeatLampBlockEntity
 		float a,
 		int light
 	) {
-		quad(consumer, pose, matrix, -hx, -hy, hz, hx, -hy, hz, hx, hy, hz, -hx, hy, hz, 0, 0, 1, r, g, b, a, light);
-		quad(consumer, pose, matrix, hx, -hy, -hz, -hx, -hy, -hz, -hx, hy, -hz, hx, hy, -hz, 0, 0, -1, r, g, b, a, light);
-		quad(consumer, pose, matrix, -hx, -hy, -hz, -hx, -hy, hz, -hx, hy, hz, -hx, hy, -hz, -1, 0, 0, r, g, b, a, light);
-		quad(consumer, pose, matrix, hx, -hy, hz, hx, -hy, -hz, hx, hy, -hz, hx, hy, hz, 1, 0, 0, r, g, b, a, light);
-		quad(consumer, pose, matrix, -hx, hy, hz, hx, hy, hz, hx, hy, -hz, -hx, hy, -hz, 0, 1, 0, r, g, b, a, light);
-		quad(consumer, pose, matrix, -hx, -hy, -hz, hx, -hy, -hz, hx, -hy, hz, -hx, -hy, hz, 0, -1, 0, r, g, b, a, light);
+		net.minecraft.world.level.Level level = beatLamp.getLevel();
+		net.minecraft.core.BlockPos pos = beatLamp.getBlockPos();
+		boolean drawSouth = true, drawNorth = true, drawWest = true, drawEast = true, drawUp = true, drawDown = true;
+		if (level != null && pos != null) {
+			drawSouth = shouldRenderFace(level, pos.south());
+			drawNorth = shouldRenderFace(level, pos.north());
+			drawWest = shouldRenderFace(level, pos.west());
+			drawEast = shouldRenderFace(level, pos.east());
+			drawUp = shouldRenderFace(level, pos.above());
+			drawDown = shouldRenderFace(level, pos.below());
+		}
+
+		if (drawSouth) quad(consumer, pose, matrix, -hx, -hy, hz, hx, -hy, hz, hx, hy, hz, -hx, hy, hz, 0, 0, 1, r, g, b, a, light);
+		if (drawNorth) quad(consumer, pose, matrix, hx, -hy, -hz, -hx, -hy, -hz, -hx, hy, -hz, hx, hy, -hz, 0, 0, -1, r, g, b, a, light);
+		if (drawWest) quad(consumer, pose, matrix, -hx, -hy, -hz, -hx, -hy, hz, -hx, hy, hz, -hx, hy, -hz, -1, 0, 0, r, g, b, a, light);
+		if (drawEast) quad(consumer, pose, matrix, hx, -hy, hz, hx, -hy, -hz, hx, hy, -hz, hx, hy, hz, 1, 0, 0, r, g, b, a, light);
+		if (drawUp) quad(consumer, pose, matrix, -hx, hy, hz, hx, hy, hz, hx, hy, -hz, -hx, hy, -hz, 0, 1, 0, r, g, b, a, light);
+		if (drawDown) quad(consumer, pose, matrix, -hx, -hy, -hz, hx, -hy, -hz, hx, -hy, hz, -hx, -hy, hz, 0, -1, 0, r, g, b, a, light);
+	}
+
+	private static boolean shouldRenderFace(net.minecraft.world.level.Level level, net.minecraft.core.BlockPos neighborPos) {
+		net.minecraft.world.level.block.state.BlockState state = level.getBlockState(neighborPos);
+		if (state.getBlock() instanceof com.beatlamp.block.BeatLampBlock) {
+			return false;
+		}
+		return !state.isSolidRender(level, neighborPos);
 	}
 
 	private static void quad(

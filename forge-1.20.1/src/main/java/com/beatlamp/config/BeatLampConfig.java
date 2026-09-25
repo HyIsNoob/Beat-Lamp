@@ -24,7 +24,9 @@ public final class BeatLampConfig {
 	public static int maxGroupLinkSize = 256;
 	public static double maxLinkerDistance = 64.0;
 	public static double defaultAudibleRadius = 64.0;
+	public static int maxAudioRadius = 64;
 	public static boolean enableDmxProtocol = true;
+	public static boolean enableRedstoneEmitter = true;
 
 	private BeatLampConfig() {
 	}
@@ -51,8 +53,16 @@ public final class BeatLampConfig {
 			if (json.has("defaultAudibleRadius")) {
 				defaultAudibleRadius = json.get("defaultAudibleRadius").getAsDouble();
 			}
+			if (json.has("maxAudioRadius")) {
+				maxAudioRadius = json.get("maxAudioRadius").getAsInt();
+			} else if (json.has("defaultAudibleRadius")) {
+				maxAudioRadius = (int) defaultAudibleRadius;
+			}
 			if (json.has("enableDmxProtocol")) {
 				enableDmxProtocol = json.get("enableDmxProtocol").getAsBoolean();
+			}
+			if (json.has("enableRedstoneEmitter")) {
+				enableRedstoneEmitter = json.get("enableRedstoneEmitter").getAsBoolean();
 			}
 			LOGGER.info("Loaded server config from {}", CONFIG_FILE.getName());
 		} catch (Exception e) {
@@ -66,7 +76,9 @@ public final class BeatLampConfig {
 		json.addProperty("maxGroupLinkSize", maxGroupLinkSize);
 		json.addProperty("maxLinkerDistance", maxLinkerDistance);
 		json.addProperty("defaultAudibleRadius", defaultAudibleRadius);
+		json.addProperty("maxAudioRadius", maxAudioRadius);
 		json.addProperty("enableDmxProtocol", enableDmxProtocol);
+		json.addProperty("enableRedstoneEmitter", enableRedstoneEmitter);
 
 		try (FileWriter writer = new FileWriter(CONFIG_FILE)) {
 			GSON.toJson(json, writer);

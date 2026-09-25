@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Minecraft.class)
 public class MinecraftMixin {
-	@Inject(method = "tick", at = @At("END"))
+	@Inject(method = "tick", at = @At("TAIL"))
 	private void beatlamp$onTick(CallbackInfo ci) {
 		JukeboxAudioTracker.clientTick();
 		if (com.beatlamp.fabric.BeatLampFabricClient.OPEN_SETTINGS_KEY != null) {

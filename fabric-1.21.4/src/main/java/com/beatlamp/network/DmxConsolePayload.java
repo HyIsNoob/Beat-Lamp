@@ -12,8 +12,13 @@ public record DmxConsolePayload(
 	boolean blackout,
 	boolean strobeAll,
 	float masterDimmer,
-	float masterSpeed
+	float masterSpeed,
+	java.util.List<BlockPos> mutedGroups
 ) implements CustomPacketPayload {
+	public DmxConsolePayload(BlockPos pos, boolean blackout, boolean strobeAll, float masterDimmer, float masterSpeed) {
+		this(pos, blackout, strobeAll, masterDimmer, masterSpeed, java.util.List.of());
+	}
+
 	public static final CustomPacketPayload.Type<DmxConsolePayload> ID = new CustomPacketPayload.Type<>(BeatLamp.id("configure_dmx_console"));
 
 	public static final StreamCodec<FriendlyByteBuf, DmxConsolePayload> CODEC = StreamCodec.of(
@@ -26,16 +31,24 @@ public record DmxConsolePayload(
 		buf.writeBoolean(payload.strobeAll());
 		buf.writeFloat(payload.masterDimmer());
 		buf.writeFloat(payload.masterSpeed());
+		buf.writeVarInt(payload.mutedGroups().size());
+		for (BlockPos p : payload.mutedGroups()) {
+			buf.writeBlockPos(p);
+		}
 	}
 
 	private static DmxConsolePayload read(FriendlyByteBuf buf) {
-		return new DmxConsolePayload(
-			buf.readBlockPos(),
-			buf.readBoolean(),
-			buf.readBoolean(),
-			buf.readFloat(),
-			buf.readFloat()
-		);
+		BlockPos pos = buf.readBlockPos();
+		boolean blackout = buf.readBoolean();
+		boolean strobeAll = buf.readBoolean();
+		float masterDimmer = buf.readFloat();
+		float masterSpeed = buf.readFloat();
+		int count = buf.readVarInt();
+		java.util.List<BlockPos> muted = new java.util.ArrayList<>(count);
+		for (int i = 0; i < count; i++) {
+			muted.add(buf.readBlockPos());
+		}
+		return new DmxConsolePayload(pos, blackout, strobeAll, masterDimmer, masterSpeed, muted);
 	}
 
 	@Override

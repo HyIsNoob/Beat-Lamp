@@ -129,7 +129,8 @@ public final class LampOutlineRenderer {
 			var be = level.getBlockEntity(pos);
 			if (be instanceof BeatLampBlockEntity || be instanceof StageLightBlockEntity
 				|| be instanceof FountainBlockEntity || be instanceof LaserProjectorBlockEntity
-				|| be instanceof FogGeneratorBlockEntity || be instanceof BeatEmitterBlockEntity) {
+				|| be instanceof FogGeneratorBlockEntity || be instanceof BeatEmitterBlockEntity
+				|| be instanceof com.beatlamp.block.RainbowLedBlockEntity) {
 				return pos;
 			}
 		}
@@ -150,6 +151,8 @@ public final class LampOutlineRenderer {
 			return fog.getManualGroup().isEmpty() ? List.of(target) : fog.getManualGroup();
 		} else if (be instanceof BeatEmitterBlockEntity emitter) {
 			return emitter.getManualGroup().isEmpty() ? List.of(target) : emitter.getManualGroup();
+		} else if (be instanceof com.beatlamp.block.RainbowLedBlockEntity led) {
+			return led.getManualGroup().isEmpty() ? BeatLamp.floodFillRainbowLed(level, target) : led.getManualGroup();
 		}
 		return List.of();
 	}

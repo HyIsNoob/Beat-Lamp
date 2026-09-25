@@ -28,6 +28,11 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 	}
 
 	@Override
+	public boolean shouldRenderOffScreen(StageLightBlockEntity blockEntity) {
+		return true;
+	}
+
+	@Override
 	public int getViewDistance() {
 		return com.beatlamp.client.config.BeatLampClientConfig.beamRenderDistance;
 	}
@@ -48,8 +53,9 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 			return;
 		}
 
-		float energy = Mth.clamp(light.beamEnergy * light.getSensitivity(), 0.0F, 1.0F);
-		float beat = Mth.clamp(light.beamBeat, 0.0F, 1.0F);
+		float masterDimmer = com.beatlamp.client.DmxMasterTracker.getMasterDimmerNear(light.getBlockPos());
+		float energy = Mth.clamp(light.beamEnergy * light.getSensitivity(), 0.0F, 1.0F) * masterDimmer;
+		float beat = Mth.clamp(light.beamBeat, 0.0F, 1.0F) * masterDimmer;
 
 		if (energy <= 0.02F) {
 			return;

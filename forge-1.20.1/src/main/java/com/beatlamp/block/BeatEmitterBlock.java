@@ -20,14 +20,16 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 
 public class BeatEmitterBlock extends BaseEntityBlock {
 	public static final BooleanProperty POWERED = BlockStateProperties.POWERED;
+	public static final IntegerProperty POWER = BlockStateProperties.POWER;
 
 	public BeatEmitterBlock(BlockBehaviour.Properties properties) {
 		super(properties);
-		this.registerDefaultState(this.getStateDefinition().any().setValue(POWERED, false));
+		this.registerDefaultState(this.getStateDefinition().any().setValue(POWERED, false).setValue(POWER, 0));
 	}
 
 	@Override
@@ -37,6 +39,9 @@ public class BeatEmitterBlock extends BaseEntityBlock {
 
 	@Override
 	public int getSignal(BlockState state, BlockGetter level, BlockPos pos, Direction direction) {
+		if (state.hasProperty(POWER)) {
+			return state.getValue(POWER);
+		}
 		if (level.getBlockEntity(pos) instanceof BeatEmitterBlockEntity emitter) {
 			return emitter.getSignal();
 		}
@@ -60,10 +65,9 @@ public class BeatEmitterBlock extends BaseEntityBlock {
 
 	@Override
 	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState blockState, BlockEntityType<T> blockEntityType) {
-		if (!level.isClientSide) {
-			return null;
-		}
-		return createTickerHelper(blockEntityType, BeatLampBlockEntities.BEAT_EMITTER, (l, p, s, be) -> BeatEmitterBlockEntity.clientTicker.tick(be));
+		return level.isClientSide
+			? createTickerHelper(blockEntityType, BeatLampBlockEntities.BEAT_EMITTER, (l, p, s, be) -> BeatEmitterBlockEntity.clientTicker.tick(be))
+			: createTickerHelper(blockEntityType, BeatLampBlockEntities.BEAT_EMITTER, (l, p, s, be) -> be.tickServerTimeout(l));
 	}
 
 	@Override
@@ -73,6 +77,6 @@ public class BeatEmitterBlock extends BaseEntityBlock {
 
 	@Override
 	protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
-		builder.add(POWERED);
+		builder.add(POWERED, POWER);
 	}
 }

@@ -13,6 +13,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -25,6 +26,11 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 	private static final DyeColor[] DYES = DyeColor.values();
 
 	public StageLightRenderer(BlockEntityRendererProvider.Context context) {
+	}
+
+	@Override
+	public boolean shouldRenderOffScreen(StageLightBlockEntity blockEntity) {
+		return true;
 	}
 
 	@Override
@@ -48,7 +54,14 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 			return;
 		}
 
-		float energy = Mth.clamp(light.beamIntensity * light.getSensitivity(), 0.0F, 1.0F);
+		BlockPos leadPos = (light.getManualGroup() == null || light.getManualGroup().isEmpty()) ? null : light.getManualGroup().get(0);
+		if (com.beatlamp.client.DmxMasterTracker.isBlackoutNear(light.getBlockPos()) || com.beatlamp.client.DmxMasterTracker.isGroupMuted(light.getBlockPos(), leadPos)) {
+			return;
+		}
+
+		float masterDimmer = com.beatlamp.client.DmxMasterTracker.getMasterDimmerNear(light.getBlockPos());
+		float energy = Mth.clamp(light.beamEnergy * light.getSensitivity(), 0.0F, 1.0F) * masterDimmer;
+		float beat = Mth.clamp(light.beamBeat, 0.0F, 1.0F) * masterDimmer;
 		if (energy <= 0.02F) {
 			return;
 		}
@@ -92,8 +105,10 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 				poseStack.mulPose(Axis.XP.rotationDegrees(tilt));
 			}
 			case BEAT_STEP -> {
-				poseStack.mulPose(Axis.YP.rotationDegrees(light.currentYaw));
-				poseStack.mulPose(Axis.XP.rotationDegrees(light.currentPitch));
+				light.currentPan = Mth.lerp(0.28F, light.currentPan, light.targetPan);
+				light.currentTilt = Mth.lerp(0.28F, light.currentTilt, light.targetTilt);
+				poseStack.mulPose(Axis.YP.rotationDegrees(light.currentPan));
+				poseStack.mulPose(Axis.XP.rotationDegrees(light.currentTilt));
 			}
 			case CHASE -> {
 				float phase = effectTime * 0.12F + light.groupIndex * 0.5F;
@@ -253,7 +268,12 @@ public class StageLightRenderer implements BlockEntityRenderer<StageLightBlockEn
 
 		int color = light.getColor();
 
-		if (color == BeatLampBlockEntity.COLOR_OLED) {
+		if (color == BeatLampBlockEntity.COLOR_OLED || color == 0) {
+			if (light.getMode() == StageLightMode.BEAT_STEP) {
+				float[] hues = {0.0F, 0.15F, 0.33F, 0.5F, 0.66F, 0.83F};
+				float hue = hues[Math.abs(light.beatColorIndex) % hues.length];
+				return java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
+			}
 			float hue = (JukeboxAudioTracker.getEffectTime() * 2.0F % 360.0F) / 360.0F;
 			return java.awt.Color.HSBtoRGB(hue, 0.85F, 1.0F);
 		}

@@ -42,3 +42,6 @@ replay_*.log
 web/
 
 AGENTS.md
+
+# astervale tools & analysis
+astervale-tools/

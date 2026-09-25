@@ -20,46 +20,33 @@
 	"block.beatlamp.dj_deck": "DJ Performance Deck",
 	"item.beatlamp.stage_speaker": "Stage Line Array Speaker",
 	"block.beatlamp.stage_speaker": "Stage Line Array Speaker",
-
 	"item.beatlamp.tag.decoration": "Decoration",
 	"item.beatlamp.tag.hold_shift": "Hold [Shift] for Guide",
 	"item.beatlamp.tag.guide_header": "▪ Stage Guide ▪",
-
 	"item.beatlamp.beat_lamp.tooltip.summary": "Audio-reactive neon lamp with 9 visualizer modes.",
 	"item.beatlamp.beat_lamp.tooltip.details": "• Lights up to music. 9 Visualizer Modes.\n• Right-click with Controller to configure.",
-
 	"item.beatlamp.stage_light.tooltip.summary": "Concert moving-head spotlight beam.",
 	"item.beatlamp.stage_light.tooltip.details": "• Concert spotlight beam (up to 34 blocks).\n• Right-click with Controller to configure.",
-
 	"item.beatlamp.laser_projector.tooltip.summary": "3D multi-beam concert laser fixture.",
 	"item.beatlamp.laser_projector.tooltip.details": "• 1 to 8 beams 3D concert laser.\n• Right-click with Controller to configure.",
-
 	"item.beatlamp.fog_generator.tooltip.summary": "Low-lying dry-ice stage fog & CO2 jet blast.",
 	"item.beatlamp.fog_generator.tooltip.details": "• Emits ground fog & CO2 jet blasts on beat.\n• Right-click with Controller to configure.",
-
 	"item.beatlamp.fountain.tooltip.summary": "Stage pyro fountain & fireworks launcher.",
 	"item.beatlamp.fountain.tooltip.details": "• Shoots sparks on beat & rockets on drop.\n• Right-click with Controller to configure.",
-
 	"item.beatlamp.beat_emitter.tooltip.summary": "Converts music beats into Redstone signals.",
 	"item.beatlamp.beat_emitter.tooltip.details": "• Emits Redstone pulses on music beat.\n• Sneak + Right Click to cycle source.",
-
 	"item.beatlamp.stage_jukebox.tooltip.summary": "Modern titanium jukebox for stage performances.",
 	"item.beatlamp.stage_jukebox.tooltip.details": "• Plays music discs with beat tracking.\n• Right-click with disc to play, click to eject.",
-
 	"item.beatlamp.dmx_console.tooltip.summary": "Master lighting control desk for stage productions.",
 	"item.beatlamp.dmx_console.tooltip.details": "• Master stage controller (Blackout & Strobe).\n• Right-click to open DMX control board.",
-
 	"item.beatlamp.dj_deck.tooltip.summary": "Dual-jog professional DJ performance station.",
 	"item.beatlamp.dj_deck.tooltip.details": "• Professional DJ stage setup.\n• Decorative prop.",
-
 	"item.beatlamp.stage_speaker.tooltip.summary": "High-power line array concert speaker cabinet.",
 	"item.beatlamp.stage_speaker.tooltip.details": "• High-power concert line array speaker.\n• Decorative prop, stackable.",
-
 	"item.beatlamp.linker": "Group Linker",
 	"item.beatlamp.linker.tooltip.summary": "Smart bounding-box stage device linker.",
 	"item.beatlamp.linker.tooltip.details": "• Click Corner 1, then Corner 2 to link group.\n• Sneak + Right Click to cancel.",
 	"item.beatlamp.linker.anchor": "Selection corner: %s, %s, %s",
-
 	"item.beatlamp.controller": "Lamp Controller",
 	"item.beatlamp.controller.tooltip.summary": "Universal stage remote controller & jukebox binder.",
 	"item.beatlamp.controller.tooltip.details": "• Right-click devices to open config GUI.\n• Sneak + Right Click Jukebox to bind source.",
@@ -226,5 +213,32 @@
 	"screen.beatlamp.client_settings.particle_density.off": "Off",
 	"screen.beatlamp.client_settings.anti_strobe": "Anti-Strobe (Safety): %s",
 	"screen.beatlamp.client_settings.render_distance": "Effect Render Distance",
-	"screen.beatlamp.client_settings.render_distance.format": "%s blocks"
+	"screen.beatlamp.client_settings.render_distance.format": "%s blocks",
+	"item.beatlamp.rainbow_led_block": "Rainbow LED Block",
+	"block.beatlamp.rainbow_led_block": "Rainbow LED Block",
+	"item.beatlamp.rainbow_led_block.tooltip.summary": "Continuous rainbow LED light for architectural and cyberpunk builds.",
+	"item.beatlamp.rainbow_led_block.tooltip.details": "• 24/7 animated LED block with rich lighting modes.\n• Right-click with Lamp Controller to open Config Menu.\n• Shift + Right Click to toggle Framed / Frameless.",
+	"screen.beatlamp.rainbow_led.config": "Rainbow LED Configuration",
+	"screen.beatlamp.rainbow_led.mode": "Mode: %s",
+	"screen.beatlamp.rainbow_led.mode.rainbow": "Rainbow Cycle",
+	"screen.beatlamp.rainbow_led.mode.breathing": "Breathing",
+	"screen.beatlamp.rainbow_led.mode.strobe": "Strobe Pulse",
+	"screen.beatlamp.rainbow_led.mode.static": "Static Color",
+	"screen.beatlamp.rainbow_led.mode.wave": "Spatial Wave",
+	"screen.beatlamp.rainbow_led.frame": "Frame: %s",
+	"screen.beatlamp.rainbow_led.frame.framed": "Framed",
+	"screen.beatlamp.rainbow_led.frame.frameless": "Frameless",
+	"screen.beatlamp.rainbow_led.speed": "Speed",
+	"screen.beatlamp.rainbow_led.brightness": "Brightness",
+	"screen.beatlamp.rainbow_led.color.rainbow": "Rainbow (OLED)",
+	"screen.beatlamp.brightness": "Brightness",
+	"screen.beatlamp.color.rainbow": "Rainbow (OLED)",
+	"screen.beatlamp.stage_jukebox.title": "Stage Jukebox",
+	"screen.beatlamp.stage_jukebox.no_disc": "No Music Disc",
+	"screen.beatlamp.stage_jukebox.playing": "Playing",
+	"screen.beatlamp.stage_jukebox.paused": "Paused",
+	"screen.beatlamp.stage_jukebox.volume": "Volume",
+	"screen.beatlamp.stage_jukebox.range": "Range",
+	"screen.beatlamp.stage_jukebox.loop_on": "Loop: ON",
+	"screen.beatlamp.stage_jukebox.loop_off": "Loop: OFF"
 }

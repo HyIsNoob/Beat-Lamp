@@ -52,14 +52,44 @@ public final class JukeboxTracker {
 
 	public static boolean isPlayingNear(Level level, BlockPos center, BlockPos source) {
 		if (source != null) {
-			Set<BlockPos> positions = PLAYING.get(level.dimension());
-
-			if (positions == null || !positions.contains(source)) {
+			double rangeSqr = (double) BeatLampConfig.maxAudioRadius * (double) BeatLampConfig.maxAudioRadius;
+			if (Vec3.atCenterOf(center).distanceToSqr(Vec3.atCenterOf(source)) > rangeSqr) {
 				return false;
 			}
 
-			double rangeSqr = (double) BeatLampConfig.maxAudioRadius * (double) BeatLampConfig.maxAudioRadius;
-			return Vec3.atCenterOf(center).distanceToSqr(Vec3.atCenterOf(source)) <= rangeSqr;
+			Set<BlockPos> positions = PLAYING.get(level.dimension());
+			if (positions != null && positions.contains(source)) {
+				return true;
+			}
+
+			net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(source);
+			if (be != null) {
+				try {
+					java.lang.reflect.Field dataField = be.getClass().getField("data");
+					Object data = dataField.get(be);
+					if (data != null) {
+						java.lang.reflect.Field activeField = data.getClass().getField("active");
+						java.lang.reflect.Field pausedField = data.getClass().getField("paused");
+						java.lang.reflect.Field mutedField = data.getClass().getField("muted");
+						java.lang.reflect.Field volField = data.getClass().getField("volume");
+						boolean active = activeField.getBoolean(data);
+						boolean paused = pausedField.getBoolean(data);
+						boolean muted = mutedField.getBoolean(data);
+						int vol = volField.getInt(data);
+						if (active && !paused && !muted && vol > 0) {
+							return true;
+						}
+					}
+				} catch (Throwable ignored) {
+				}
+				net.minecraft.world.level.block.state.BlockState state = be.getBlockState();
+				if (state.hasProperty(net.minecraft.world.level.block.state.properties.BlockStateProperties.HAS_RECORD)
+					&& state.getValue(net.minecraft.world.level.block.state.properties.BlockStateProperties.HAS_RECORD)) {
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		return isPlayingNear(level, center);
